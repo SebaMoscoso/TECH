@@ -1,0 +1,609 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>InvertirCL — Ranking de Disciplina</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:#07090d; --bg2:#0d1117; --bg3:#131a22; --bg4:#1a222c;
+  --verde:#00e676; --rojo:#ff3d57; --azul:#4a9eff; --amarillo:#f5c518;
+  --purpura:#9b59b6; --naranja:#ff6b35; --cyan:#00bcd4;
+  --oro:#f5c518; --plata:#8a9bb0; --bronce:#cd7f32;
+  --linea:rgba(255,255,255,0.06); --linea2:rgba(255,255,255,0.1);
+  --texto:#e2e8f0; --texto2:#8a9bb0; --texto3:#4a5568;
+  --mono:'DM Mono',monospace; --sans:'DM Sans',sans-serif; --display:'Syne',sans-serif;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html,body{height:100%;overflow:hidden;}
+body{font-family:var(--sans);background:var(--bg);color:var(--texto);display:flex;flex-direction:column;}
+
+/* ── TOPBAR ── */
+.topbar{height:52px;background:var(--bg2);border-bottom:1px solid var(--linea);display:flex;align-items:center;padding:0 20px;gap:14px;flex-shrink:0;}
+.logo{font-family:var(--display);font-weight:800;font-size:1rem;color:var(--verde);text-decoration:none;}
+.logo span{color:var(--texto2);font-weight:400;}
+.tnav-wrap{display:flex;gap:2px;margin-left:8px;}
+.tnav{padding:6px 13px;border-radius:6px;font-size:0.78rem;color:var(--texto2);cursor:pointer;transition:all 0.15s;text-decoration:none;}
+.tnav:hover{background:var(--bg3);color:var(--texto);}
+.tnav.active{background:rgba(245,197,24,0.1);color:var(--amarillo);}
+.topbar-right{margin-left:auto;display:flex;align-items:center;gap:10px;}
+.live-dot{width:6px;height:6px;border-radius:50%;background:var(--verde);animation:pulse 2s infinite;}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.3}}
+.live-label{font-family:var(--mono);font-size:0.68rem;color:var(--verde);}
+
+/* ── LAYOUT ── */
+.page{flex:1;overflow-y:auto;padding:24px 32px;}
+
+/* ── HERO DEL RANKING ── */
+.ranking-hero{
+  background:linear-gradient(135deg,rgba(245,197,24,0.05),rgba(74,158,255,0.04));
+  border:1px solid rgba(245,197,24,0.12);
+  border-radius:14px;padding:24px 28px;
+  display:flex;align-items:center;justify-content:space-between;
+  margin-bottom:20px;position:relative;overflow:hidden;
+}
+.ranking-hero::before{
+  content:'';position:absolute;top:-40px;right:-40px;
+  width:200px;height:200px;
+  background:radial-gradient(circle,rgba(245,197,24,0.08),transparent 70%);
+  pointer-events:none;
+}
+.hero-left{}
+.hero-tag{
+  display:inline-flex;align-items:center;gap:6px;
+  background:rgba(245,197,24,0.08);border:1px solid rgba(245,197,24,0.2);
+  border-radius:100px;padding:4px 12px;font-size:0.68rem;
+  color:var(--amarillo);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:10px;
+}
+.hero-title{font-family:var(--display);font-size:1.5rem;font-weight:800;letter-spacing:-0.02em;margin-bottom:6px;}
+.hero-title span{color:var(--amarillo);}
+.hero-sub{font-size:0.82rem;color:var(--texto2);max-width:500px;line-height:1.6;}
+.hero-meta{display:flex;gap:20px;margin-top:14px;}
+.hero-meta-item{display:flex;align-items:center;gap:6px;font-size:0.75rem;color:var(--texto2);}
+.hero-meta-item strong{color:var(--texto);}
+
+/* Podio top 3 */
+.podio{display:flex;align-items:flex-end;gap:8px;}
+.podio-item{
+  display:flex;flex-direction:column;align-items:center;
+  gap:6px;padding:12px 16px;border-radius:10px;border:1px solid;
+  min-width:100px;position:relative;
+}
+.podio-item.oro{background:rgba(245,197,24,0.06);border-color:rgba(245,197,24,0.25);}
+.podio-item.plata{background:rgba(138,155,176,0.05);border-color:rgba(138,155,176,0.2);}
+.podio-item.bronce{background:rgba(205,127,50,0.05);border-color:rgba(205,127,50,0.2);}
+.podio-corona{font-size:1.1rem;line-height:1;}
+.podio-avatar{
+  width:36px;height:36px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  font-family:var(--display);font-size:0.8rem;font-weight:700;
+  border:2px solid;
+}
+.podio-item.oro .podio-avatar{background:rgba(245,197,24,0.15);border-color:rgba(245,197,24,0.4);color:var(--oro);}
+.podio-item.plata .podio-avatar{background:rgba(138,155,176,0.12);border-color:rgba(138,155,176,0.3);color:var(--plata);}
+.podio-item.bronce .podio-avatar{background:rgba(205,127,50,0.1);border-color:rgba(205,127,50,0.3);color:var(--bronce);}
+.podio-nick{font-family:var(--mono);font-size:0.65rem;color:var(--texto2);}
+.podio-score{font-family:var(--display);font-size:1rem;font-weight:800;}
+.podio-item.oro .podio-score{color:var(--oro);}
+.podio-item.plata .podio-score{color:var(--plata);}
+.podio-item.bronce .podio-score{color:var(--bronce);}
+.podio-label{font-size:0.6rem;color:var(--texto3);text-transform:uppercase;letter-spacing:0.06em;}
+
+/* ── CONTROLES ── */
+.controls-row{
+  display:flex;align-items:center;justify-content:space-between;
+  margin-bottom:14px;gap:12px;flex-wrap:wrap;
+}
+.period-tabs{display:flex;gap:3px;background:var(--bg2);border:1px solid var(--linea);border-radius:8px;padding:3px;}
+.period-tab{
+  padding:5px 14px;border-radius:6px;font-size:0.75rem;
+  color:var(--texto2);cursor:pointer;transition:all 0.15s;border:none;background:transparent;
+  font-family:var(--sans);
+}
+.period-tab.active{background:var(--bg3);color:var(--texto);}
+.filter-wrap{display:flex;gap:8px;align-items:center;}
+.filter-label{font-size:0.72rem;color:var(--texto3);}
+.filter-select{
+  background:var(--bg2);border:1px solid var(--linea);border-radius:6px;
+  padding:5px 10px;font-size:0.75rem;color:var(--texto2);
+  font-family:var(--sans);cursor:pointer;outline:none;
+}
+.search-input{
+  background:var(--bg2);border:1px solid var(--linea);border-radius:6px;
+  padding:5px 12px;font-size:0.75rem;color:var(--texto);
+  font-family:var(--sans);outline:none;width:160px;
+  transition:border-color 0.15s;
+}
+.search-input:focus{border-color:var(--amarillo);}
+.search-input::placeholder{color:var(--texto3);}
+
+/* ── TABLA RANKING ── */
+.ranking-wrap{
+  background:var(--bg2);border:1px solid var(--linea);
+  border-radius:12px;overflow:hidden;margin-bottom:20px;
+}
+.ranking-table{width:100%;border-collapse:collapse;}
+.ranking-table th{
+  padding:9px 14px;text-align:left;
+  font-size:0.62rem;text-transform:uppercase;letter-spacing:0.08em;
+  color:var(--texto3);border-bottom:1px solid var(--linea);
+  font-weight:400;background:var(--bg2);
+}
+.ranking-table th.sort-active{color:var(--amarillo);}
+.ranking-table th.right,.ranking-table td.right{text-align:right;padding-right:16px;}
+.ranking-table th.center,.ranking-table td.center{text-align:center;}
+
+.ranking-row{transition:background 0.12s;cursor:default;}
+.ranking-row:hover{background:rgba(255,255,255,0.015);}
+.ranking-row.es-yo{background:rgba(245,197,24,0.04);}
+.ranking-row.es-yo:hover{background:rgba(245,197,24,0.07);}
+.ranking-row td{padding:10px 14px;border-bottom:1px solid rgba(255,255,255,0.03);font-size:0.8rem;}
+.ranking-row:last-child td{border-bottom:none;}
+
+/* Posición */
+.pos-cell{display:flex;align-items:center;gap:8px;}
+.pos-num{
+  font-family:var(--mono);font-size:0.78rem;
+  width:24px;text-align:center;flex-shrink:0;
+}
+.pos-medal{font-size:0.95rem;}
+.pos-change{font-family:var(--mono);font-size:0.62rem;}
+.pos-change.up{color:var(--verde);}
+.pos-change.down{color:var(--rojo);}
+.pos-change.same{color:var(--texto3);}
+
+/* Avatar + nick */
+.user-cell{display:flex;align-items:center;gap:10px;}
+.user-avatar{
+  width:30px;height:30px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  font-family:var(--display);font-size:0.65rem;font-weight:700;
+  flex-shrink:0;border:1px solid var(--linea2);
+}
+.user-nick{font-weight:500;font-size:0.82rem;}
+.user-badge{
+  font-size:0.58rem;padding:1px 5px;border-radius:3px;
+  text-transform:uppercase;letter-spacing:0.05em;margin-left:4px;
+}
+.user-badge.yo{background:rgba(245,197,24,0.15);color:var(--amarillo);border:1px solid rgba(245,197,24,0.25);}
+.user-badge.nuevo{background:rgba(0,230,118,0.1);color:var(--verde);border:1px solid rgba(0,230,118,0.2);}
+.user-racha{font-size:0.65rem;color:var(--texto3);margin-top:1px;}
+
+/* Score de disciplina */
+.score-cell{display:flex;align-items:center;gap:8px;}
+.score-bar-track{width:60px;height:4px;background:var(--bg3);border-radius:2px;overflow:hidden;}
+.score-bar-fill{height:100%;border-radius:2px;transition:width 0.5s ease;}
+.score-val{font-family:var(--mono);font-size:0.82rem;font-weight:500;width:32px;}
+
+/* WR */
+.wr-cell{font-family:var(--mono);font-size:0.78rem;}
+
+/* P&L */
+.pnl-cell{font-family:var(--mono);font-size:0.78rem;}
+.pos{color:var(--verde);}
+.neg{color:var(--rojo);}
+
+/* Trades */
+.trades-cell{font-family:var(--mono);font-size:0.78rem;color:var(--texto2);}
+
+/* Racha */
+.racha-cell{font-size:0.75rem;}
+
+/* ── MI POSICIÓN (sticky abajo) ── */
+.mi-posicion{
+  background:var(--bg2);border:1px solid rgba(245,197,24,0.2);
+  border-radius:10px;padding:14px 18px;
+  display:flex;align-items:center;justify-content:space-between;
+  margin-bottom:20px;
+}
+.mp-left{display:flex;align-items:center;gap:14px;}
+.mp-pos{font-family:var(--display);font-size:1.8rem;font-weight:800;color:var(--amarillo);line-height:1;}
+.mp-label{font-size:0.65rem;color:var(--texto3);text-transform:uppercase;letter-spacing:0.06em;}
+.mp-nick{font-family:var(--mono);font-size:0.82rem;color:var(--texto);margin-top:2px;}
+.mp-stats{display:flex;gap:20px;}
+.mp-stat{}
+.mp-stat-label{font-size:0.62rem;color:var(--texto3);text-transform:uppercase;letter-spacing:0.06em;}
+.mp-stat-val{font-family:var(--mono);font-size:0.9rem;margin-top:2px;}
+.mp-right{text-align:right;}
+.mp-cta{
+  font-size:0.72rem;color:var(--azul);cursor:pointer;
+  text-decoration:underline dotted;text-underline-offset:2px;
+}
+.mp-edu{font-size:0.68rem;color:var(--texto3);margin-top:4px;}
+
+/* ── PANEL EDUCATIVO ── */
+.edu-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:20px;}
+.edu-card{
+  background:var(--bg2);border:1px solid var(--linea);border-radius:10px;
+  padding:14px 16px;
+}
+.edu-card-icon{font-size:1.2rem;margin-bottom:8px;}
+.edu-card-title{font-family:var(--display);font-size:0.82rem;font-weight:700;margin-bottom:5px;}
+.edu-card-body{font-size:0.73rem;color:var(--texto2);line-height:1.6;}
+.edu-card-body strong{color:var(--texto);}
+
+/* Scrollbar */
+::-webkit-scrollbar{width:4px;}
+::-webkit-scrollbar-track{background:transparent;}
+::-webkit-scrollbar-thumb{background:var(--bg4);border-radius:2px;}
+
+@keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+.fade-in{animation:fadeIn 0.4s ease both;}
+</style>
+</head>
+<body>
+
+<!-- TOPBAR -->
+<div class="topbar">
+  <a href="dashboard.html" class="logo">Invertir<span>CL</span></a>
+  <nav class="tnav-wrap">
+    <a href="dashboard.html" class="tnav">Dashboard</a>
+    <a href="simulator.html" class="tnav">Simulador</a>
+    <a href="backtest.html" class="tnav">Backtest</a>
+    <a href="risk.html" class="tnav">Riesgo</a>
+    <a href="learn.html" class="tnav">Aprender</a>
+    <a href="heatmap.html" class="tnav">Liquidez</a>
+    <a href="ranking.html" class="tnav active">Ranking</a>
+  </nav>
+  <div class="topbar-right">
+    <div class="live-dot"></div>
+    <span class="live-label" id="mesLabel">Abril 2026</span>
+  </div>
+</div>
+
+<div class="page">
+
+  <!-- ── HERO ── -->
+  <div class="ranking-hero fade-in">
+    <div class="hero-left">
+      <div class="hero-tag">🏆 Ranking mensual · Anónimo</div>
+      <div class="hero-title">Gana quien tiene más <span>disciplina.</span></div>
+      <div class="hero-sub">No la mayor rentabilidad — el mayor Score de Disciplina. Aquí se premia operar bien, no apostar bien. El mercado premia la consistencia a largo plazo.</div>
+      <div class="hero-meta">
+        <div class="hero-meta-item"><span>👥</span><strong id="totalUsuarios">—</strong> traders activos este mes</div>
+        <div class="hero-meta-item"><span>📅</span><strong>Reinicio:</strong> 1 de Mayo</div>
+        <div class="hero-meta-item"><span>🔒</span><strong>100% anónimo</strong> — solo se muestra el nickname</div>
+      </div>
+    </div>
+    <div class="podio" id="podioTop3">
+      <!-- generado por JS -->
+    </div>
+  </div>
+
+  <!-- ── MI POSICIÓN ── -->
+  <div class="mi-posicion fade-in" id="miPosicion">
+    <!-- generado por JS -->
+  </div>
+
+  <!-- ── CONTROLES ── -->
+  <div class="controls-row">
+    <div class="period-tabs">
+      <button class="period-tab active" onclick="setPeriodo('mes',this)">Este mes</button>
+      <button class="period-tab" onclick="setPeriodo('semana',this)">Esta semana</button>
+      <button class="period-tab" onclick="setPeriodo('historico',this)">Histórico</button>
+    </div>
+    <div class="filter-wrap">
+      <span class="filter-label">Filtrar:</span>
+      <select class="filter-select" onchange="setFiltro(this.value)">
+        <option value="todos">Todos</option>
+        <option value="novatos">Novatos (&lt;30 trades)</option>
+        <option value="intermedios">Intermedios (30–100)</option>
+        <option value="avanzados">Avanzados (&gt;100 trades)</option>
+      </select>
+      <input type="text" class="search-input" placeholder="🔍 Buscar nick..." oninput="buscar(this.value)">
+    </div>
+  </div>
+
+  <!-- ── TABLA RANKING ── -->
+  <div class="ranking-wrap fade-in">
+    <table class="ranking-table">
+      <thead>
+        <tr>
+          <th style="width:60px">#</th>
+          <th>Trader</th>
+          <th class="sort-active" style="cursor:pointer" onclick="ordenarPor('score')">Score Disciplina ↓</th>
+          <th style="cursor:pointer" onclick="ordenarPor('wr')">Win Rate</th>
+          <th style="cursor:pointer" onclick="ordenarPor('pnl')">P&L Mes</th>
+          <th>Trades</th>
+          <th>Racha</th>
+          <th class="center">Nivel</th>
+        </tr>
+      </thead>
+      <tbody id="rankingBody">
+        <!-- generado por JS -->
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ── PANEL EDUCATIVO ── -->
+  <div class="edu-row fade-in">
+    <div class="edu-card">
+      <div class="edu-card-icon">🧠</div>
+      <div class="edu-card-title">¿Qué es el Score de Disciplina?</div>
+      <div class="edu-card-body">Mide qué tan bien sigues tus propias reglas. <strong>No depende de si el mercado subió o bajó</strong> — depende de si respetaste tu stop loss, evitaste el overtrading y operaste sin tilt. Va de 0 a 100.</div>
+    </div>
+    <div class="edu-card">
+      <div class="edu-card-icon">📊</div>
+      <div class="edu-card-title">¿Por qué no rankear por rentabilidad?</div>
+      <div class="edu-card-body">Un trader puede ganar mucho por suerte en un mes — y quebrar al siguiente. <strong>La disciplina predice el éxito a largo plazo</strong>. Los mejores traders del mundo no tienen los mejores meses — tienen la mejor consistencia.</div>
+    </div>
+    <div class="edu-card">
+      <div class="edu-card-icon">⬆️</div>
+      <div class="edu-card-title">¿Cómo subir tu score?</div>
+      <div class="edu-card-body">Respetar stop loss (+20 pts), no operar en tilt (+15 pts), R/R ≥ 2:1 (+10 pts), no sobreoperar (+10 pts), completar módulos educativos (+5 pts). <strong>Cada regla rota baja el score</strong>.</div>
+    </div>
+  </div>
+
+</div><!-- /page -->
+
+<script>
+// ══════════════════════════════════════════════════════════════
+// ÍTEM 24 — RANKING POR SCORE DE DISCIPLINA
+// ══════════════════════════════════════════════════════════════
+
+// ── DATOS SIMULADOS REALISTAS ────────────────────────────────
+// En producción esto vendrá de Supabase con un query simple:
+// SELECT nick, score_disciplina, win_rate, pnl_mes, trades
+// FROM usuarios ORDER BY score_disciplina DESC LIMIT 100
+
+const COLORES_AVATAR = [
+  '#00e676','#4a9eff','#9b59b6','#ff6b35','#00bcd4',
+  '#f5c518','#ff3d57','#2ecc71','#e74c3c','#3498db',
+];
+
+function generarUsuarios(n) {
+  const nicks = [
+    'trader_austral','ipsa_hunter','copec_long','sqm_watcher','dolar_obs',
+    'uf_master','bolsa_cl','risk_mgr','velas_jp','chile_quant',
+    'santiago_fx','maipo_trade','cobre_bulls','litio_king','andes_alpha',
+    'fintual_bye','etoro_no','wr_sixtyfive','drawdown_ctrl','sharpe_max',
+    'condor_trades','patagonia_q','atacama_fx','bio_bio_trade','valpo_inv',
+    'temuco_trader','arica_quant','iquique_fx','concepcion_q','antofagasta_t',
+  ];
+  const niveles = ['🌱 Novato','📈 Aprendiz','⚡ Intermedio','🔥 Avanzado','💎 Elite'];
+
+  return Array.from({length: n}, (_, i) => {
+    const score    = Math.max(12, Math.min(98, Math.round(85 - i*2.1 + (Math.random()-0.5)*8)));
+    const wr       = Math.max(32, Math.min(78, Math.round(55 + score*0.15 + (Math.random()-0.5)*12)));
+    const trades   = Math.round(15 + Math.random()*120);
+    const pnlBase  = (score - 50) * 12000 + (Math.random()-0.4)*200000;
+    const racha    = Math.round(Math.random()*8);
+    const nivel    = niveles[Math.min(4, Math.floor(score/20))];
+    const posAnterior = i + Math.round((Math.random()-0.5)*4);
+
+    return {
+      pos:          i + 1,
+      posAnterior:  Math.max(1, posAnterior),
+      nick:         nicks[i % nicks.length] + (i >= nicks.length ? '_' + Math.floor(i/nicks.length) : ''),
+      score,
+      wr,
+      trades,
+      pnl:          Math.round(pnlBase),
+      racha,
+      nivel,
+      avatarColor:  COLORES_AVATAR[i % COLORES_AVATAR.length],
+      iniciales:    nicks[i % nicks.length].slice(0,2).toUpperCase(),
+      esNuevo:      Math.random() < 0.15,
+    };
+  });
+}
+
+// ── ESTADO ────────────────────────────────────────────────────
+let todosUsuarios = generarUsuarios(30);
+let usuariosFiltrados = [...todosUsuarios];
+let ordenActual   = 'score';
+let periodo       = 'mes';
+let filtro        = 'todos';
+let busqueda      = '';
+
+// Mi usuario (desde localStorage o generado)
+const miUsuario = (() => {
+  const guardado = localStorage.getItem('invertircl_mi_usuario');
+  if (guardado) return JSON.parse(guardado);
+  const yo = {
+    nick:       'tú · ' + (localStorage.getItem('invertircl_nick') || 'Joaquín'),
+    score:      parseInt(localStorage.getItem('invertircl_score') || '67'),
+    wr:         parseInt(localStorage.getItem('invertircl_wr') || '58'),
+    trades:     parseInt(localStorage.getItem('invertircl_trades') || '23'),
+    pnl:        parseInt(localStorage.getItem('invertircl_pnl') || '284500'),
+    racha:      3,
+    nivel:      '⚡ Intermedio',
+    avatarColor:'#f5c518',
+    iniciales:  'JO',
+    esYo:       true,
+  };
+  return yo;
+})();
+
+// Insertar mi usuario en la lista y calcular posición
+function calcularMiPosicion() {
+  const lista = [...todosUsuarios, { ...miUsuario, esYo:true }]
+    .sort((a,b) => b.score - a.score);
+  const pos = lista.findIndex(u => u.esYo) + 1;
+  return { pos, total: lista.length };
+}
+
+// ── RENDER PODIO ──────────────────────────────────────────────
+function renderPodio() {
+  const top3 = todosUsuarios.slice(0,3);
+  const clases = ['plata','oro','bronce'];   // orden visual: 2º izq, 1º centro, 3º der
+  const orden  = [1, 0, 2];                 // índices de top3 para el orden visual
+  const coronas = ['🥈','🥇','🥉'];
+
+  document.getElementById('podioTop3').innerHTML = orden.map((idx, vi) => {
+    const u = top3[idx];
+    return `<div class="podio-item ${clases[vi]}">
+      <div class="podio-corona">${coronas[vi]}</div>
+      <div class="podio-avatar">${u.iniciales}</div>
+      <div class="podio-nick">${u.nick.slice(0,10)}</div>
+      <div class="podio-score">${u.score}</div>
+      <div class="podio-label">Score Disc.</div>
+    </div>`;
+  }).join('');
+
+  document.getElementById('totalUsuarios').textContent = todosUsuarios.length + 1; // +yo
+}
+
+// ── RENDER MI POSICIÓN ────────────────────────────────────────
+function renderMiPosicion() {
+  const { pos, total } = calcularMiPosicion();
+  const pct  = Math.round((1 - pos/total) * 100);
+  const sign = miUsuario.pnl >= 0 ? '+' : '';
+  const scoreColor = miUsuario.score >= 70 ? 'var(--verde)' : miUsuario.score >= 50 ? 'var(--amarillo)' : 'var(--rojo)';
+
+  document.getElementById('miPosicion').innerHTML = `
+    <div class="mp-left">
+      <div>
+        <div class="mp-label">Tu posición</div>
+        <div class="mp-pos">#${pos}</div>
+      </div>
+      <div style="width:1px;height:40px;background:var(--linea)"></div>
+      <div>
+        <div class="mp-label">Nickname</div>
+        <div class="mp-nick">${miUsuario.nick}</div>
+      </div>
+      <div class="mp-stats">
+        <div class="mp-stat">
+          <div class="mp-stat-label">Score Disciplina</div>
+          <div class="mp-stat-val" style="color:${scoreColor}">${miUsuario.score}/100</div>
+        </div>
+        <div class="mp-stat">
+          <div class="mp-stat-label">Win Rate</div>
+          <div class="mp-stat-val">${miUsuario.wr}%</div>
+        </div>
+        <div class="mp-stat">
+          <div class="mp-stat-label">P&L mes</div>
+          <div class="mp-stat-val ${miUsuario.pnl>=0?'pos':'neg'}">${sign}$${Math.abs(miUsuario.pnl).toLocaleString('es-CL')}</div>
+        </div>
+        <div class="mp-stat">
+          <div class="mp-stat-label">Trades</div>
+          <div class="mp-stat-val">${miUsuario.trades}</div>
+        </div>
+      </div>
+    </div>
+    <div class="mp-right">
+      <div style="font-size:0.72rem;color:var(--texto2)">Mejor que el <strong style="color:var(--amarillo)">${pct}%</strong> de traders</div>
+      <div class="mp-edu" style="margin-top:6px">Para subir: respeta tu stop loss y evita el overtrading</div>
+      <div class="mp-cta" onclick="location.href='simulator.html'" style="margin-top:6px">Ir al simulador →</div>
+    </div>
+  `;
+}
+
+// ── RENDER TABLA ──────────────────────────────────────────────
+function renderTabla() {
+  const body = document.getElementById('rankingBody');
+
+  // Aplicar filtros
+  let lista = [...todosUsuarios];
+  if (filtro === 'novatos')      lista = lista.filter(u => u.trades < 30);
+  if (filtro === 'intermedios')  lista = lista.filter(u => u.trades >= 30 && u.trades <= 100);
+  if (filtro === 'avanzados')    lista = lista.filter(u => u.trades > 100);
+  if (busqueda) lista = lista.filter(u => u.nick.includes(busqueda.toLowerCase()));
+
+  // Ordenar
+  lista.sort((a,b) => {
+    if (ordenActual === 'score') return b.score - a.score;
+    if (ordenActual === 'wr')    return b.wr - a.wr;
+    if (ordenActual === 'pnl')   return b.pnl - a.pnl;
+    return b.score - a.score;
+  });
+
+  // Re-numerar posiciones tras filtro
+  lista.forEach((u, i) => u.posFiltrada = i + 1);
+
+  body.innerHTML = lista.map((u, i) => {
+    const cambioPos = u.posAnterior - u.pos;
+    const cambioPosStr = cambioPos > 0
+      ? `<span class="pos-change up">▲${cambioPos}</span>`
+      : cambioPos < 0
+        ? `<span class="pos-change down">▼${Math.abs(cambioPos)}</span>`
+        : `<span class="pos-change same">—</span>`;
+
+    const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : '';
+
+    // Barra del score coloreada
+    const scoreColor = u.score >= 80 ? '#00e676' : u.score >= 60 ? '#f5c518' : u.score >= 40 ? '#ff6b35' : '#ff3d57';
+
+    const sign = u.pnl >= 0 ? '+' : '';
+    const rachaStr = u.racha > 0 ? `🔥 ${u.racha} seguidas` : '—';
+
+    const badgeYo  = u.esYo   ? '<span class="user-badge yo">Tú</span>' : '';
+    const badgeNew = u.esNuevo && !u.esYo ? '<span class="user-badge nuevo">Nuevo</span>' : '';
+
+    return `<tr class="ranking-row ${u.esYo?'es-yo':''}">
+      <td>
+        <div class="pos-cell">
+          <span class="pos-num" style="color:${i<3?['#f5c518','#8a9bb0','#cd7f32'][i]:'var(--texto3)'}">${u.posFiltrada}</span>
+          ${medal ? `<span class="pos-medal">${medal}</span>` : cambioPosStr}
+        </div>
+      </td>
+      <td>
+        <div class="user-cell">
+          <div class="user-avatar" style="background:${u.avatarColor}22;border-color:${u.avatarColor}44;color:${u.avatarColor}">${u.iniciales}</div>
+          <div>
+            <div class="user-nick">${u.nick}${badgeYo}${badgeNew}</div>
+            <div class="user-racha">${u.nivel}</div>
+          </div>
+        </div>
+      </td>
+      <td>
+        <div class="score-cell">
+          <div class="score-bar-track">
+            <div class="score-bar-fill" style="width:${u.score}%;background:${scoreColor}"></div>
+          </div>
+          <span class="score-val" style="color:${scoreColor}">${u.score}</span>
+        </div>
+      </td>
+      <td class="wr-cell ${u.wr>=55?'pos':u.wr<45?'neg':''}">${u.wr}%</td>
+      <td class="pnl-cell ${u.pnl>=0?'pos':'neg'}">${sign}$${Math.abs(u.pnl).toLocaleString('es-CL',{maximumFractionDigits:0})}</td>
+      <td class="trades-cell">${u.trades}</td>
+      <td class="racha-cell">${rachaStr}</td>
+      <td class="center" style="font-size:0.75rem">${u.nivel}</td>
+    </tr>`;
+  }).join('');
+}
+
+// ── CONTROLES ─────────────────────────────────────────────────
+function setPeriodo(p, btn) {
+  periodo = p;
+  document.querySelectorAll('.period-tab').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  // En producción: fetch diferente endpoint según periodo
+  // Por ahora regenerar con variación
+  todosUsuarios = generarUsuarios(periodo === 'historico' ? 50 : periodo === 'semana' ? 20 : 30);
+  renderPodio();
+  renderTabla();
+  renderMiPosicion();
+}
+
+function setFiltro(f) {
+  filtro = f;
+  renderTabla();
+}
+
+function buscar(q) {
+  busqueda = q.toLowerCase();
+  renderTabla();
+}
+
+function ordenarPor(col) {
+  ordenActual = col;
+  // Actualizar header activo
+  document.querySelectorAll('.ranking-table th').forEach(th => th.classList.remove('sort-active'));
+  renderTabla();
+}
+
+// ── MES ACTUAL ───────────────────────────────────────────────
+const MESES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+const ahora = new Date();
+document.getElementById('mesLabel').textContent = MESES[ahora.getMonth()] + ' ' + ahora.getFullYear();
+
+// ── INIT ─────────────────────────────────────────────────────
+renderPodio();
+renderMiPosicion();
+renderTabla();
+</script>
+</body>
+</html>
