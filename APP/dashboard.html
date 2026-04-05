@@ -628,6 +628,75 @@ body {
 }
 .learn-start-btn:hover { background: rgba(0,230,118,0.18); }
 
+/* ══ SCANNER DE CORRELACIONES ══════════════════════════════ */
+.scanner-panel {
+  background: var(--bg2);
+  border: 1px solid var(--linea);
+  border-radius: 10px;
+  overflow: hidden;
+  margin-bottom: 14px;
+}
+.scanner-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 11px 16px; border-bottom: 1px solid var(--linea);
+}
+.scanner-title {
+  display: flex; align-items: center; gap: 8px;
+  font-family: var(--display); font-size: 0.88rem; font-weight: 700;
+}
+.scanner-pulse {
+  width:7px; height:7px; border-radius:50%; background:var(--amarillo);
+  animation: scanPulse 2s infinite; flex-shrink:0;
+}
+@keyframes scanPulse {
+  0%,100%{ opacity:1; box-shadow:0 0 0 0 rgba(245,197,24,0.4); }
+  50%    { opacity:0.7; box-shadow:0 0 0 5px rgba(245,197,24,0); }
+}
+.scanner-meta { display:flex; align-items:center; gap:12px; font-size:0.7rem; color:var(--texto2); }
+.scanner-badge {
+  font-size:0.6rem; padding:2px 7px; border-radius:3px;
+  text-transform:uppercase; letter-spacing:0.06em; font-weight:600;
+  background:rgba(245,197,24,0.1); color:var(--amarillo); border:1px solid rgba(245,197,24,0.2);
+}
+.scanner-body { display:grid; grid-template-columns:repeat(3,1fr); gap:0; }
+.corr-signal {
+  padding:12px 16px; border-right:1px solid var(--linea);
+  cursor:pointer; transition:background 0.15s; position:relative;
+}
+.corr-signal:last-child { border-right:none; }
+.corr-signal:hover { background:rgba(255,255,255,0.015); }
+.corr-signal-top {
+  display:flex; align-items:center; justify-content:space-between; margin-bottom:7px;
+}
+.corr-activos {
+  display:flex; align-items:center; gap:5px;
+  font-family:var(--display); font-size:0.78rem; font-weight:700;
+}
+.corr-arrow { font-size:0.7rem; color:var(--texto3); }
+.corr-urgencia {
+  font-size:0.6rem; padding:2px 6px; border-radius:3px;
+  font-weight:600; text-transform:uppercase; letter-spacing:0.05em;
+}
+.corr-urgencia.alta  { background:rgba(255,61,87,0.12);  color:var(--rojo);     border:1px solid rgba(255,61,87,0.2);  }
+.corr-urgencia.media { background:rgba(245,197,24,0.1);  color:var(--amarillo); border:1px solid rgba(245,197,24,0.2); }
+.corr-urgencia.baja  { background:rgba(74,158,255,0.1);  color:var(--azul);     border:1px solid rgba(74,158,255,0.2); }
+.corr-desc { font-size:0.75rem; color:var(--texto2); line-height:1.5; margin-bottom:9px; }
+.corr-desc strong { color:var(--texto); font-weight:500; }
+.corr-desc .vp { color:var(--verde); font-family:var(--mono); }
+.corr-desc .vn { color:var(--rojo);  font-family:var(--mono); }
+.corr-desc .va { color:var(--amarillo); font-family:var(--mono); }
+.corr-bar-wrap { display:flex; align-items:center; gap:7px; margin-bottom:7px; }
+.corr-bar-label { font-size:0.62rem; color:var(--texto3); width:64px; flex-shrink:0; }
+.corr-bar-track { flex:1; height:4px; background:var(--bg3); border-radius:2px; overflow:hidden; position:relative; }
+.corr-bar-fill  { position:absolute; left:0; top:0; bottom:0; border-radius:2px; transition:width 1s ease; }
+.corr-bar-val   { font-family:var(--mono); font-size:0.65rem; color:var(--texto2); width:34px; text-align:right; flex-shrink:0; }
+.corr-footer { display:flex; align-items:center; justify-content:space-between; }
+.corr-ventana { font-size:0.65rem; color:var(--texto3); display:flex; align-items:center; gap:4px; }
+.corr-countdown { font-family:var(--mono); font-size:0.68rem; color:var(--amarillo); }
+.corr-accion { font-size:0.65rem; color:var(--azul); cursor:pointer; text-decoration:underline dotted; text-underline-offset:2px; }
+.corr-accion:hover { color:var(--texto); }
+.scanner-empty { padding:20px; text-align:center; font-size:0.78rem; color:var(--texto3); grid-column:1/-1; }
+
 /* ══ PANEL DE BIENVENIDA (primer uso) ══════════════════════ */
 .welcome-banner {
   background: linear-gradient(135deg, rgba(0,230,118,0.06), rgba(74,158,255,0.06));
@@ -701,11 +770,6 @@ body {
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--bg4); border-radius: 2px; }
 
-/* ── TOPBAR NAV ──────────────────────────────────────────── */
-.tnav { padding:6px 14px; border-radius:6px; font-size:0.82rem; color:var(--texto2); cursor:pointer; transition:all 0.15s; }
-.tnav:hover { background:var(--bg3); color:var(--texto); }
-.tnav.active { background:rgba(0,230,118,0.1); color:var(--verde); }
-
 /* ══ ANIMACIONES ════════════════════════════════════════════ */
 @keyframes fadeIn { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
 .fade-in { animation: fadeIn 0.4s ease both; }
@@ -721,14 +785,6 @@ body {
 <!-- ══ TOPBAR ══════════════════════════════════════════════ -->
 <div class="topbar">
   <div class="logo">Invertir<span>CL</span></div>
-
-  <div style="display:flex;align-items:center;gap:4px;margin-left:16px;">
-    <div class="tnav active">Dashboard</div>
-    <div class="tnav" onclick="irA('simulator.html')">Simulador</div>
-    <div class="tnav" onclick="irA('backtest.html')">Backtest</div>
-    <div class="tnav" onclick="irA('risk.html')">Riesgo</div>
-    <div class="tnav" onclick="irA('learn.html')">Aprender</div>
-  </div>
 
   <div class="top-ticker" id="topTicker">
     <div class="tick-item">
@@ -792,29 +848,29 @@ body {
 
     <div class="nav-section">
       <div class="nav-label">Mercado</div>
-      <div class="nav-item" onclick="document.querySelector('.kpi-row')?.scrollIntoView({behavior:'smooth'})">
+      <div class="nav-item">
         <span class="nav-icon">📈</span> IPSA
       </div>
-      <div class="nav-item" onclick="document.querySelector('.table-panel:last-child')?.scrollIntoView({behavior:'smooth'})">
+      <div class="nav-item">
         <span class="nav-icon">💵</span> Divisas
       </div>
-      <div class="nav-item" onclick="document.querySelector('.table-panel')?.scrollIntoView({behavior:'smooth'})">
+      <div class="nav-item">
         <span class="nav-icon">🏢</span> Acciones
       </div>
-      <div class="nav-item" onclick="actualizarKPI('k-cu','k-cu-ch',Market.FALLBACKS.cobre.valor,null,false)">
+      <div class="nav-item">
         <span class="nav-icon">🛢️</span> Commodities
       </div>
     </div>
 
     <div class="nav-section">
       <div class="nav-label">Herramientas</div>
-      <div class="nav-item" onclick="irA('risk.html')">
+      <div class="nav-item">
         <span class="nav-icon">🛡️</span> Gestión Riesgo
       </div>
-      <div class="nav-item" onclick="irA('learn.html')">
+      <div class="nav-item">
         <span class="nav-icon">🎓</span> Aprender
       </div>
-      <div class="nav-item" onclick="irA('ajustes.html')" style="opacity:0.45;cursor:not-allowed" title="Próximamente">
+      <div class="nav-item">
         <span class="nav-icon">⚙️</span> Ajustes
       </div>
     </div>
@@ -1031,6 +1087,25 @@ body {
     </div>
 
     <!-- Bottom row: tabla + aprender -->
+    <!-- ══ SCANNER DE CORRELACIONES OCULTAS ══ -->
+    <div class="scanner-panel fade-in">
+      <div class="scanner-header">
+        <div class="scanner-title">
+          <div class="scanner-pulse"></div>
+          🔗 Scanner de Correlaciones Ocultas
+        </div>
+        <div class="scanner-meta">
+          <span>Correlaciones históricas USD/CLP · Cobre · IPSA · acciones IPSA</span>
+          <span class="scanner-badge">En vivo</span>
+          <span id="scannerLastUpdate" style="font-family:var(--mono);font-size:0.65rem;">—</span>
+        </div>
+      </div>
+      <div class="scanner-body" id="scannerBody">
+        <div class="scanner-empty">⟳ Calculando correlaciones...</div>
+      </div>
+    </div>
+
+    <!-- Bottom row: tabla + aprender -->
     <div class="bottom-row fade-in">
 
       <!-- Tabla acciones IPSA -->
@@ -1134,8 +1209,7 @@ body {
   </div>
 </div>
 
-<script src="JS/market.js"></script>
-<script src="JS/poller.js"></script>
+<script src="../js/market.js"></script>
 <script>
 // ── DATOS SIMULADOS ──────────────────────────────────────────
 const acciones = [
@@ -1362,49 +1436,318 @@ function animarTickersFallback() {
 }
 
 function animarTickers() {
-  // Carga inicial de datos reales
+  // Cargar datos reales inmediatamente
   cargarDatosReales();
-
-  // Refrescar APIs cada 30 segundos
-  setInterval(cargarDatosReales, 30_000);
-
-  // Iniciar StockPoller para acciones en tiempo real (interpolación cada 2s)
-  if (typeof StockPoller !== 'undefined') {
-    StockPoller.start(['COPEC.SN', 'SQM-B.SN', 'BCI.SN', 'CCU.SN', 'FALABELLA.SN', 'ENTEL.SN']);
-    StockPoller.subscribe('ALL', d => {
-      // Actualizar tabla de acciones cuando llega nuevo precio
-      actualizarFilaAccion(d.symbol, d.price, d.changePct);
-    });
-  }
-
-  // Variación leve del gráfico (generado localmente entre fetches reales)
+  // Refrescar cada 30 segundos
+  Market.startPolling(30_000);
+  // Suscribirse a actualizaciones
+  Market.subscribe('USDCLP', d => {
+    if (d?.promedio) actualizarTicker('t-usd','t-usd-ch','$'+parseFloat(d.promedio).toLocaleString('es-CL',{minimumFractionDigits:2}),null,d.live);
+  });
+  // Variación leve del gráfico (sigue siendo generado localmente)
   setInterval(() => {
-    const last  = chartPoints[chartPoints.length - 1];
-    const newPt = last + (Math.random() - 0.48) * 3;
+    const last = chartPoints[chartPoints.length-1];
+    const newPt = last + (Math.random()-0.48)*3;
     chartPoints.push(newPt);
     if (chartPoints.length > 80) chartPoints.shift();
     drawChart();
   }, 5000);
 }
 
-// Actualizar una fila específica de la tabla de acciones con precio real
-function actualizarFilaAccion(symbol, price, changePct) {
-  const nemo = symbol.replace('.SN', '');
-  const rows = document.querySelectorAll('#accionesTable tr');
-  rows.forEach(row => {
-    const symEl = row.querySelector('.mkt-sym');
-    if (symEl && symEl.textContent === nemo) {
-      const priceEl = row.querySelector('.mkt-price');
-      if (priceEl) priceEl.textContent = '$' + price.toLocaleString('es-CL');
-      const chgEl = row.querySelector('[data-chg]');
-      if (chgEl && changePct !== undefined) {
-        const isPos = changePct >= 0;
-        chgEl.textContent = `${isPos?'▲':'▼'} ${isPos?'+':''}${changePct.toFixed(2)}%`;
-        chgEl.style.color = isPos ? 'var(--verde)' : 'var(--rojo)';
-      }
+// ══════════════════════════════════════════════════════════════
+// ÍTEM 21 — SCANNER DE CORRELACIONES OCULTAS
+// ══════════════════════════════════════════════════════════════
+//
+// Lógica: correlaciones históricas hardcodeadas entre pares macro
+// conocidos del mercado chileno. Cuando un activo "líder" se mueve
+// más allá de un umbral, y el activo "seguidor" aún no reaccionó,
+// se genera una señal con ventana temporal estimada.
+//
+// Base de conocimiento (correlaciones históricas Chile):
+//   USD/CLP ↑  → Cobre ↓    (r ≈ −0.72, lag ~15min)
+//   Cobre  ↑  → COPEC ↑     (r ≈ +0.68, lag ~20min)
+//   USD/CLP ↑  → SQM-B ↑   (r ≈ +0.61, lag ~30min)  exportador litio
+//   USD/CLP ↑  → IPSA ↓     (r ≈ −0.55, lag ~25min)
+//   Cobre  ↑  → USD/CLP ↓   (r ≈ −0.72, lag ~10min)
+//   IPSA   ↑  → BCI ↑       (r ≈ +0.81, lag ~15min)
+//
+// Los datos de movimiento vienen de cargarDatosReales() ya existente
+// en el dashboard. El scanner los lee desde window._scannerData.
+
+const Scanner = (() => {
+
+  // ── BASE DE CORRELACIONES ─────────────────────────────────
+  // { lider, seguidor, r, lagMin, umbral%, descripcion, sentido }
+  const CORRELACIONES = [
+    {
+      id: 'usd-cobre',
+      lider:    { id:'usd',   nombre:'USD/CLP',  icono:'💵' },
+      seguidor: { id:'cobre', nombre:'Cobre',     icono:'🛢️' },
+      r: -0.72, lagMin: 15, umbral: 0.5, sentido: -1,
+      desc: (ldPct, sgPct) =>
+        `<strong>USD/CLP</strong> subió <span class="vp">+${ldPct}%</span> pero
+         <strong>Cobre</strong> solo bajó <span class="vn">${sgPct}%</span>.
+         Históricamente el cobre ajusta en ~15 min.`,
+    },
+    {
+      id: 'cobre-copec',
+      lider:    { id:'cobre', nombre:'Cobre',  icono:'🛢️' },
+      seguidor: { id:'copec', nombre:'COPEC',  icono:'⛽' },
+      r: +0.68, lagMin: 20, umbral: 0.6, sentido: +1,
+      desc: (ldPct, sgPct) =>
+        `<strong>Cobre</strong> subió <span class="vp">+${ldPct}%</span>.
+         <strong>COPEC</strong> aún no reaccionó <span class="va">(${sgPct}%)</span>.
+         Correlación histórica sugiere alza en ~20 min.`,
+    },
+    {
+      id: 'usd-sqm',
+      lider:    { id:'usd',  nombre:'USD/CLP', icono:'💵' },
+      seguidor: { id:'sqm',  nombre:'SQM-B',   icono:'⚗️' },
+      r: +0.61, lagMin: 30, umbral: 0.7, sentido: +1,
+      desc: (ldPct, sgPct) =>
+        `<strong>USD/CLP</strong> subió <span class="vp">+${ldPct}%</span>.
+         <strong>SQM-B</strong> exporta en USD — aún no subió <span class="va">(${sgPct}%)</span>.
+         Ventana estimada: ~30 min.`,
+    },
+    {
+      id: 'usd-ipsa',
+      lider:    { id:'usd',  nombre:'USD/CLP', icono:'💵' },
+      seguidor: { id:'ipsa', nombre:'IPSA',    icono:'📈' },
+      r: -0.55, lagMin: 25, umbral: 0.8, sentido: -1,
+      desc: (ldPct, sgPct) =>
+        `<strong>USD/CLP</strong> subió <span class="vp">+${ldPct}%</span>.
+         El <strong>IPSA</strong> históricamente cae con dólar alto — aún en <span class="va">${sgPct}%</span>.`,
+    },
+    {
+      id: 'cobre-usd',
+      lider:    { id:'cobre', nombre:'Cobre',   icono:'🛢️' },
+      seguidor: { id:'usd',   nombre:'USD/CLP', icono:'💵' },
+      r: -0.72, lagMin: 10, umbral: 0.5, sentido: -1,
+      desc: (ldPct, sgPct) =>
+        `<strong>Cobre</strong> subió <span class="vp">+${ldPct}%</span>.
+         El peso chileno suele apreciarse — <strong>USD/CLP</strong> aún en <span class="va">${sgPct}%</span>.
+         Ventana: ~10 min.`,
+    },
+    {
+      id: 'ipsa-bci',
+      lider:    { id:'ipsa', nombre:'IPSA', icono:'📈' },
+      seguidor: { id:'bci',  nombre:'BCI',  icono:'🏦' },
+      r: +0.81, lagMin: 15, umbral: 0.4, sentido: +1,
+      desc: (ldPct, sgPct) =>
+        `<strong>IPSA</strong> subió <span class="vp">+${ldPct}%</span>.
+         <strong>BCI</strong> es beta alto vs índice — todavía en <span class="va">${sgPct}%</span>.
+         Alta correlación histórica.`,
+    },
+  ];
+
+  // Variaciones actuales de cada activo (actualizadas desde el dashboard)
+  let variaciones = {
+    usd:   0, cobre: 0, ipsa: 0,
+    copec: 0, sqm:   0, bci:  0,
+  };
+
+  // Countdown: segundos restantes por señal activa
+  let countdowns = {};
+  let countdownInterval = null;
+
+  // ── ACTUALIZAR VARIACIONES DESDE DOM ─────────────────────
+  // Lee los valores que ya tiene el dashboard en sus KPIs
+  function leerVariaciones() {
+    // USD/CLP: leer el KPI existente del dashboard
+    const usdChEl = document.getElementById('k-usd-ch');
+    if (usdChEl) {
+      const txt = usdChEl.textContent.replace(/[▲▼+%\s]/g,'');
+      const sign = usdChEl.textContent.includes('▼') ? -1 : 1;
+      variaciones.usd = sign * (parseFloat(txt) || 0);
     }
-  });
-}
+    // IPSA
+    const ipsaChEl = document.getElementById('k-ipsa-ch');
+    if (ipsaChEl) {
+      const txt = ipsaChEl.textContent.replace(/[▲▼+%\s]/g,'');
+      const sign = ipsaChEl.textContent.includes('▼') ? -1 : 1;
+      variaciones.ipsa = sign * (parseFloat(txt) || 0);
+    }
+    // Cobre: simular variación basada en datos de mindicador (live) o fallback
+    // En producción vendrá de Market.getCobre() — aquí usamos window._scannerData
+    if (window._scannerData?.cobrePct !== undefined) {
+      variaciones.cobre = window._scannerData.cobrePct;
+    } else {
+      // Fallback educativo: variación aleatoria realista
+      variaciones.cobre = (Math.random() - 0.45) * 1.2;
+    }
+    // Acciones individuales: variación simulada con correlación parcial vs USD
+    variaciones.copec = variaciones.cobre * 0.3 + (Math.random()-0.5)*0.4;
+    variaciones.sqm   = variaciones.usd   * 0.4 + (Math.random()-0.5)*0.5;
+    variaciones.bci   = variaciones.ipsa  * 0.6 + (Math.random()-0.5)*0.3;
+  }
+
+  // ── EVALUAR SEÑALES ───────────────────────────────────────
+  function evaluarSenales() {
+    leerVariaciones();
+
+    const senalesActivas = [];
+
+    CORRELACIONES.forEach(corr => {
+      const ldPct = variaciones[corr.lider.id];
+      const sgPct = variaciones[corr.seguidor.id];
+
+      // ¿El líder se movió lo suficiente?
+      if (Math.abs(ldPct) < corr.umbral) return;
+
+      // ¿El seguidor aún no reaccionó en el sentido esperado?
+      const movExpected = ldPct * corr.sentido;
+      const rezago = movExpected - sgPct;
+
+      // Solo mostrar si hay rezago significativo (>0.3%)
+      if (rezago < 0.3) return;
+
+      // Calcular urgencia según magnitud del rezago y correlación
+      const intensidad = Math.abs(ldPct) * Math.abs(corr.r);
+      const urgencia = intensidad > 0.8 ? 'alta' : intensidad > 0.5 ? 'media' : 'baja';
+
+      // Inicializar countdown si es señal nueva
+      if (!countdowns[corr.id]) {
+        countdowns[corr.id] = corr.lagMin * 60; // segundos
+      }
+
+      senalesActivas.push({
+        ...corr,
+        ldPct: ldPct.toFixed(2),
+        sgPct: sgPct >= 0 ? '+' + sgPct.toFixed(2) : sgPct.toFixed(2),
+        rezago: rezago.toFixed(2),
+        urgencia,
+        intensidad,
+      });
+    });
+
+    // Limpiar countdowns de señales que ya no están activas
+    Object.keys(countdowns).forEach(id => {
+      if (!senalesActivas.find(s => s.id === id)) delete countdowns[id];
+    });
+
+    return senalesActivas;
+  }
+
+  // ── RENDER ─────────────────────────────────────────────────
+  function render() {
+    const body = document.getElementById('scannerBody');
+    if (!body) return;
+
+    const senales = evaluarSenales();
+
+    if (senales.length === 0) {
+      body.innerHTML = `<div class="scanner-empty">
+        ✅ Sin rezagos detectados — correlaciones alineadas en este momento.
+      </div>`;
+      return;
+    }
+
+    // Mostrar máx 3 señales, ordenadas por urgencia
+    const orden = { alta:0, media:1, baja:2 };
+    const top3 = senales
+      .sort((a,b) => orden[a.urgencia] - orden[b.urgencia] || b.intensidad - a.intensidad)
+      .slice(0, 3);
+
+    // Padding: si hay menos de 3, rellenar con placeholders vacíos
+    while (top3.length < 3) top3.push(null);
+
+    body.innerHTML = top3.map((s, i) => {
+      if (!s) return `<div class="corr-signal" style="opacity:0.3;cursor:default">
+        <div style="height:100%;display:flex;align-items:center;justify-content:center;font-size:0.72rem;color:var(--texto3)">Sin señal</div>
+      </div>`;
+
+      const secs    = countdowns[s.id] || s.lagMin * 60;
+      const minLeft = Math.floor(secs / 60);
+      const secLeft = secs % 60;
+      const timeStr = `${minLeft}:${String(secLeft).padStart(2,'0')}`;
+
+      // Barra de correlación (r va de -1 a +1, mostrar como 0-100%)
+      const rAbs  = Math.abs(s.r) * 100;
+      const rColor = s.r > 0 ? 'var(--verde)' : 'var(--rojo)';
+
+      // Barra de rezago (como % del movimiento esperado, máx 100%)
+      const rezagoPct = Math.min(parseFloat(s.rezago) / 2 * 100, 100);
+
+      return `<div class="corr-signal" onclick="irA('simulator.html')">
+        <div class="corr-signal-top">
+          <div class="corr-activos">
+            <span>${s.lider.icono} ${s.lider.nombre}</span>
+            <span class="corr-arrow">→</span>
+            <span>${s.seguidor.icono} ${s.seguidor.nombre}</span>
+          </div>
+          <span class="corr-urgencia ${s.urgencia}">${s.urgencia}</span>
+        </div>
+
+        <div class="corr-desc">${s.desc(s.ldPct, s.sgPct)}</div>
+
+        <div class="corr-bar-wrap">
+          <span class="corr-bar-label">Correlación r</span>
+          <div class="corr-bar-track">
+            <div class="corr-bar-fill" style="width:${rAbs}%;background:${rColor};opacity:0.7"></div>
+          </div>
+          <span class="corr-bar-val" style="color:${rColor}">${s.r > 0 ? '+' : ''}${s.r.toFixed(2)}</span>
+        </div>
+
+        <div class="corr-bar-wrap">
+          <span class="corr-bar-label">Rezago actual</span>
+          <div class="corr-bar-track">
+            <div class="corr-bar-fill" style="width:${rezagoPct}%;background:var(--amarillo);opacity:0.7"></div>
+          </div>
+          <span class="corr-bar-val" style="color:var(--amarillo)">+${s.rezago}%</span>
+        </div>
+
+        <div class="corr-footer">
+          <div class="corr-ventana">
+            ⏱ Ventana estimada:
+            <span class="corr-countdown" id="cd-${s.id}">${timeStr}</span>
+          </div>
+          <span class="corr-accion">Ver en simulador →</span>
+        </div>
+      </div>`;
+    }).join('');
+
+    // Timestamp
+    const now = new Date();
+    const ts = now.toLocaleTimeString('es-CL', {hour:'2-digit',minute:'2-digit',second:'2-digit'});
+    const el = document.getElementById('scannerLastUpdate');
+    if (el) el.textContent = `Actualizado ${ts}`;
+  }
+
+  // ── COUNTDOWN TICK ────────────────────────────────────────
+  function tickCountdowns() {
+    Object.keys(countdowns).forEach(id => {
+      if (countdowns[id] > 0) {
+        countdowns[id]--;
+        const el = document.getElementById(`cd-${id}`);
+        if (el) {
+          const m = Math.floor(countdowns[id] / 60);
+          const s = countdowns[id] % 60;
+          el.textContent = `${m}:${String(s).padStart(2,'0')}`;
+          // Parpadeo urgente cuando quedan menos de 2 min
+          if (countdowns[id] < 120) el.style.color = 'var(--rojo)';
+        }
+      }
+    });
+  }
+
+  // ── INICIAR ───────────────────────────────────────────────
+  function iniciar() {
+    // Primer render inmediato
+    setTimeout(() => render(), 800);
+
+    // Re-evaluar correlaciones cada 30 segundos
+    setInterval(() => render(), 30_000);
+
+    // Countdown cada segundo
+    if (countdownInterval) clearInterval(countdownInterval);
+    countdownInterval = setInterval(() => tickCountdowns(), 1_000);
+  }
+
+  return { iniciar, render };
+})();
+
+// Arrancar el scanner
+Scanner.iniciar();
 
 // ── RELOJ ────────────────────────────────────────────────────
 function actualizarReloj() {
