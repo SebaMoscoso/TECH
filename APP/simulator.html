@@ -345,7 +345,7 @@ body { font-family: var(--sans); background: var(--bg); color: var(--texto); dis
   <div class="top-right">
     <div class="capital-badge">
       <span class="cap-label">Capital</span>
-      <span class="cap-val" id="capDisplay">$11.284.500</span>
+      <span class="cap-val" id="capDisplay">$10.000.000</span>
     </div>
     <div class="capital-badge">
       <span class="cap-label">P&L hoy</span>
@@ -606,8 +606,8 @@ body { font-family: var(--sans); background: var(--bg); color: var(--texto); dis
   <span id="toastMsg">Orden ejecutada correctamente</span>
 </div>
 
-<script src="../js/market.js"></script>
-<script src="../js/poller.js"></script>
+<script src="JS/market.js"></script>
+<script src="JS/poller.js"></script>
 <script>
 // ── DATOS ────────────────────────────────────────────────────
 const acciones = [
@@ -623,15 +623,69 @@ const acciones = [
   { sym:'CENCOSUD',name:'Cencosud',            precio:1780,  ch:+0.6, vol:'33.8M' },
 ];
 
+// ── ESTADO INICIAL (posiciones demo) ─────────────────────────
+const estadoInicial = {
+  posiciones: [
+    { sym:'COPEC', qty:100, entry:8183,  current:8420  },
+    { sym:'SQM-B', qty:50,  entry:38960, current:38200 },
+    { sym:'BCI',   qty:30,  entry:28100, current:28500 },
+  ]
+};
+
 let accionSel = acciones[0];
-let accion = 'comprar'; // comprar o vender
-let capital = 11284500;
-let trades = [];
-let posiciones = [
-  { sym:'COPEC',  qty:100, entry:8183, current:8420 },
-  { sym:'SQM-B',  qty:50,  entry:38960, current:38200 },
-  { sym:'BCI',    qty:30,  entry:28100, current:28500 },
-];
+let accion    = 'comprar';
+let capital   = 10_000_000; // capital inicial real
+let trades    = [];
+let posiciones = [...estadoInicial.posiciones];
+
+// ── PERSISTENCIA localStorage ─────────────────────────────────
+const STORAGE_KEY     = 'invertircl_simulador';
+const CAPITAL_INICIAL = 10_000_000;
+
+function guardarEstado() {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({
+      capital,
+      trades,
+      posiciones,
+      journal:   window._journal || [],
+      updatedAt: new Date().toISOString(),
+    }));
+  } catch(e) {
+    console.warn('[Simulador] Error guardando estado:', e.message);
+  }
+}
+
+function cargarEstado() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return false;
+    const s = JSON.parse(raw);
+    if (typeof s.capital !== 'number') return false;
+    capital         = s.capital;
+    trades          = Array.isArray(s.trades)     ? s.trades     : [];
+    posiciones      = Array.isArray(s.posiciones)  ? s.posiciones : [...estadoInicial.posiciones];
+    window._journal = Array.isArray(s.journal)    ? s.journal    : [];
+    console.log(`[Simulador] Sesión restaurada — capital $${capital.toLocaleString('es-CL')} | ${trades.length} trades`);
+    return true;
+  } catch(e) {
+    console.warn('[Simulador] Error cargando estado, iniciando desde cero:', e.message);
+    return false;
+  }
+}
+
+function resetearEstado() {
+  if (!confirm('¿Resetear la cuenta? Volverás a $10.000.000 y perderás todo el historial. Esta acción no se puede deshacer.')) return;
+  localStorage.removeItem(STORAGE_KEY);
+  capital    = CAPITAL_INICIAL;
+  trades     = [];
+  posiciones = [...estadoInicial.posiciones];
+  window._journal = [];
+  document.getElementById('capDisplay').textContent = `$${capital.toLocaleString('es-CL')}`;
+  renderRightPanel('historial');
+  showToast('🔄', 'Cuenta reseteada a $10.000.000');
+  guardarEstado();
+}
 
 // ── VELAS ────────────────────────────────────────────────────
 let candleData = [];
@@ -874,6 +928,7 @@ function ejecutarOrden() {
     sym: accionSel.sym, tipo: isCompra?'compra':'venta',
     cant, precio: accionSel.precio, stop, tp, hora,
     pnl: null,
+    timestamp: Date.now(),
   });
 
   // Actualizar capital
@@ -882,6 +937,10 @@ function ejecutarOrden() {
 
   document.getElementById('capDisplay').textContent = `$${capital.toLocaleString('es-CL')}`;
 
+  // Persistir estado
+  _guardarEstado();
+
+  guardarEstado();
   renderRightPanel('historial');
   showToast(isCompra ? '✅' : '⛔', `${isCompra?'Compra':'Venta'} de ${cant} ${accionSel.sym} ejecutada a $${accionSel.precio.toLocaleString('es-CL')}`);
 }
@@ -896,20 +955,23 @@ function switchTab(tab) {
 function renderRightPanel(tab) {
   const el = document.getElementById('rightContent');
   if (tab === 'historial') {
-    const allTrades = [
-      ...trades,
-      { sym:'SQM-B', tipo:'compra', cant:50,  precio:38960, hora:'09:32', pnl:-38000 },
-      { sym:'COPEC', tipo:'compra', cant:100, precio:8183,  hora:'09:35', pnl:+23700 },
-      { sym:'BCI',   tipo:'compra', cant:30,  precio:28100, hora:'10:12', pnl:+12000 },
-      { sym:'ENTEL', tipo:'venta',  cant:200, precio:4180,  hora:'11:04', pnl:+8400  },
-      { sym:'CMPC',  tipo:'compra', cant:500, precio:1920,  hora:'11:47', pnl:-11000 },
-    ];
+    // Mostrar trades reales + demos solo si no hay trades reales aún
+    const allTrades = trades;
+    if (allTrades.length === 0) {
+      el.innerHTML = `<div style="padding:32px 16px;text-align:center;color:var(--texto3);font-size:0.82rem">
+        <div style="font-size:1.8rem;margin-bottom:12px">📋</div>
+        <div style="color:var(--texto2)">Sin trades todavía</div>
+        <div style="margin-top:6px;font-size:0.72rem">Ejecuta tu primera orden para verla aquí.</div>
+      </div>`;
+      return;
+    }
     el.innerHTML = allTrades.map(t => {
       const isPos = t.pnl === null ? null : t.pnl >= 0;
-      return `<div class="trade-item">
+      const esDemo = t.demo === true;
+      return `<div class="trade-item" style="${esDemo ? 'opacity:0.45' : ''}">
         <div class="trade-type ${t.tipo}">${t.tipo==='compra'?'BUY':'SELL'}</div>
         <div class="trade-info">
-          <div class="trade-sym">${t.sym}</div>
+          <div class="trade-sym">${t.sym}${esDemo ? ' <span style="font-size:0.6rem;color:var(--texto3)">demo</span>' : ''}</div>
           <div class="trade-detail">${t.cant} acc. · $${t.precio.toLocaleString('es-CL')}</div>
         </div>
         <div class="trade-pnl">
@@ -920,6 +982,15 @@ function renderRightPanel(tab) {
         </div>
       </div>`;
     }).join('');
+
+    // Botón resetear solo si hay trades reales
+    if (trades.length > 0) {
+      el.innerHTML += `<div style="padding:12px 16px;border-top:1px solid var(--linea);margin-top:8px">
+        <button onclick="resetearSimulador()" style="background:transparent;border:1px solid rgba(255,61,87,0.3);color:var(--rojo);padding:6px 14px;border-radius:6px;cursor:pointer;font-size:0.72rem;width:100%">
+          🔄 Reiniciar simulador
+        </button>
+      </div>`;
+    }
   } else if (tab === 'posiciones') {
     el.innerHTML = posiciones.map(p => {
       const pnl  = (p.current - p.entry) * p.qty;
@@ -938,15 +1009,42 @@ function renderRightPanel(tab) {
       </div>`;
     }).join('');
   } else {
+    // Calcular estadísticas reales desde el historial de trades
+    const cerrados  = trades.filter(t => t.pnl !== null && t.pnl !== undefined);
+    const ganados   = cerrados.filter(t => t.pnl > 0);
+    const perdidos  = cerrados.filter(t => t.pnl < 0);
+    const pnlTotal  = cerrados.reduce((a, t) => a + t.pnl, 0);
+    const pnlAbier  = posiciones.reduce((a, p) => a + (p.current - p.entry) * p.qty, 0);
+    const avgWin    = ganados.length  ? ganados.reduce((a,t)=>a+t.pnl,0)/ganados.length : 0;
+    const avgLoss   = perdidos.length ? perdidos.reduce((a,t)=>a+t.pnl,0)/perdidos.length : 0;
+    const pf        = perdidos.length && avgLoss !== 0 ? Math.abs(avgWin * ganados.length / (avgLoss * perdidos.length)) : null;
+    const mejorTrade = cerrados.length ? cerrados.reduce((a,b)=>a.pnl>b.pnl?a:b, cerrados[0]) : null;
+    const peorTrade  = cerrados.length ? cerrados.reduce((a,b)=>a.pnl<b.pnl?a:b, cerrados[0]) : null;
+    const wr = cerrados.length ? (ganados.length / cerrados.length * 100).toFixed(1) : '—';
+    const fmtCLP = n => (n>=0?'+':'') + '$' + Math.abs(Math.round(n)).toLocaleString('es-CL');
+
+    const statsRows = [
+      ['Trades totales',   cerrados.length || '0'],
+      ['Ganados',          ganados.length  ? `${ganados.length} (${wr}%)`  : '0'],
+      ['Perdidos',         perdidos.length ? `${perdidos.length}`           : '0'],
+      ['P&L realizado',    cerrados.length ? fmtCLP(pnlTotal)              : '$0'],
+      ['P&L no realizado', fmtCLP(pnlAbier)],
+      ['Mejor trade',      mejorTrade ? `${fmtCLP(mejorTrade.pnl)} ${mejorTrade.sym}` : '—'],
+      ['Peor trade',       peorTrade  ? `${fmtCLP(peorTrade.pnl)} ${peorTrade.sym}`  : '—'],
+      ['Avg ganancia',     ganados.length  ? fmtCLP(avgWin)  : '—'],
+      ['Avg pérdida',      perdidos.length ? fmtCLP(avgLoss) : '—'],
+      ['Profit factor',    pf ? pf.toFixed(2) + 'x' : '—'],
+      ['Capital actual',   '$' + capital.toLocaleString('es-CL')],
+      ['Retorno total',    fmtCLP(capital - CAPITAL_INICIAL)],
+    ];
+
     el.innerHTML = `
       <div style="padding:16px">
-        <div style="font-size:0.78rem;color:var(--texto2);margin-bottom:14px">Últimos 30 días</div>
-        ${[
-          ['Trades totales','23'],['Ganados','15 (65.2%)'],['Perdidos','8 (34.8%)'],
-          ['P&L realizado','+$284.500'],['P&L no realizado','+$45.700'],
-          ['Mejor trade','+$84.000 ENTEL'],['Peor trade','−$38.000 SQM'],
-          ['Avg win','$42.300'],['Avg loss','−$21.100'],['Profit factor','2.0x'],
-        ].map(([l,v]) => `
+        <div style="font-size:0.78rem;color:var(--texto2);margin-bottom:14px;display:flex;justify-content:space-between;align-items:center">
+          <span>Estadísticas reales</span>
+          <span style="font-size:0.68rem;color:var(--texto3);cursor:pointer" onclick="resetearEstado()">↺ Resetear cuenta</span>
+        </div>
+        ${statsRows.map(([l,v]) => `
           <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--linea);font-size:0.82rem">
             <span style="color:var(--texto2)">${l}</span>
             <span style="font-family:var(--mono)">${v}</span>
@@ -1027,8 +1125,9 @@ function animarPrecio() {
     const precios = StockPoller.getAllPrices();
     posiciones.forEach(p => {
       const sym = p.sym.includes('.') ? p.sym : p.sym + '.SN';
-      if (precios[sym]?.price) p.current = precios[sym].price;
+      if (precios[sym]?.price) p.current = parseFloat(precios[sym].price.toFixed(2));
     });
+    _guardarEstado();
     renderRightPanel('posiciones');
   }, 5000);
 }
@@ -1050,6 +1149,9 @@ document.querySelectorAll('.cc-btn').forEach(btn => {
 });
 
 // ── INIT ─────────────────────────────────────────────────────
+// Cargar estado persistido antes de renderizar
+const estadoRestaurado = cargarEstado();
+
 seleccionarAccion(0);
 genCandles();
 drawCandles();
@@ -1059,10 +1161,30 @@ reloj();
 setInterval(reloj, 1000);
 animarPrecio();
 
-// Defaults
+// Mostrar capital real desde localStorage
+document.getElementById('capDisplay').textContent = `$${capital.toLocaleString('es-CL')}`;
+
+// Defaults inputs
 document.getElementById('stopInput').value = Math.round(accionSel.precio * 0.975);
 document.getElementById('tpInput').value   = Math.round(accionSel.precio * 1.05);
 actualizarOrden();
+
+// Banner de sesión restaurada
+if (estadoRestaurado && trades.length > 0) {
+  showToast('💾', `Sesión restaurada — ${trades.length} trades · $${capital.toLocaleString('es-CL')}`);
+}
+
+// Guardar estado periódicamente como respaldo (cada 60s)
+setInterval(guardarEstado, 60_000);
+
+// Mostrar capital guardado al cargar
+document.getElementById('capDisplay').textContent = `$${capital.toLocaleString('es-CL')}`;
+
+// Banner si hay sesión guardada
+if (_estadoGuardado && trades.length > 0) {
+  const fecha = new Date(_estadoGuardado.timestamp).toLocaleDateString('es-CL');
+  showToast('💾', `Sesión restaurada — ${trades.length} trade${trades.length>1?'s':''} · última actividad ${fecha}`);
+}
 </script>
 
 <!-- ── FOOTER DISCLAIMER LEGAL ── -->
