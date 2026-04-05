@@ -778,6 +778,93 @@ body {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.6; }
 }
+/* ══ ONBOARDING (J2) ════════════════════════════════════════ */
+#ob-backdrop {
+  position:fixed;inset:0;z-index:900;
+  background:rgba(0,0,0,0);
+  pointer-events:none;
+  transition:background 0.3s;
+}
+#ob-backdrop.active { background:rgba(0,0,0,0.65); pointer-events:all; }
+
+/* Recorte del elemento destacado */
+#ob-spotlight {
+  position:fixed;z-index:901;
+  border-radius:10px;
+  box-shadow:0 0 0 9999px rgba(0,0,0,0.65);
+  border:2px solid rgba(0,230,118,0.6);
+  transition:all 0.4s cubic-bezier(0.4,0,0.2,1);
+  pointer-events:none;
+}
+
+/* Tooltip del paso */
+#ob-tooltip {
+  position:fixed;z-index:902;
+  background:var(--bg2);
+  border:1px solid rgba(0,230,118,0.25);
+  border-radius:14px;
+  padding:20px 22px;
+  max-width:320px;
+  width:320px;
+  box-shadow:0 16px 48px rgba(0,0,0,0.5);
+  transition:all 0.35s cubic-bezier(0.4,0,0.2,1);
+  pointer-events:all;
+}
+.ob-step-num {
+  font-family:var(--mono);font-size:0.65rem;color:var(--texto3);
+  text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px;
+  display:flex;align-items:center;gap:8px;
+}
+.ob-progress-dots { display:flex;gap:5px; }
+.ob-dot {
+  width:6px;height:6px;border-radius:50%;
+  background:var(--bg4);transition:background 0.3s;
+}
+.ob-dot.active { background:var(--verde); }
+.ob-dot.done   { background:rgba(0,230,118,0.4); }
+
+.ob-title {
+  font-family:var(--display);font-size:1rem;font-weight:800;
+  margin-bottom:8px;line-height:1.2;
+}
+.ob-body {
+  font-size:0.8rem;color:var(--texto2);line-height:1.65;margin-bottom:16px;
+}
+.ob-body strong { color:var(--texto); }
+.ob-body .verde { color:var(--verde); }
+
+.ob-footer { display:flex;align-items:center;justify-content:space-between; }
+.ob-skip {
+  font-size:0.72rem;color:var(--texto3);cursor:pointer;
+  text-decoration:underline dotted;text-underline-offset:2px;
+  background:none;border:none;font-family:var(--sans);
+}
+.ob-skip:hover { color:var(--texto2); }
+.ob-nav { display:flex;gap:8px; }
+.ob-btn-prev {
+  padding:7px 14px;border-radius:7px;border:1px solid var(--linea2);
+  background:transparent;color:var(--texto2);font-size:0.78rem;
+  cursor:pointer;font-family:var(--sans);transition:all 0.15s;
+}
+.ob-btn-prev:hover { border-color:var(--verde);color:var(--texto); }
+.ob-btn-next {
+  padding:7px 18px;border-radius:7px;border:none;
+  background:var(--verde);color:#000;font-size:0.78rem;
+  font-weight:600;cursor:pointer;font-family:var(--sans);transition:all 0.15s;
+}
+.ob-btn-next:hover { background:#fff; }
+
+/* Botón flotante para relanzar onboarding */
+#ob-launcher {
+  position:fixed;bottom:24px;right:24px;z-index:800;
+  width:40px;height:40px;border-radius:50%;
+  background:rgba(0,230,118,0.12);border:1px solid rgba(0,230,118,0.25);
+  color:var(--verde);font-size:1rem;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  transition:all 0.2s;box-shadow:0 4px 16px rgba(0,0,0,0.3);
+}
+#ob-launcher:hover { background:rgba(0,230,118,0.2);transform:scale(1.05); }
+#ob-launcher title { display:none; }
 </style>
 </head>
 <body>
@@ -837,7 +924,7 @@ body {
       <div class="nav-item active">
         <span class="nav-icon">📊</span> Dashboard
       </div>
-      <div class="nav-item" onclick="irA('simulator.html')">
+      <div class="nav-item" onclick="irA('simulator.html')" id="ob-simulador">
         <span class="nav-icon">🎮</span> Simulador
         <span class="nav-badge">NUEVO</span>
       </div>
@@ -867,7 +954,7 @@ body {
       <div class="nav-item">
         <span class="nav-icon">🛡️</span> Gestión Riesgo
       </div>
-      <div class="nav-item">
+      <div class="nav-item" id="ob-aprender">
         <span class="nav-icon">🎓</span> Aprender
       </div>
       <div class="nav-item">
@@ -877,7 +964,7 @@ body {
 
     <!-- Capital simulado -->
     <div class="sidebar-bottom">
-      <div class="capital-card">
+      <div class="capital-card" id="ob-capital">
         <div class="capital-label">Capital simulado</div>
         <div class="capital-amount pos">$11.284.500</div>
         <div class="capital-sub pos">▲ +12.84% desde inicio</div>
@@ -919,7 +1006,7 @@ body {
     </div>
 
     <!-- KPIs -->
-    <div class="kpi-row fade-in">
+    <div class="kpi-row fade-in" id="ob-kpis">
       <div class="kpi-card highlight">
         <div class="edu-tip">💡 El <b>USD/CLP</b> es el tipo de cambio entre el dólar y el peso chileno. Cuando sube, el dólar vale más pesos. Afecta a empresas exportadoras como COPEC.</div>
         <div class="kpi-header">
@@ -1796,5 +1883,218 @@ setInterval(actualizarReloj, 1000);
   <a href="legal.html" style="color:#4a5568;text-decoration:underline">Privacidad</a> ·
   <a href="legal.html" style="color:#4a5568;text-decoration:underline">Disclaimer</a>
 </div>
+<!-- ══ ONBOARDING J2 ══ -->
+<div id="ob-backdrop"></div>
+<div id="ob-spotlight" style="display:none"></div>
+<div id="ob-tooltip"  style="display:none"></div>
+<button id="ob-launcher" onclick="Onboarding.iniciar()" title="Tour de bienvenida">?</button>
+
+<script>
+// ══════════════════════════════════════════════════════════════
+// J2 — ONBOARDING GUIADO (5 pasos)
+// Sin librerías externas — JS puro
+// Se activa automáticamente en el primer acceso (localStorage)
+// Puede relanzarse con el botón flotante "?"
+// ══════════════════════════════════════════════════════════════
+
+const Onboarding = (() => {
+
+  const PASOS = [
+    {
+      id:       'ipsa',
+      ancla:    'ob-kpis',
+      posicion: 'bottom',
+      titulo:   '📈 El IPSA — el pulso del mercado chileno',
+      cuerpo:   `El <strong>IPSA</strong> es el índice bursátil más importante de Chile — agrupa las 30 acciones con mayor volumen de la Bolsa de Santiago. Es el equivalente chileno del S&P500.\n\nEstos 4 KPIs muestran los indicadores más relevantes del mercado local: <span class="verde">USD/CLP, IPSA, UF y Cobre</span>. Se actualizan con datos reales.`,
+      cta:      'Entendido →',
+    },
+    {
+      id:       'simulador',
+      ancla:    'ob-simulador',
+      posicion: 'right',
+      titulo:   '🎮 El simulador — opera sin riesgo',
+      cuerpo:   `Recibes <strong>$10.000.000 CLP virtuales</strong> para invertir en el mercado chileno real.\n\nPuedes comprar y vender acciones del IPSA, ver cómo se mueven tus posiciones en tiempo real y aprender de tus errores — <span class="verde">sin arriesgar un peso real</span>.`,
+      cta:      'Siguiente →',
+    },
+    {
+      id:       'capital',
+      ancla:    'ob-capital',
+      posicion: 'right',
+      titulo:   '🧠 Score de Disciplina — la métrica que importa',
+      cuerpo:   `No medimos solo si ganaste o perdiste. El <strong>Score de Disciplina</strong> mide si operaste bien: ¿respetaste tu stop loss?, ¿evitaste el overtrading?, ¿tu R/R ratio fue ≥ 2:1?\n\nEl ranking mensual premia al trader con <span class="verde">mayor disciplina</span>, no mayor rentabilidad.`,
+      cta:      'Siguiente →',
+    },
+    {
+      id:       'primer-trade',
+      ancla:    'ob-simulador',
+      posicion: 'right',
+      titulo:   '⚡ Tu primer trade — 3 pasos',
+      cuerpo:   `<strong>1.</strong> Abre el Simulador desde el menú lateral.\n<strong>2.</strong> Busca una acción (COPEC, SQM-B, BCI...).\n<strong>3.</strong> Define tu Stop Loss y Take Profit, y ejecuta.\n\nCada operación incluye una <span class="verde">explicación educativa</span> del R/R ratio y el riesgo.`,
+      cta:      'Siguiente →',
+    },
+    {
+      id:       'aprender',
+      ancla:    'ob-aprender',
+      posicion: 'right',
+      titulo:   '🎓 Módulos de aprendizaje',
+      cuerpo:   `12 módulos organizados desde lo básico hasta lo avanzado — IPSA, USD/CLP, stop loss, velas japonesas, Markowitz y más.\n\nCada módulo tiene: introducción, puntos clave, glosario y <span class="verde">quiz interactivo</span>. Aprende mientras practicas.`,
+      cta:      '¡Empezar! 🚀',
+    },
+  ];
+
+  let pasoActual = 0;
+  let activo     = false;
+
+  // ── CALCULAR POSICIÓN DEL SPOTLIGHT ────────────────────────
+  function getRect(anclaId) {
+    const el = document.getElementById(anclaId);
+    if (!el) return null;
+    const r = el.getBoundingClientRect();
+    return { top: r.top, left: r.left, width: r.width, height: r.height };
+  }
+
+  // ── POSICIONAR TOOLTIP ──────────────────────────────────────
+  function posicionarTooltip(rect, posicion) {
+    const tt   = document.getElementById('ob-tooltip');
+    const GAP  = 16;
+    const TW   = 320;
+    const vw   = window.innerWidth;
+    const vh   = window.innerHeight;
+
+    let top, left;
+
+    if (posicion === 'bottom') {
+      top  = rect.top + rect.height + GAP;
+      left = rect.left + rect.width / 2 - TW / 2;
+    } else if (posicion === 'right') {
+      top  = rect.top + rect.height / 2 - 100; // centrado vertical aprox
+      left = rect.left + rect.width + GAP;
+    } else if (posicion === 'left') {
+      top  = rect.top + rect.height / 2 - 100;
+      left = rect.left - TW - GAP;
+    } else { // top
+      top  = rect.top - GAP - 200;
+      left = rect.left + rect.width / 2 - TW / 2;
+    }
+
+    // Guardar dentro de la pantalla
+    left = Math.max(16, Math.min(left, vw - TW - 16));
+    top  = Math.max(16, Math.min(top, vh - 220));
+
+    tt.style.top  = top  + 'px';
+    tt.style.left = left + 'px';
+  }
+
+  // ── RENDER PASO ─────────────────────────────────────────────
+  function renderPaso(idx) {
+    const paso   = PASOS[idx];
+    const rect   = getRect(paso.ancla);
+    const spot   = document.getElementById('ob-spotlight');
+    const tt     = document.getElementById('ob-tooltip');
+    const PAD    = 8;
+
+    // Spotlight
+    if (rect) {
+      spot.style.display = 'block';
+      spot.style.top     = (rect.top  - PAD) + 'px';
+      spot.style.left    = (rect.left - PAD) + 'px';
+      spot.style.width   = (rect.width  + PAD*2) + 'px';
+      spot.style.height  = (rect.height + PAD*2) + 'px';
+      posicionarTooltip(rect, paso.posicion);
+    } else {
+      // Si no encuentra el elemento, centrar
+      spot.style.display = 'none';
+      tt.style.top  = '50%';
+      tt.style.left = '50%';
+      tt.style.transform = 'translate(-50%,-50%)';
+    }
+
+    // Dots de progreso
+    const dots = PASOS.map((_,i) =>
+      `<div class="ob-dot ${i < idx ? 'done' : i === idx ? 'active' : ''}"></div>`
+    ).join('');
+
+    // Cuerpo con saltos de línea convertidos
+    const cuerpoHtml = paso.cuerpo.replace(/\n/g,'<br>');
+
+    // Tooltip content
+    tt.style.display   = 'block';
+    tt.style.transform = '';
+    tt.innerHTML = `
+      <div class="ob-step-num">
+        Paso ${idx+1} de ${PASOS.length}
+        <div class="ob-progress-dots">${dots}</div>
+      </div>
+      <div class="ob-title">${paso.titulo}</div>
+      <div class="ob-body">${cuerpoHtml}</div>
+      <div class="ob-footer">
+        <button class="ob-skip" onclick="Onboarding.saltar()">Saltar tour</button>
+        <div class="ob-nav">
+          ${idx > 0 ? `<button class="ob-btn-prev" onclick="Onboarding.anterior()">← Atrás</button>` : ''}
+          <button class="ob-btn-next" onclick="Onboarding.siguiente()">${paso.cta}</button>
+        </div>
+      </div>
+    `;
+  }
+
+  // ── API PÚBLICA ─────────────────────────────────────────────
+  function iniciar() {
+    activo     = true;
+    pasoActual = 0;
+    document.getElementById('ob-backdrop').classList.add('active');
+    document.getElementById('ob-launcher').style.display = 'none';
+    renderPaso(0);
+  }
+
+  function siguiente() {
+    if (pasoActual < PASOS.length - 1) {
+      pasoActual++;
+      renderPaso(pasoActual);
+    } else {
+      terminar();
+    }
+  }
+
+  function anterior() {
+    if (pasoActual > 0) {
+      pasoActual--;
+      renderPaso(pasoActual);
+    }
+  }
+
+  function saltar() { terminar(); }
+
+  function terminar() {
+    activo = false;
+    document.getElementById('ob-backdrop').classList.remove('active');
+    document.getElementById('ob-spotlight').style.display = 'none';
+    document.getElementById('ob-tooltip').style.display   = 'none';
+    document.getElementById('ob-launcher').style.display  = 'flex';
+    // Marcar como completado
+    localStorage.setItem('invertircl_onboarding_done', '1');
+  }
+
+  // ── AUTO-INICIO EN PRIMER ACCESO ────────────────────────────
+  function autoIniciar() {
+    const done = localStorage.getItem('invertircl_onboarding_done');
+    if (!done) {
+      // Esperar a que el dashboard esté pintado
+      setTimeout(() => iniciar(), 800);
+    }
+  }
+
+  // Reposicionar al redimensionar ventana
+  window.addEventListener('resize', () => {
+    if (activo) renderPaso(pasoActual);
+  });
+
+  return { iniciar, siguiente, anterior, saltar, autoIniciar };
+})();
+
+// Arrancar automáticamente si es el primer acceso
+window.addEventListener('DOMContentLoaded', () => {
+  Onboarding.autoIniciar();
+});
+</script>
 </body>
 </html>
