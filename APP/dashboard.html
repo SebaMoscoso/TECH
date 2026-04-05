@@ -714,6 +714,26 @@ body {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.6; }
 }
+
+/* Flash verde cuando precio sube */
+@keyframes flash-up {
+  0%   { background: rgba(0,230,118,0.2); }
+  100% { background: transparent; }
+}
+/* Flash rojo cuando precio baja */
+@keyframes flash-down {
+  0%   { background: rgba(255,61,87,0.2); }
+  100% { background: transparent; }
+}
+.flash-up   { animation: flash-up   0.6s ease-out; border-radius: 4px; }
+.flash-down { animation: flash-down 0.6s ease-out; border-radius: 4px; }
+
+/* Indicador live/fallback en KPIs */
+.kpi-status { display:inline-block; width:6px; height:6px; border-radius:50%; margin-left:6px; vertical-align:middle; flex-shrink:0; }
+.kpi-status.live     { background:var(--verde); box-shadow:0 0 4px var(--verde); animation:pulse-dot 2s infinite; }
+.kpi-status.delay    { background:var(--amarillo); }
+.kpi-status.fallback { background:var(--texto3); }
+@keyframes pulse-dot { 0%,100%{opacity:1} 50%{opacity:0.4} }
 </style>
 </head>
 <body>
@@ -868,6 +888,7 @@ body {
         <div class="edu-tip">💡 El <b>USD/CLP</b> es el tipo de cambio entre el dólar y el peso chileno. Cuando sube, el dólar vale más pesos. Afecta a empresas exportadoras como COPEC.</div>
         <div class="kpi-header">
           <span class="kpi-sym">USD / CLP</span>
+          <span class="kpi-status fallback" id="st-usd" title="Cargando..."></span>
           <span class="kpi-icon">💵</span>
         </div>
         <div class="kpi-price" id="k-usd">$927.40</div>
@@ -881,6 +902,7 @@ body {
         <div class="edu-tip">💡 El <b>IPSA</b> es el índice bursátil más importante de Chile. Agrupa las 30 acciones con mayor volumen de la Bolsa de Santiago. Es el "S&P500 chileno".</div>
         <div class="kpi-header">
           <span class="kpi-sym">IPSA</span>
+          <span class="kpi-status fallback" id="st-ipsa" title="Cargando..."></span>
           <span class="kpi-icon">📈</span>
         </div>
         <div class="kpi-price" id="k-ipsa">7.284</div>
@@ -894,6 +916,7 @@ body {
         <div class="edu-tip">💡 La <b>UF</b> (Unidad de Fomento) es una unidad de cuenta indexada a la inflación en Chile. Muchos contratos, créditos y arriendos se denominan en UF.</div>
         <div class="kpi-header">
           <span class="kpi-sym">UF</span>
+          <span class="kpi-status fallback" id="st-uf" title="Cargando..."></span>
           <span class="kpi-icon">🇨🇱</span>
         </div>
         <div class="kpi-price">$38.741</div>
@@ -907,6 +930,7 @@ body {
         <div class="edu-tip">💡 El <b>Cobre</b> (USD/lb) es el principal producto de exportación de Chile. Cuando su precio sube, el peso chileno generalmente se aprecia y el dólar baja.</div>
         <div class="kpi-header">
           <span class="kpi-sym">Cobre USD/lb</span>
+          <span class="kpi-status fallback" id="st-cu" title="Cargando..."></span>
           <span class="kpi-icon">🛢️</span>
         </div>
         <div class="kpi-price" id="k-cu">$4.824</div>
@@ -1277,24 +1301,28 @@ async function cargarDatosReales() {
     // USD/CLP
     if (data.usdclp) {
       const u = data.usdclp;
+      const esFallback = !u.live && u.fuente === 'fallback';
       const usdVal = parseFloat(u.promedio || u.venta);
       actualizarTicker('t-usd', 't-usd-ch', '$' + usdVal.toLocaleString('es-CL',{minimumFractionDigits:2,maximumFractionDigits:2}), null, u.live);
-      actualizarKPI('k-usd', 'k-usd-ch', usdVal, null, u.live);
-      // Guardar referencia para calcular variación
+      actualizarKPI('k-usd', 'k-usd-ch', usdVal, null, u.live, 'st-usd', esFallback);
       window._usdBase = window._usdBase || usdVal;
     }
 
     // UF
     if (data.uf) {
       const v = data.uf.valor;
-      document.getElementById('t-uf') && (document.getElementById('t-uf').textContent = '$' + Math.round(v).toLocaleString('es-CL'));
+      const esFallback = data.uf.fuente === 'fallback';
+      const ufEl = document.getElementById('t-uf');
+      if (ufEl) ufEl.textContent = '$' + Math.round(v).toLocaleString('es-CL');
+      actualizarStatus('st-uf', false, esFallback);
     }
 
     // Cobre
     if (data.cobre) {
       const v = data.cobre.valor;
+      const esFallback = data.cobre.fuente === 'fallback';
       actualizarTicker('t-cu', 't-cu-ch', '$' + v.toFixed(2), null, false);
-      actualizarKPI('k-cu', 'k-cu-ch', v, null, false);
+      actualizarKPI('k-cu', 'k-cu-ch', v, null, false, 'st-cu', esFallback);
     }
 
     // Euro
@@ -1306,6 +1334,7 @@ async function cargarDatosReales() {
     // IPSA
     if (data.ipsa) {
       const p = data.ipsa;
+      const esFallback = p.fuente === 'fallback';
       const isPos = p.changePct >= 0;
       const priceStr = p.price.toLocaleString('es-CL',{minimumFractionDigits:1,maximumFractionDigits:1});
       const pEl = document.getElementById('t-ipsa');
@@ -1315,7 +1344,7 @@ async function cargarDatosReales() {
         cEl.textContent = `${isPos?'▲':'▼'}${isPos?'+':''}${p.changePct}%`;
         cEl.className = `tick-chg ${isPos?'pos':'neg'}`;
       }
-      actualizarKPI('k-ipsa', 'k-ipsa-ch', p.price, p.changePct, false);
+      actualizarKPI('k-ipsa', 'k-ipsa-ch', p.price, p.changePct, false, 'st-ipsa', esFallback);
     }
 
     console.log('[Dashboard] Datos reales cargados:', Object.keys(data).filter(k=>data[k]));
@@ -1325,10 +1354,43 @@ async function cargarDatosReales() {
   }
 }
 
+// Dispara animación de flash en un elemento
+function flashEl(el, subio) {
+  if (!el) return;
+  el.classList.remove('flash-up', 'flash-down');
+  // Forzar reflow para que la animación se reinicie si ya estaba corriendo
+  void el.offsetWidth;
+  el.classList.add(subio ? 'flash-up' : 'flash-down');
+  el.addEventListener('animationend', () => {
+    el.classList.remove('flash-up', 'flash-down');
+  }, { once: true });
+}
+
+// Actualiza el punto de estado live/delay/fallback de un KPI
+function actualizarStatus(idStatus, live, esFallback) {
+  const el = document.getElementById(idStatus);
+  if (!el) return;
+  if (esFallback) {
+    el.className = 'kpi-status fallback';
+    el.title = 'Dato de respaldo — API no disponible';
+  } else if (live) {
+    el.className = 'kpi-status live';
+    el.title = '⚡ Dato en tiempo real';
+  } else {
+    el.className = 'kpi-status delay';
+    el.title = '🕒 Dato con delay (15 min)';
+  }
+}
+
 function actualizarTicker(idPrice, idChange, priceStr, pct, live) {
   const pEl = document.getElementById(idPrice);
   const cEl = document.getElementById(idChange);
   if (pEl) {
+    // Detectar si subió o bajó para el flash del ticker
+    const prevText = pEl.textContent.replace(/[^0-9.,]/g, '');
+    const prevVal  = parseFloat(prevText.replace('.', '').replace(',', '.')) || 0;
+    const newVal   = parseFloat(priceStr.replace(/[^0-9.,]/g, '').replace('.', '').replace(',', '.')) || 0;
+    if (prevVal > 0 && newVal !== prevVal) flashEl(pEl, newVal > prevVal);
     pEl.textContent = priceStr;
     if (live) pEl.title = '⚡ Precio en tiempo real';
   }
@@ -1339,15 +1401,21 @@ function actualizarTicker(idPrice, idChange, priceStr, pct, live) {
   }
 }
 
-function actualizarKPI(idPrice, idChange, val, pct, live) {
+function actualizarKPI(idPrice, idChange, val, pct, live, idStatus, esFallback) {
   const pEl = document.getElementById(idPrice);
   const cEl = document.getElementById(idChange);
-  if (pEl) pEl.textContent = val.toLocaleString('es-CL',{minimumFractionDigits:2,maximumFractionDigits:2});
+  if (pEl) {
+    // Flash comparando con valor anterior
+    const prevVal = parseFloat(pEl.textContent.replace(/[^0-9,]/g, '').replace(',', '.')) || 0;
+    if (prevVal > 0 && val !== prevVal) flashEl(pEl, val > prevVal);
+    pEl.textContent = val.toLocaleString('es-CL', { minimumFractionDigits:2, maximumFractionDigits:2 });
+  }
   if (cEl && pct !== null) {
     const isPos = pct >= 0;
     cEl.textContent = `${isPos?'▲':'▼'} ${isPos?'+':''}${pct.toFixed(2)}%`;
     cEl.className = `kpi-change ${isPos?'pos':'neg'}`;
   }
+  if (idStatus) actualizarStatus(idStatus, live, esFallback);
 }
 
 // Fallback con variación aleatoria si la API falla
