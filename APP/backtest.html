@@ -1,0 +1,892 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>InvertirCL — Backtest</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:#07090d; --bg2:#0d1117; --bg3:#131a22; --bg4:#1a222c;
+  --verde:#00e676; --rojo:#ff3d57; --azul:#4a9eff; --amarillo:#f5c518; --purpura:#9b59b6;
+  --linea:rgba(255,255,255,0.06); --linea2:rgba(255,255,255,0.1);
+  --texto:#e2e8f0; --texto2:#8a9bb0; --texto3:#4a5568;
+  --mono:'DM Mono',monospace; --sans:'DM Sans',sans-serif; --display:'Syne',sans-serif;
+  --topbar:52px;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html,body{height:100%;overflow:hidden;}
+body{font-family:var(--sans);background:var(--bg);color:var(--texto);display:flex;flex-direction:column;}
+
+/* ── TOPBAR ── */
+.topbar{height:var(--topbar);background:var(--bg2);border-bottom:1px solid var(--linea);display:flex;align-items:center;padding:0 16px;gap:12px;flex-shrink:0;}
+.logo{font-family:var(--display);font-weight:800;font-size:1rem;color:var(--verde);}
+.logo span{color:var(--texto2);}
+.top-nav{display:flex;gap:4px;margin-left:12px;}
+.tnav{padding:6px 14px;border-radius:6px;font-size:0.82rem;color:var(--texto2);cursor:pointer;transition:all 0.15s;}
+.tnav:hover{background:var(--bg3);color:var(--texto);}
+.tnav.active{background:rgba(0,230,118,0.1);color:var(--verde);}
+.top-right{margin-left:auto;display:flex;align-items:center;gap:10px;}
+.hora{font-family:var(--mono);font-size:0.78rem;color:var(--texto2);}
+
+/* ── LAYOUT ── */
+.layout{display:flex;flex:1;overflow:hidden;}
+
+/* ── PANEL IZQUIERDO — Config ── */
+.config-panel{width:300px;background:var(--bg2);border-right:1px solid var(--linea);display:flex;flex-direction:column;overflow-y:auto;flex-shrink:0;}
+.cfg-section{padding:16px;border-bottom:1px solid var(--linea);}
+.cfg-title{font-size:0.72rem;text-transform:uppercase;letter-spacing:0.08em;color:var(--texto3);margin-bottom:12px;}
+
+/* Estrategias predefinidas */
+.strat-grid{display:flex;flex-direction:column;gap:6px;}
+.strat-card{background:var(--bg3);border:1px solid var(--linea);border-radius:8px;padding:12px;cursor:pointer;transition:all 0.15s;}
+.strat-card:hover{border-color:var(--linea2);}
+.strat-card.selected{border-color:var(--verde);background:rgba(0,230,118,0.05);}
+.strat-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;}
+.strat-name{font-size:0.85rem;font-weight:500;}
+.strat-tag{font-size:0.62rem;padding:2px 7px;border-radius:3px;text-transform:uppercase;letter-spacing:0.05em;}
+.strat-desc{font-size:0.75rem;color:var(--texto2);line-height:1.4;}
+.strat-perf{display:flex;gap:12px;margin-top:8px;}
+.strat-stat{font-size:0.68rem;color:var(--texto3);}
+.strat-stat span{font-family:var(--mono);font-size:0.7rem;}
+
+/* Parámetros */
+.param-group{margin-bottom:12px;}
+.param-label{font-size:0.72rem;color:var(--texto2);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:5px;display:flex;justify-content:space-between;}
+.param-val{color:var(--verde);font-family:var(--mono);}
+.param-input{width:100%;background:var(--bg3);border:1px solid var(--linea2);border-radius:6px;padding:8px 10px;font-family:var(--mono);font-size:0.88rem;color:var(--texto);outline:none;transition:border-color 0.2s;}
+.param-input:focus{border-color:var(--verde);}
+.param-slider{width:100%;margin:5px 0;accent-color:var(--verde);}
+select.param-input{cursor:pointer;}
+
+/* Período */
+.period-tabs{display:flex;gap:4px;}
+.period-tab{flex:1;padding:7px;border-radius:5px;font-size:0.75rem;text-align:center;cursor:pointer;border:1px solid var(--linea);color:var(--texto2);transition:all 0.15s;}
+.period-tab:hover{border-color:var(--linea2);color:var(--texto);}
+.period-tab.active{background:rgba(0,230,118,0.1);border-color:rgba(0,230,118,0.3);color:var(--verde);}
+
+/* Botón run */
+.run-btn{width:100%;padding:13px;border-radius:10px;border:none;background:var(--verde);color:#000;font-family:var(--sans);font-size:0.95rem;font-weight:600;cursor:pointer;transition:all 0.2s;margin-top:4px;}
+.run-btn:hover{background:#fff;transform:translateY(-1px);}
+.run-btn.running{background:var(--bg4);color:var(--texto2);cursor:not-allowed;transform:none;}
+
+/* ── MAIN ── */
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden;}
+
+/* Estado vacío */
+.empty-state{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;color:var(--texto2);}
+.empty-icon{font-size:3rem;}
+.empty-state h3{font-family:var(--display);font-size:1.1rem;font-weight:700;color:var(--texto);}
+.empty-state p{font-size:0.85rem;text-align:center;max-width:320px;line-height:1.6;}
+
+/* Resultados */
+.results{flex:1;display:flex;flex-direction:column;gap:0;overflow:hidden;}
+
+/* KPIs resultado */
+.result-kpis{display:grid;grid-template-columns:repeat(6,1fr);gap:1px;background:var(--linea);border-bottom:1px solid var(--linea);flex-shrink:0;}
+.kpi-cell{background:var(--bg2);padding:14px 16px;}
+.kpi-cell-label{font-size:0.65rem;text-transform:uppercase;letter-spacing:0.08em;color:var(--texto3);margin-bottom:5px;}
+.kpi-cell-val{font-family:var(--display);font-size:1.1rem;font-weight:700;}
+.kpi-cell-sub{font-size:0.7rem;color:var(--texto2);margin-top:2px;font-family:var(--mono);}
+
+/* Layout resultados */
+.results-body{flex:1;display:grid;grid-template-columns:1fr 320px;overflow:hidden;}
+
+/* Gráfico equity */
+.equity-panel{display:flex;flex-direction:column;border-right:1px solid var(--linea);overflow:hidden;}
+.panel-header{padding:12px 16px;border-bottom:1px solid var(--linea);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
+.panel-title{font-size:0.85rem;font-weight:500;}
+.chart-area{flex:1;padding:12px 16px;position:relative;}
+.chart-svg{width:100%;height:100%;}
+
+/* Bottom: trades list */
+.trades-panel{overflow-y:auto;}
+.trade-row{display:flex;align-items:center;gap:8px;padding:9px 14px;border-bottom:1px solid rgba(255,255,255,0.03);font-size:0.78rem;cursor:pointer;transition:background 0.15s;}
+.trade-row:hover{background:var(--bg3);}
+.tr-num{color:var(--texto3);font-family:var(--mono);font-size:0.68rem;width:24px;flex-shrink:0;}
+.tr-type{width:42px;text-align:center;padding:2px 0;border-radius:3px;font-size:0.62rem;font-weight:600;letter-spacing:0.05em;flex-shrink:0;}
+.tr-type.buy{background:rgba(0,230,118,0.1);color:var(--verde);}
+.tr-type.sell{background:rgba(255,61,87,0.1);color:var(--rojo);}
+.tr-sym{font-weight:500;width:60px;flex-shrink:0;}
+.tr-fecha{color:var(--texto2);width:72px;flex-shrink:0;font-family:var(--mono);font-size:0.7rem;}
+.tr-price{font-family:var(--mono);width:70px;flex-shrink:0;}
+.tr-pnl{font-family:var(--mono);margin-left:auto;text-align:right;}
+.tr-pnl.pos{color:var(--verde);}
+.tr-pnl.neg{color:var(--rojo);}
+
+/* Progress bar corriendo */
+.progress-overlay{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;background:rgba(7,9,13,0.85);z-index:10;display:none;}
+.progress-bar-wrap{width:300px;background:var(--bg3);border-radius:4px;height:6px;overflow:hidden;}
+.progress-bar-fill{height:100%;background:linear-gradient(90deg,var(--verde),var(--azul));border-radius:4px;width:0;transition:width 0.3s;}
+.progress-label{font-size:0.82rem;color:var(--texto2);}
+.progress-sym{font-family:var(--mono);color:var(--verde);font-size:0.78rem;}
+
+/* Scrollbar */
+::-webkit-scrollbar{width:4px;}
+::-webkit-scrollbar-track{background:transparent;}
+::-webkit-scrollbar-thumb{background:var(--bg4);border-radius:2px;}
+
+/* Tooltip educativo */
+.edu-inline{background:rgba(74,158,255,0.06);border:1px solid rgba(74,158,255,0.15);border-radius:8px;padding:10px 12px;font-size:0.75rem;color:var(--texto2);line-height:1.6;margin-top:10px;}
+.edu-inline b{color:var(--azul);}
+
+@keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+.fade-in{animation:fadeIn 0.35s ease both;}
+
+/* ── EDITOR DE REGLAS ── */
+.mode-tabs{display:flex;border-bottom:1px solid var(--linea);flex-shrink:0;}
+.mode-tab{flex:1;padding:11px;text-align:center;font-size:0.78rem;color:var(--texto2);cursor:pointer;border-bottom:2px solid transparent;transition:all 0.15s;}
+.mode-tab:hover{color:var(--texto);}
+.mode-tab.active{color:var(--verde);border-bottom-color:var(--verde);}
+
+.editor-panel{display:none;flex-direction:column;gap:0;padding:0;}
+.editor-panel.visible{display:flex;}
+
+.rule-block{background:var(--bg3);border:1px solid var(--linea);border-radius:8px;padding:12px;margin:12px;position:relative;}
+.rule-block-title{font-size:0.68rem;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:10px;display:flex;align-items:center;justify-content:space-between;}
+.rule-block-title.entrada{color:var(--verde);}
+.rule-block-title.salida{color:var(--rojo);}
+.rule-block-title.filtros{color:var(--azul);}
+
+.rule-row{display:flex;align-items:center;gap:6px;margin-bottom:8px;font-size:0.8rem;}
+.rule-select{background:var(--bg4);border:1px solid var(--linea2);border-radius:5px;padding:5px 8px;color:var(--texto);font-family:var(--sans);font-size:0.78rem;outline:none;cursor:pointer;}
+.rule-select:focus{border-color:var(--verde);}
+.rule-input-sm{background:var(--bg4);border:1px solid var(--linea2);border-radius:5px;padding:5px 8px;color:var(--texto);font-family:var(--mono);font-size:0.78rem;width:64px;outline:none;}
+.rule-input-sm:focus{border-color:var(--verde);}
+.rule-op{color:var(--texto3);font-size:0.72rem;padding:0 2px;}
+.add-rule-btn{display:flex;align-items:center;gap:5px;font-size:0.72rem;color:var(--texto3);cursor:pointer;padding:4px 0;transition:color 0.15s;}
+.add-rule-btn:hover{color:var(--verde);}
+.del-rule{color:var(--texto3);cursor:pointer;margin-left:auto;font-size:0.8rem;transition:color 0.15s;flex-shrink:0;}
+.del-rule:hover{color:var(--rojo);}
+
+.logic-connector{display:flex;align-items:center;gap:6px;margin:6px 0 4px;font-size:0.7rem;color:var(--texto3);}
+.logic-badge{background:var(--bg4);border:1px solid var(--linea);border-radius:3px;padding:1px 8px;font-size:0.65rem;cursor:pointer;transition:all 0.15s;}
+.logic-badge.active{background:rgba(0,230,118,0.1);border-color:rgba(0,230,118,0.2);color:var(--verde);}
+
+.code-preview{background:#0a0f14;border:1px solid rgba(0,230,118,0.1);border-radius:6px;padding:10px 12px;font-family:var(--mono);font-size:0.7rem;color:var(--texto2);line-height:1.8;margin:0 12px 12px;white-space:pre-wrap;}
+.code-kw{color:var(--azul);}
+.code-val{color:var(--amarillo);}
+.code-cmt{color:var(--texto3);}
+.code-fn{color:var(--purpura);}
+</style>
+</head>
+<body>
+
+<!-- TOPBAR -->
+<div class="topbar">
+  <div class="logo">Invertir<span>CL</span></div>
+  <div class="top-nav">
+    <div class="tnav" onclick="location.href='dashboard.html'">Dashboard</div>
+    <div class="tnav" onclick="location.href='simulator.html'">Simulador</div>
+    <div class="tnav active">Backtest</div>
+  </div>
+  <div class="top-right">
+    <div class="hora" id="horaEl">09:31:42</div>
+  </div>
+</div>
+
+<div class="layout">
+
+<!-- ── CONFIG ──────────────────────────────────────────────── -->
+<div class="config-panel">
+
+  <!-- Tabs: Predefinida vs Editor -->
+  <div class="mode-tabs">
+    <div class="mode-tab active" id="tabPredefinida" onclick="setMode('predefinida')">📋 Predefinida</div>
+    <div class="mode-tab" id="tabEditor" onclick="setMode('editor')">✏️ Mis reglas</div>
+  </div>
+
+  <!-- ══ MODO PREDEFINIDA ══ -->
+  <div id="modePredefinida">
+    <!-- Estrategias -->
+    <div class="cfg-section">
+      <div class="cfg-title">Estrategia</div>
+      <div class="strat-grid" id="stratGrid"></div>
+    </div>
+    <!-- Parámetros -->
+    <div class="cfg-section" id="paramSection">
+      <div class="cfg-title">Parámetros</div>
+      <div id="paramContainer"></div>
+    </div>
+  </div>
+
+  <!-- ══ MODO EDITOR DE REGLAS ══ -->
+  <div id="modeEditor" style="display:none">
+
+    <!-- Bloque ENTRADA -->
+    <div class="rule-block">
+      <div class="rule-block-title entrada">▲ Condición de Entrada
+        <span style="font-size:0.68rem;color:var(--texto3)">¿Cuándo comprar?</span>
+      </div>
+      <div id="entradaRules">
+        <div class="rule-row" data-idx="0">
+          <select class="rule-select" onchange="updatePreview()">
+            <option>RSI(14)</option><option>EMA(9)</option><option>EMA(21)</option>
+            <option>MACD</option><option>Precio</option><option>Volumen</option>
+            <option>BB inferior</option><option>BB superior</option>
+          </select>
+          <select class="rule-select" onchange="updatePreview()">
+            <option>menor que</option><option>mayor que</option>
+            <option>cruza sobre</option><option>cruza bajo</option><option>igual a</option>
+          </select>
+          <input class="rule-input-sm" value="30" oninput="updatePreview()">
+          <span class="del-rule" onclick="delRule('entrada',0)">✕</span>
+        </div>
+      </div>
+      <div class="logic-connector">
+        <span>Combinar con:</span>
+        <span class="logic-badge active" id="entradaAND" onclick="toggleLogic('entrada','AND')">Y (AND)</span>
+        <span class="logic-badge" id="entradaOR" onclick="toggleLogic('entrada','OR')">O (OR)</span>
+      </div>
+      <div class="add-rule-btn" onclick="addRule('entrada')">+ Agregar condición</div>
+    </div>
+
+    <!-- Bloque SALIDA -->
+    <div class="rule-block">
+      <div class="rule-block-title salida">▼ Condición de Salida
+        <span style="font-size:0.68rem;color:var(--texto3)">¿Cuándo vender?</span>
+      </div>
+      <div id="salidaRules">
+        <div class="rule-row" data-idx="0">
+          <select class="rule-select" onchange="updatePreview()">
+            <option>RSI(14)</option><option>EMA(9)</option><option>EMA(21)</option>
+            <option>MACD</option><option>Precio</option><option>Volumen</option>
+            <option>BB inferior</option><option selected>BB superior</option>
+          </select>
+          <select class="rule-select" onchange="updatePreview()">
+            <option>menor que</option><option selected>mayor que</option>
+            <option>cruza sobre</option><option>cruza bajo</option><option>igual a</option>
+          </select>
+          <input class="rule-input-sm" value="70" oninput="updatePreview()">
+          <span class="del-rule" onclick="delRule('salida',0)">✕</span>
+        </div>
+      </div>
+      <div class="logic-connector">
+        <span>Combinar con:</span>
+        <span class="logic-badge active" id="salidaAND" onclick="toggleLogic('salida','AND')">Y (AND)</span>
+        <span class="logic-badge" id="salidaOR" onclick="toggleLogic('salida','OR')">O (OR)</span>
+      </div>
+      <div class="add-rule-btn" onclick="addRule('salida')">+ Agregar condición</div>
+    </div>
+
+    <!-- Bloque FILTROS -->
+    <div class="rule-block">
+      <div class="rule-block-title filtros">🛡️ Filtros de Riesgo</div>
+      <div class="rule-row">
+        <span style="font-size:0.78rem;color:var(--texto2)">Stop Loss</span>
+        <input class="rule-input-sm" id="editorStop" value="3" oninput="updatePreview()">
+        <span style="font-size:0.75rem;color:var(--texto3)">%</span>
+      </div>
+      <div class="rule-row">
+        <span style="font-size:0.78rem;color:var(--texto2)">Take Profit</span>
+        <input class="rule-input-sm" id="editorTP" value="6" oninput="updatePreview()">
+        <span style="font-size:0.75rem;color:var(--texto3)">%</span>
+      </div>
+      <div class="rule-row">
+        <span style="font-size:0.78rem;color:var(--texto2)">Capital por trade</span>
+        <input class="rule-input-sm" id="editorSize" value="20" oninput="updatePreview()">
+        <span style="font-size:0.75rem;color:var(--texto3)">%</span>
+      </div>
+    </div>
+
+    <!-- Preview código -->
+    <div style="padding:0 12px 4px;font-size:0.68rem;color:var(--texto3);text-transform:uppercase;letter-spacing:0.08em">Vista previa lógica</div>
+    <div class="code-preview" id="codePreview"></div>
+
+    <!-- Tip educativo -->
+    <div style="margin:0 12px 12px">
+      <div class="edu-inline">
+        💡 <b>Tip:</b> Una buena estrategia necesita condiciones de <b>entrada claras</b> (cuándo comprar), <b>salida definida</b> (cuándo vender) y <b>gestión del riesgo</b> (stop loss). Sin stop loss, un trade malo puede borrar muchos buenos.
+      </div>
+    </div>
+  </div>
+
+  <!-- Acción y período -->
+  <div class="cfg-section">
+    <div class="cfg-title">Activo</div>
+    <select class="param-input" id="activoSel" style="margin-bottom:12px">
+      <option value="COPEC">COPEC — Copec S.A.</option>
+      <option value="SQM">SQM-B — SQM Serie B</option>
+      <option value="BCI">BCI — Banco BCI</option>
+      <option value="FALABELLA">FALABELLA — Falabella</option>
+      <option value="ENTEL">ENTEL — Entel Chile</option>
+      <option value="USDCLP">USD/CLP — Tipo de cambio</option>
+    </select>
+
+    <div class="cfg-title">Período histórico</div>
+    <div class="period-tabs">
+      <div class="period-tab" onclick="setPeriod('3M',this)">3M</div>
+      <div class="period-tab active" onclick="setPeriod('6M',this)">6M</div>
+      <div class="period-tab" onclick="setPeriod('1A',this)">1A</div>
+      <div class="period-tab" onclick="setPeriod('3A',this)">3A</div>
+    </div>
+
+    <div class="param-group" style="margin-top:12px">
+      <div class="param-label">Capital inicial <span class="param-val" id="capLabel">$10.000.000</span></div>
+      <input type="range" class="param-slider" min="1000000" max="50000000" step="500000" value="10000000"
+        oninput="document.getElementById('capLabel').textContent='$'+parseInt(this.value).toLocaleString('es-CL')">
+    </div>
+
+    <div class="edu-inline">
+      💡 El backtest prueba tu estrategia en datos históricos reales. Si hubiera funcionado antes, <b>no garantiza</b> que funcione en el futuro — pero es la mejor forma de validar una idea antes de arriesgar dinero.
+    </div>
+  </div>
+
+  <!-- Botón -->
+  <div class="cfg-section">
+    <button class="run-btn" id="runBtn" onclick="correrBacktest()">
+      🔬 Correr Backtest
+    </button>
+  </div>
+
+</div>
+
+<!-- ── MAIN ──────────────────────────────────────────────────── -->
+<div class="main" id="mainPanel">
+
+  <!-- Estado vacío -->
+  <div class="empty-state" id="emptyState">
+    <div class="empty-icon">🔬</div>
+    <h3>Configura tu backtest</h3>
+    <p>Selecciona una estrategia, ajusta los parámetros y presiona <b>Correr Backtest</b> para ver cómo habría funcionado en el mercado chileno.</p>
+    <div style="display:flex;flex-direction:column;gap:8px;margin-top:8px;width:100%;max-width:360px">
+      <div style="background:var(--bg2);border:1px solid var(--linea);border-radius:8px;padding:12px 16px;font-size:0.82rem;display:flex;align-items:center;gap:10px">
+        <span style="font-size:1.1rem">1️⃣</span>
+        <span style="color:var(--texto2)">Elige una estrategia del panel izquierdo</span>
+      </div>
+      <div style="background:var(--bg2);border:1px solid var(--linea);border-radius:8px;padding:12px 16px;font-size:0.82rem;display:flex;align-items:center;gap:10px">
+        <span style="font-size:1.1rem">2️⃣</span>
+        <span style="color:var(--texto2)">Ajusta los parámetros y el período</span>
+      </div>
+      <div style="background:var(--bg2);border:1px solid var(--linea);border-radius:8px;padding:12px 16px;font-size:0.82rem;display:flex;align-items:center;gap:10px">
+        <span style="font-size:1.1rem">3️⃣</span>
+        <span style="color:var(--texto2)">Presiona Correr Backtest y ve los resultados</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Overlay progreso -->
+  <div class="progress-overlay" id="progressOverlay">
+    <div style="font-size:0.9rem;color:var(--texto)">Simulando estrategia en datos históricos...</div>
+    <div class="progress-bar-wrap">
+      <div class="progress-bar-fill" id="progressFill"></div>
+    </div>
+    <div class="progress-sym" id="progressSym">Cargando datos COPEC...</div>
+    <div class="progress-label" id="progressPct">0%</div>
+  </div>
+
+  <!-- Resultados (oculto hasta correr) -->
+  <div class="results fade-in" id="resultsPanel" style="display:none">
+
+    <!-- KPIs -->
+    <div class="result-kpis" id="kpisPanel"></div>
+
+    <!-- Body resultados -->
+    <div class="results-body">
+
+      <!-- Gráfico equity + comparativa -->
+      <div class="equity-panel">
+        <div class="panel-header">
+          <div class="panel-title" id="chartTitle">Curva de capital — COPEC · RSI Mean Reversion · 6M</div>
+          <div style="display:flex;gap:12px;font-size:0.72rem">
+            <span style="color:var(--verde)">— Estrategia</span>
+            <span style="color:var(--texto3)">— Buy & Hold</span>
+            <span style="color:var(--azul)">— IPSA</span>
+          </div>
+        </div>
+        <div class="chart-area">
+          <svg class="chart-svg" id="equityChart" viewBox="0 0 700 240" preserveAspectRatio="none">
+            <defs>
+              <linearGradient id="eqGrad" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="#00e676" stop-opacity="0.15"/>
+                <stop offset="100%" stop-color="#00e676" stop-opacity="0"/>
+              </linearGradient>
+            </defs>
+            <!-- Grid -->
+            <line x1="0" y1="60"  x2="700" y2="60"  stroke="rgba(255,255,255,0.04)" stroke-width="1"/>
+            <line x1="0" y1="120" x2="700" y2="120" stroke="rgba(255,255,255,0.04)" stroke-width="1"/>
+            <line x1="0" y1="180" x2="700" y2="180" stroke="rgba(255,255,255,0.04)" stroke-width="1"/>
+            <!-- Líneas del gráfico -->
+            <path id="eqArea" fill="url(#eqGrad)" stroke="none"/>
+            <path id="eqLine" fill="none" stroke="#00e676" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <path id="bhLine" fill="none" stroke="rgba(255,255,255,0.2)" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="4,4"/>
+            <path id="ipsaLine" fill="none" stroke="rgba(74,158,255,0.4)" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="2,4"/>
+            <!-- Marcadores de trades -->
+            <g id="tradeMarkers"></g>
+            <!-- Labels eje Y -->
+            <text id="yTop"    x="4" y="16"  font-family="DM Mono" font-size="9" fill="rgba(255,255,255,0.25)"></text>
+            <text id="yMid"    x="4" y="126" font-family="DM Mono" font-size="9" fill="rgba(255,255,255,0.25)"></text>
+            <text id="yBottom" x="4" y="236" font-family="DM Mono" font-size="9" fill="rgba(255,255,255,0.25)"></text>
+          </svg>
+        </div>
+
+        <!-- Distribución mensual -->
+        <div style="padding:8px 16px;border-top:1px solid var(--linea);display:flex;gap:4px;align-items:flex-end;height:56px" id="monthlyBars">
+        </div>
+      </div>
+
+      <!-- Lista de trades -->
+      <div class="trades-panel" id="tradesPanel">
+        <div class="panel-header" style="position:sticky;top:0;z-index:1;background:var(--bg2)">
+          <div class="panel-title">Trades simulados</div>
+          <span id="tradeCount" style="font-size:0.72rem;color:var(--texto2)"></span>
+        </div>
+        <!-- generado por JS -->
+      </div>
+
+    </div>
+  </div>
+
+</div><!-- /main -->
+</div><!-- /layout -->
+
+<script>
+// ── ESTRATEGIAS ───────────────────────────────────────────────
+const estrategias = [
+  {
+    id:'rsi', name:'RSI Mean Reversion', tag:'Básica', tagColor:'var(--verde)',
+    desc:'Compra cuando el RSI cae bajo 30 (sobrevendido) y vende cuando sube sobre 70.',
+    wr:'62%', pf:'1.8x',
+    params:[
+      {id:'rsi_per', label:'Período RSI', type:'range', min:7, max:28, val:14},
+      {id:'rsi_ob',  label:'Sobrecomprado', type:'range', min:60, max:85, val:70},
+      {id:'rsi_os',  label:'Sobrevendido', type:'range', min:15, max:40, val:30},
+      {id:'stop_pct',label:'Stop Loss %', type:'range', min:1, max:10, val:3, suffix:'%'},
+    ]
+  },
+  {
+    id:'ema', name:'Cruce EMA', tag:'Tendencia', tagColor:'var(--azul)',
+    desc:'Compra cuando la EMA rápida cruza sobre la lenta. Clásica estrategia de tendencia.',
+    wr:'55%', pf:'2.1x',
+    params:[
+      {id:'ema_fast', label:'EMA Rápida', type:'range', min:5, max:30, val:9},
+      {id:'ema_slow', label:'EMA Lenta', type:'range', min:20, max:100, val:21},
+      {id:'stop_pct', label:'Stop Loss %', type:'range', min:1, max:10, val:4, suffix:'%'},
+    ]
+  },
+  {
+    id:'bb', name:'Bandas de Bollinger', tag:'Reversión', tagColor:'var(--amarillo)',
+    desc:'Opera rebotes en las bandas. Compra en la banda inferior, vende en la superior.',
+    wr:'58%', pf:'1.6x',
+    params:[
+      {id:'bb_per',  label:'Período', type:'range', min:10, max:30, val:20},
+      {id:'bb_std',  label:'Desviaciones', type:'range', min:1, max:3, val:2, step:0.1},
+      {id:'stop_pct',label:'Stop Loss %', type:'range', min:1, max:8, val:3, suffix:'%'},
+    ]
+  },
+  {
+    id:'macd', name:'MACD + Señal', tag:'Momentum', tagColor:'var(--purpura)',
+    desc:'Entra cuando el MACD cruza la línea de señal. Confirma con histograma positivo.',
+    wr:'52%', pf:'2.3x',
+    params:[
+      {id:'macd_fast', label:'MACD Rápido', type:'range', min:8, max:20, val:12},
+      {id:'macd_slow', label:'MACD Lento', type:'range', min:20, max:40, val:26},
+      {id:'macd_sig',  label:'Señal', type:'range', min:5, max:15, val:9},
+      {id:'stop_pct',  label:'Stop Loss %', type:'range', min:1, max:10, val:5, suffix:'%'},
+    ]
+  },
+];
+
+let stratSel = estrategias[0];
+let period = '6M';
+let backData = null;
+
+// ── RENDER ESTRATEGIAS ────────────────────────────────────────
+function renderStrategias() {
+  const g = document.getElementById('stratGrid');
+  g.innerHTML = estrategias.map(s => `
+    <div class="strat-card ${s.id===stratSel.id?'selected':''}" onclick="selStrat('${s.id}')">
+      <div class="strat-header">
+        <span class="strat-name">${s.name}</span>
+        <span class="strat-tag" style="background:${s.tagColor}22;color:${s.tagColor}">${s.tag}</span>
+      </div>
+      <div class="strat-desc">${s.desc}</div>
+      <div class="strat-perf">
+        <div class="strat-stat">WR hist. <span style="color:var(--verde)">${s.wr}</span></div>
+        <div class="strat-stat">PF hist. <span style="color:var(--azul)">${s.pf}</span></div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function selStrat(id) {
+  stratSel = estrategias.find(s => s.id === id);
+  renderStrategias();
+  renderParams();
+}
+
+// ── RENDER PARÁMETROS ─────────────────────────────────────────
+function renderParams() {
+  const c = document.getElementById('paramContainer');
+  c.innerHTML = stratSel.params.map(p => `
+    <div class="param-group">
+      <div class="param-label">${p.label} <span class="param-val" id="pv_${p.id}">${p.val}${p.suffix||''}</span></div>
+      <input type="range" class="param-slider" min="${p.min}" max="${p.max}" value="${p.val}" step="${p.step||1}"
+        oninput="document.getElementById('pv_${p.id}').textContent=this.value+'${p.suffix||''}'">
+    </div>
+  `).join('');
+}
+
+function setPeriod(p, el) {
+  period = p;
+  document.querySelectorAll('.period-tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+}
+
+// ── GENERAR DATOS SIMULADOS ───────────────────────────────────
+function generarBacktest() {
+  const periodos = {'3M':63,'6M':126,'1A':252,'3A':756};
+  const n = periodos[period] || 126;
+  const capital = 10000000;
+  let equity = [capital], bh = [capital], ipsa = [capital];
+  let pos = null, trades_sim = [];
+  let precio = 8000 + Math.random()*1000;
+
+  // Generar precios históricos
+  const precios = [precio];
+  for (let i=1; i<n; i++) {
+    precio = precios[i-1] * (1 + (Math.random()-0.48)*0.02);
+    precios.push(precio);
+  }
+
+  // Simular estrategia RSI simple
+  let cap = capital;
+  for (let i=20; i<n; i++) {
+    const slice = precios.slice(Math.max(0,i-14), i+1);
+    const rsi = calcRSI(slice);
+    const isOversold  = rsi < 30;
+    const isOverbought = rsi > 70;
+
+    if (!pos && isOversold) {
+      const qty = Math.floor(cap * 0.95 / precios[i]);
+      pos = { entry: precios[i], qty, idx: i };
+    } else if (pos && (isOverbought || precios[i] < pos.entry * 0.97)) {
+      const pnl = (precios[i] - pos.entry) * pos.qty;
+      cap += pnl;
+      const d = new Date(2025, Math.floor(i/21), (i%21)+1);
+      trades_sim.push({
+        num: trades_sim.length+1,
+        sym: document.getElementById('activoSel').value,
+        tipo: 'buy', sell_tipo: 'sell',
+        entry: pos.entry, exit: precios[i],
+        qty: pos.qty,
+        pnl, pct: (precios[i]-pos.entry)/pos.entry*100,
+        fecha: `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}`,
+      });
+      pos = null;
+    }
+    equity.push(cap);
+    bh.push(capital * precios[i] / precios[0]);
+    ipsa.push(capital * (1 + (Math.random()-0.48)*0.015 + i*0.0003));
+  }
+
+  return { equity, bh, ipsa, trades: trades_sim, precios };
+}
+
+function calcRSI(prices) {
+  if (prices.length < 2) return 50;
+  let gains=0, losses=0;
+  for (let i=1; i<prices.length; i++) {
+    const d = prices[i]-prices[i-1];
+    if (d>0) gains+=d; else losses-=d;
+  }
+  const rs = gains/(losses||1);
+  return 100 - 100/(1+rs);
+}
+
+// ── CORRER BACKTEST ───────────────────────────────────────────
+function correrBacktest() {
+  const btn = document.getElementById('runBtn');
+  const overlay = document.getElementById('progressOverlay');
+  btn.className = 'run-btn running';
+  btn.textContent = '⏳ Corriendo...';
+  document.getElementById('emptyState').style.display = 'none';
+  document.getElementById('resultsPanel').style.display = 'none';
+  overlay.style.display = 'flex';
+
+  const activo = document.getElementById('activoSel').value;
+  const steps = ['Cargando datos históricos...', `Calculando indicadores ${stratSel.name}...`, 'Simulando trades...', 'Calculando métricas...', 'Generando resultados...'];
+  let step = 0;
+  const fill = document.getElementById('progressFill');
+
+  const interval = setInterval(() => {
+    step++;
+    const pct = (step/steps.length)*100;
+    fill.style.width = pct+'%';
+    document.getElementById('progressSym').textContent = steps[Math.min(step, steps.length-1)];
+    document.getElementById('progressPct').textContent = Math.round(pct)+'%';
+    if (step >= steps.length) {
+      clearInterval(interval);
+      setTimeout(() => {
+        overlay.style.display = 'none';
+        backData = generarBacktest();
+        mostrarResultados();
+        btn.className = 'run-btn';
+        btn.textContent = '🔬 Correr Backtest';
+      }, 400);
+    }
+  }, 280);
+}
+
+// ── MOSTRAR RESULTADOS ────────────────────────────────────────
+function mostrarResultados() {
+  const { equity, bh, ipsa, trades } = backData;
+  const cap0 = equity[0];
+  const capF = equity[equity.length-1];
+  const retorno = (capF-cap0)/cap0*100;
+  const retBH   = (bh[bh.length-1]-cap0)/cap0*100;
+
+  // Métricas
+  const wins  = trades.filter(t=>t.pnl>0);
+  const losses= trades.filter(t=>t.pnl<0);
+  const wr    = trades.length ? (wins.length/trades.length*100).toFixed(1) : 0;
+  const gW    = wins.reduce((a,t)=>a+t.pnl,0);
+  const gL    = Math.abs(losses.reduce((a,t)=>a+t.pnl,0));
+  const pf    = gL>0 ? (gW/gL).toFixed(2) : '∞';
+  const maxDD = calcMaxDD(equity);
+  const sharpe = ((retorno/100 - 0.05) / (stdDev(equity)/cap0*Math.sqrt(252))).toFixed(2);
+
+  // KPIs
+  const kpisData = [
+    {label:'Retorno', val:`${retorno>=0?'+':''}${retorno.toFixed(1)}%`, sub:`vs B&H: ${retBH>=0?'+':''}${retBH.toFixed(1)}%`, color:retorno>=0?'var(--verde)':'var(--rojo)'},
+    {label:'Win Rate', val:`${wr}%`, sub:`${wins.length}W / ${losses.length}L`, color:'var(--texto)'},
+    {label:'Profit Factor', val:pf, sub:'(>1.5 = bueno)', color:pf>=1.5?'var(--verde)':'var(--amarillo)'},
+    {label:'Max Drawdown', val:`${maxDD.toFixed(1)}%`, sub:'caída máx. capital', color:'var(--rojo)'},
+    {label:'Sharpe Ratio', val:sharpe, sub:'(>1 = bueno)', color:sharpe>=1?'var(--verde)':'var(--amarillo)'},
+    {label:'Total Trades', val:trades.length, sub:`${period} de datos`, color:'var(--texto)'},
+  ];
+
+  document.getElementById('kpisPanel').innerHTML = kpisData.map(k=>`
+    <div class="kpi-cell">
+      <div class="kpi-cell-label">${k.label}</div>
+      <div class="kpi-cell-val" style="color:${k.color}">${k.val}</div>
+      <div class="kpi-cell-sub">${k.sub}</div>
+    </div>
+  `).join('');
+
+  // Gráfico equity
+  drawEquityChart(equity, bh, ipsa, trades);
+
+  // Barras mensuales
+  drawMonthlyBars(equity);
+
+  // Trades
+  const activo = document.getElementById('activoSel').value;
+  document.getElementById('chartTitle').textContent =
+    `Curva de capital — ${activo} · ${stratSel.name} · ${period}`;
+  document.getElementById('tradeCount').textContent = `${trades.length} trades`;
+
+  const tp = document.getElementById('tradesPanel');
+  // Mantener header, agregar trades
+  const header = tp.querySelector('.panel-header').outerHTML;
+  tp.innerHTML = header + trades.slice().reverse().map(t=>`
+    <div class="trade-row">
+      <span class="tr-num">#${t.num}</span>
+      <span class="tr-type buy">BUY</span>
+      <span class="tr-type sell" style="margin-left:-4px">SELL</span>
+      <span class="tr-sym">${t.sym}</span>
+      <span class="tr-fecha">${t.fecha}</span>
+      <span class="tr-price">$${Math.round(t.entry).toLocaleString('es-CL')}</span>
+      <span class="tr-pnl ${t.pnl>=0?'pos':'neg'}">${t.pnl>=0?'+':''}$${Math.abs(Math.round(t.pnl)).toLocaleString('es-CL')} (${t.pct>=0?'+':''}${t.pct.toFixed(1)}%)</span>
+    </div>
+  `).join('');
+
+  document.getElementById('resultsPanel').style.display = 'flex';
+}
+
+function drawEquityChart(eq, bh, ipsa, trades) {
+  const allVals = [...eq, ...bh, ...ipsa];
+  const minV = Math.min(...allVals);
+  const maxV = Math.max(...allVals);
+  const W=700, H=220;
+  const toX = i => (i/(eq.length-1))*W;
+  const toY = v => H - ((v-minV)/(maxV-minV))*H;
+
+  const pathD = (arr) => arr.map((v,i)=>`${i===0?'M':'L'}${toX(i).toFixed(1)},${toY(v).toFixed(1)}`).join(' ');
+
+  document.getElementById('eqLine').setAttribute('d', pathD(eq));
+  document.getElementById('eqArea').setAttribute('d', pathD(eq) + ` L${W},${H} L0,${H} Z`);
+  document.getElementById('bhLine').setAttribute('d', pathD(bh));
+  document.getElementById('ipsaLine').setAttribute('d', pathD(ipsa));
+
+  // Labels
+  document.getElementById('yTop').textContent    = '$'+Math.round(maxV/1000000*10)/10+'M';
+  document.getElementById('yMid').textContent    = '$'+Math.round((maxV+minV)/2/1000000*10)/10+'M';
+  document.getElementById('yBottom').textContent = '$'+Math.round(minV/1000000*10)/10+'M';
+
+  // Marcadores de trades (triángulos)
+  const markers = document.getElementById('tradeMarkers');
+  markers.innerHTML = trades.slice(0, 30).map(t => {
+    const x = toX(Math.min(t.idx||10, eq.length-1));
+    const y = toY(eq[Math.min(t.idx||10, eq.length-1)]);
+    const isPos = t.pnl >= 0;
+    return `<circle cx="${x}" cy="${y}" r="3" fill="${isPos?'var(--verde)':'var(--rojo)'}" opacity="0.7"/>`;
+  }).join('');
+}
+
+function drawMonthlyBars(equity) {
+  const container = document.getElementById('monthlyBars');
+  const n = equity.length;
+  const monthSize = Math.floor(n / 6);
+  const monthly = [];
+  for (let i=0; i<6; i++) {
+    const start = equity[i*monthSize];
+    const end   = equity[Math.min((i+1)*monthSize-1, n-1)];
+    monthly.push((end-start)/start*100);
+  }
+  const maxAbs = Math.max(...monthly.map(Math.abs), 1);
+  const meses = ['Oct','Nov','Dic','Ene','Feb','Mar'];
+  container.innerHTML = monthly.map((m,i)=>`
+    <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px">
+      <span style="font-size:0.62rem;font-family:var(--mono);color:${m>=0?'var(--verde)':'var(--rojo)'}">${m>=0?'+':''}${m.toFixed(1)}%</span>
+      <div style="width:100%;background:var(--bg4);border-radius:2px;height:30px;display:flex;align-items:${m>=0?'flex-end':'flex-start'}">
+        <div style="width:100%;height:${Math.abs(m)/maxAbs*30}px;background:${m>=0?'rgba(0,230,118,0.4)':'rgba(255,61,87,0.4)'};border-radius:2px"></div>
+      </div>
+      <span style="font-size:0.62rem;color:var(--texto3)">${meses[i]}</span>
+    </div>
+  `).join('');
+}
+
+function calcMaxDD(equity) {
+  let peak = equity[0], maxDD = 0;
+  for (const v of equity) {
+    if (v > peak) peak = v;
+    const dd = (peak-v)/peak*100;
+    if (dd > maxDD) maxDD = dd;
+  }
+  return maxDD;
+}
+
+function stdDev(arr) {
+  const mean = arr.reduce((a,b)=>a+b,0)/arr.length;
+  return Math.sqrt(arr.reduce((a,b)=>a+(b-mean)**2,0)/arr.length);
+}
+
+// ── MODO (predefinida vs editor) ─────────────────────────────
+let modoActual = 'predefinida';
+let entradaLogic = 'AND', salidaLogic = 'AND';
+let entradaCount = 1, salidaCount = 1;
+
+function setMode(mode) {
+  modoActual = mode;
+  document.getElementById('tabPredefinida').classList.toggle('active', mode==='predefinida');
+  document.getElementById('tabEditor').classList.toggle('active', mode==='editor');
+  document.getElementById('modePredefinida').style.display = mode==='predefinida' ? '' : 'none';
+  document.getElementById('modeEditor').style.display = mode==='editor' ? '' : 'none';
+  if (mode==='editor') updatePreview();
+}
+
+// ── EDITOR DE REGLAS ─────────────────────────────────────────
+const indicadores = ['RSI(14)','EMA(9)','EMA(21)','EMA(50)','MACD','MACD Señal','Precio','Volumen','BB inferior','BB superior','ATR(14)','Cierre anterior'];
+const operadores  = ['menor que','mayor que','cruza sobre','cruza bajo','igual a','entre'];
+
+function addRule(bloque) {
+  const container = document.getElementById(`${bloque}Rules`);
+  const idx = bloque==='entrada' ? entradaCount++ : salidaCount++;
+
+  const div = document.createElement('div');
+  div.className = 'rule-row';
+  div.dataset.idx = idx;
+  div.innerHTML = `
+    <select class="rule-select" onchange="updatePreview()">
+      ${indicadores.map(i=>`<option>${i}</option>`).join('')}
+    </select>
+    <select class="rule-select" onchange="updatePreview()">
+      ${operadores.map(o=>`<option>${o}</option>`).join('')}
+    </select>
+    <input class="rule-input-sm" value="50" oninput="updatePreview()">
+    <span class="del-rule" onclick="this.parentElement.remove();updatePreview()">✕</span>
+  `;
+  container.appendChild(div);
+  updatePreview();
+}
+
+function delRule(bloque, idx) {
+  const container = document.getElementById(`${bloque}Rules`);
+  const rows = container.querySelectorAll('.rule-row');
+  if (rows.length > 1) {
+    container.querySelector(`[data-idx="${idx}"]`)?.remove();
+  }
+  updatePreview();
+}
+
+function toggleLogic(bloque, val) {
+  if (bloque==='entrada') {
+    entradaLogic = val;
+    document.getElementById('entradaAND').classList.toggle('active', val==='AND');
+    document.getElementById('entradaOR').classList.toggle('active', val==='OR');
+  } else {
+    salidaLogic = val;
+    document.getElementById('salidaAND').classList.toggle('active', val==='AND');
+    document.getElementById('salidaOR').classList.toggle('active', val==='OR');
+  }
+  updatePreview();
+}
+
+function getRules(bloque) {
+  const rows = document.querySelectorAll(`#${bloque}Rules .rule-row`);
+  return Array.from(rows).map(r => {
+    const sels = r.querySelectorAll('select');
+    const inp  = r.querySelector('input');
+    return { ind: sels[0]?.value, op: sels[1]?.value, val: inp?.value };
+  });
+}
+
+function opToCode(op) {
+  return {
+    'menor que':'<', 'mayor que':'>', 'cruza sobre':'cruza_sobre',
+    'cruza bajo':'cruza_bajo', 'igual a':'==', 'entre':'entre'
+  }[op] || op;
+}
+
+function updatePreview() {
+  const entrada = getRules('entrada');
+  const salida  = getRules('salida');
+  const stop  = document.getElementById('editorStop')?.value || 3;
+  const tp    = document.getElementById('editorTP')?.value || 6;
+  const size  = document.getElementById('editorSize')?.value || 20;
+  const eJoin = entradaLogic === 'AND' ? 'and' : 'or';
+  const sJoin = salidaLogic  === 'AND' ? 'and' : 'or';
+
+  const eLines = entrada.map(r =>
+    `  <span class='code-fn'>${r.ind}</span> <span class='code-kw'>${opToCode(r.op)}</span> <span class='code-val'>${r.val}</span>`
+  ).join(`\n  <span class='code-kw'>${eJoin}</span>\n`);
+
+  const sLines = salida.map(r =>
+    `  <span class='code-fn'>${r.ind}</span> <span class='code-kw'>${opToCode(r.op)}</span> <span class='code-val'>${r.val}</span>`
+  ).join(`\n  <span class='code-kw'>${sJoin}</span>\n`);
+
+  document.getElementById('codePreview').innerHTML =
+`<span class='code-cmt'># Condición de entrada (COMPRAR)</span>
+<span class='code-kw'>si</span> (
+${eLines}
+):
+  comprar(<span class='code-val'>${size}%</span> del capital)
+  stop_loss = precio × <span class='code-val'>${(1-stop/100).toFixed(3)}</span>
+  take_profit = precio × <span class='code-val'>${(1+tp/100).toFixed(3)}</span>
+
+<span class='code-cmt'># Condición de salida (VENDER)</span>
+<span class='code-kw'>si</span> (
+${sLines}
+):
+  vender_todo()`;
+}
+
+// ── RELOJ ─────────────────────────────────────────────────────
+function reloj() {
+  const el = document.getElementById('horaEl');
+  if (!el) return;
+  const n = new Date();
+  el.textContent = [n.getHours(),n.getMinutes(),n.getSeconds()].map(v=>String(v).padStart(2,'0')).join(':');
+}
+
+// ── INIT ──────────────────────────────────────────────────────
+renderStrategias();
+renderParams();
+reloj();
+setInterval(reloj, 1000);
+updatePreview();
+</script>
+</body>
+</html>

@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>InvertirCL — Test APIs</title>
+<script src="JS/market.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500&family=DM+Mono:wght@400&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#07090d;--bg2:#0d1117;--verde:#00e676;--rojo:#ff3d57;--azul:#4a9eff;--amarillo:#f5c518;--texto:#e2e8f0;--texto2:#8a9bb0;--texto3:#4a5568;--linea:rgba(255,255,255,0.06);}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'DM Mono',monospace;background:var(--bg);color:var(--texto);padding:32px;font-size:0.82rem;line-height:1.8;}
+h1{font-family:'Syne',sans-serif;font-size:1.8rem;font-weight:800;color:var(--verde);margin-bottom:6px;}
+.sub{color:var(--texto2);font-family:'DM Sans',sans-serif;font-size:0.88rem;margin-bottom:28px;}
+.controls{display:flex;gap:12px;margin-bottom:28px;flex-wrap:wrap;}
+button{background:var(--verde);color:#000;border:none;padding:10px 22px;border-radius:8px;cursor:pointer;font-weight:700;font-family:'DM Sans',sans-serif;font-size:0.88rem;transition:opacity 0.15s;}
+button:hover{opacity:0.85;}
+button.sec{background:var(--bg2);color:var(--texto);border:1px solid var(--linea);}
+.progress{height:3px;background:var(--bg2);border-radius:2px;margin-bottom:24px;overflow:hidden;display:none;}
+.progress-fill{height:100%;background:var(--verde);border-radius:2px;transition:width 0.3s;}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(420px,1fr));gap:12px;}
+.test{background:var(--bg2);border:1px solid var(--linea);border-radius:10px;padding:16px;transition:border-color 0.2s;}
+.test.ok{border-color:rgba(0,230,118,0.25);}
+.test.err{border-color:rgba(255,61,87,0.25);}
+.test-name{color:var(--azul);font-weight:500;margin-bottom:8px;font-family:'DM Sans',sans-serif;}
+.status{display:inline-flex;align-items:center;gap:6px;font-size:0.75rem;margin-bottom:6px;}
+.status.ok{color:var(--verde);}
+.status.err{color:var(--rojo);}
+.status.run{color:var(--amarillo);}
+pre{white-space:pre-wrap;word-break:break-all;font-size:0.72rem;color:var(--texto2);max-height:200px;overflow-y:auto;border-top:1px solid var(--linea);padding-top:8px;margin-top:8px;}
+.spinner{display:inline-block;animation:spin 0.8s linear infinite;}
+@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+.summary{background:var(--bg2);border:1px solid var(--linea);border-radius:10px;padding:16px 20px;margin-bottom:20px;display:none;font-family:'DM Sans',sans-serif;}
+.summary.show{display:block;}
+.sum-title{font-size:0.72rem;text-transform:uppercase;letter-spacing:0.08em;color:var(--texto3);margin-bottom:8px;}
+.sum-row{display:flex;gap:24px;}
+.sum-item .num{font-family:'Syne',sans-serif;font-size:1.4rem;font-weight:800;}
+.sum-item .label{font-size:0.72rem;color:var(--texto2);}
+</style>
+</head>
+<body>
+
+<h1>🧪 Test de APIs — InvertirCL</h1>
+<div class="sub">Verifica que market.js se conecta correctamente a todas las fuentes de datos. Abre en Chrome directamente — sin servidor.</div>
+
+<div class="controls">
+  <button onclick="runAll()">▶ Correr todos los tests</button>
+  <button class="sec" onclick="clearResults()">↺ Limpiar</button>
+</div>
+
+<div class="progress" id="progressBar">
+  <div class="progress-fill" id="progressFill"></div>
+</div>
+
+<div class="summary" id="summary">
+  <div class="sum-title">Resumen</div>
+  <div class="sum-row">
+    <div class="sum-item"><div class="num" id="sum-ok" style="color:var(--verde)">0</div><div class="label">OK</div></div>
+    <div class="sum-item"><div class="num" id="sum-err" style="color:var(--rojo)">0</div><div class="label">Fallidos</div></div>
+    <div class="sum-item"><div class="num" id="sum-time">0ms</div><div class="label">Tiempo total</div></div>
+  </div>
+</div>
+
+<div class="grid" id="results"></div>
+
+<script>
+const TESTS = [
+  {
+    name: '01. USD/CLP — DolarApi.com',
+    fn: () => Market.getUSDCLP(),
+  },
+  {
+    name: '02. UF — mindicador.cl',
+    fn: () => Market.getUF(),
+  },
+  {
+    name: '03. IPC — mindicador.cl',
+    fn: () => Market.getIPC(),
+  },
+  {
+    name: '04. TPM — mindicador.cl',
+    fn: () => Market.getTPM(),
+  },
+  {
+    name: '05. Cobre — mindicador.cl',
+    fn: () => Market.getCobre(),
+  },
+  {
+    name: '06. Euro — mindicador.cl',
+    fn: () => Market.getEuro(),
+  },
+  {
+    name: '07. IPSA — Yahoo Finance (proxy)',
+    fn: () => Market.getIPSA(),
+  },
+  {
+    name: '08. COPEC.SN — Yahoo Finance',
+    fn: () => Market.getAccion('COPEC'),
+  },
+  {
+    name: '09. SQM-B.SN — Yahoo Finance',
+    fn: () => Market.getAccion('SQM-B'),
+  },
+  {
+    name: '10. getAll() — todos en paralelo',
+    fn: () => Market.getAll(),
+  },
+  {
+    name: '11. Histórico IPSA 1 mes',
+    fn: async () => {
+      const h = await Market.getHistorico('^IPSA', '1mo', '1d');
+      return { candles: h.length, primero: h[0], ultimo: h[h.length - 1] };
+    },
+  },
+  {
+    name: '12. Indicadores técnicos (RSI, EMA, MACD, BB)',
+    fn: async () => {
+      const h = await Market.getHistorico('^IPSA', '3mo', '1d');
+      if (h.length === 0) throw new Error('Sin datos históricos');
+      const closes = h.map(c => c.close);
+      return {
+        puntos:  closes.length,
+        RSI14:   Market.Indicators.RSI(closes, 14),
+        EMA9:    Market.Indicators.EMA(closes, 9),
+        EMA21:   Market.Indicators.EMA(closes, 21),
+        SMA50:   Market.Indicators.SMA(closes, 50),
+        MACD:    Market.Indicators.MACD(closes),
+        BB20:    Market.Indicators.BB(closes, 20, 2),
+        ATR14:   Market.Indicators.ATR(h, 14),
+        VWAP:    Market.Indicators.VWAP(h),
+      };
+    },
+  },
+  {
+    name: '13. MatchingEngine — costos de operación',
+    fn: () => Market.MatchingEngine.costos(8420, 100, 'buy'),
+  },
+  {
+    name: '14. MatchingEngine — ejecutar orden',
+    fn: () => Market.MatchingEngine.ejecutar(
+      { symbol: 'COPEC', side: 'buy', cantidad: 100, tipo: 'market' },
+      8420
+    ),
+  },
+  {
+    name: '15. Performance — métricas de sesión',
+    fn: () => {
+      const trades = [
+        { pnl: 38000 }, { pnl: -14000 }, { pnl: 52000 },
+        { pnl: -8000  }, { pnl: 21000  }, { pnl: -31000 },
+      ];
+      return Market.Performance.calcular(trades, 10_000_000);
+    },
+  },
+  {
+    name: '16. Sharpe & Sortino Ratio',
+    fn: () => {
+      const retornos = [0.012, -0.008, 0.021, -0.015, 0.009, 0.003, -0.006, 0.018];
+      return {
+        Sharpe:  Market.Indicators.Sharpe(retornos),
+        Sortino: Market.Indicators.Sortino(retornos),
+        MaxDD:   Market.Indicators.MaxDrawdown([100, 112, 108, 121, 110, 118, 130]),
+      };
+    },
+  },
+  {
+    name: '17. Cache status',
+    fn: () => Market.cacheStatus(),
+  },
+];
+
+async function runAll() {
+  clearResults();
+  const bar       = document.getElementById('progressBar');
+  const fill      = document.getElementById('progressFill');
+  const container = document.getElementById('results');
+  bar.style.display = 'block';
+
+  let ok = 0, err = 0;
+  const startAll = Date.now();
+
+  for (let i = 0; i < TESTS.length; i++) {
+    const t   = TESTS[i];
+    const div = document.createElement('div');
+    div.className = 'test';
+    div.innerHTML = `
+      <div class="test-name">${t.name}</div>
+      <div class="status run"><span class="spinner">⟳</span> Ejecutando...</div>
+      <pre>Esperando...</pre>
+    `;
+    container.appendChild(div);
+
+    const status = div.querySelector('.status');
+    const pre    = div.querySelector('pre');
+    const start  = Date.now();
+
+    try {
+      const result = await t.fn();
+      const ms     = Date.now() - start;
+      div.classList.add('ok');
+      status.className = 'status ok';
+      status.innerHTML = `✅ OK — ${ms}ms`;
+      pre.textContent  = JSON.stringify(result, null, 2);
+      ok++;
+    } catch (e) {
+      div.classList.add('err');
+      status.className = 'status err';
+      status.innerHTML = `❌ ERROR`;
+      pre.textContent  = e.message;
+      err++;
+    }
+
+    fill.style.width = `${(i + 1) / TESTS.length * 100}%`;
+  }
+
+  // Resumen final
+  const totalMs = Date.now() - startAll;
+  const summary = document.getElementById('summary');
+  summary.classList.add('show');
+  document.getElementById('sum-ok').textContent   = ok;
+  document.getElementById('sum-err').textContent  = err;
+  document.getElementById('sum-time').textContent = `${totalMs}ms`;
+  bar.style.display = 'none';
+}
+
+function clearResults() {
+  document.getElementById('results').innerHTML   = '';
+  document.getElementById('summary').classList.remove('show');
+  document.getElementById('progressFill').style.width = '0%';
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>InvertirCL — Gestión de Riesgo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:#07090d; --bg2:#0d1117; --bg3:#131a22; --bg4:#1a222c;
+  --verde:#00e676; --rojo:#ff3d57; --azul:#4a9eff; --amarillo:#f5c518; --purpura:#9b59b6;
+  --linea:rgba(255,255,255,0.06); --linea2:rgba(255,255,255,0.1);
+  --texto:#e2e8f0; --texto2:#8a9bb0; --texto3:#4a5568;
+  --mono:'DM Mono',monospace; --sans:'DM Sans',sans-serif; --display:'Syne',sans-serif;
+  --topbar:52px;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html,body{height:100%;overflow:hidden;}
+body{font-family:var(--sans);background:var(--bg);color:var(--texto);display:flex;flex-direction:column;}
+
+.topbar{height:var(--topbar);background:var(--bg2);border-bottom:1px solid var(--linea);display:flex;align-items:center;padding:0 16px;gap:12px;flex-shrink:0;}
+.logo{font-family:var(--display);font-weight:800;font-size:1rem;color:var(--verde);}
+.logo span{color:var(--texto2);}
+.top-nav{display:flex;gap:4px;margin-left:12px;}
+.tnav{padding:6px 14px;border-radius:6px;font-size:0.82rem;color:var(--texto2);cursor:pointer;transition:all 0.15s;}
+.tnav:hover{background:var(--bg3);color:var(--texto);}
+.tnav.active{background:rgba(0,230,118,0.1);color:var(--verde);}
+.hora{margin-left:auto;font-family:var(--mono);font-size:0.78rem;color:var(--texto2);}
+
+.main{flex:1;overflow-y:auto;padding:20px;display:flex;flex-direction:column;gap:16px;}
+
+/* ── HEADER ── */
+.page-header{display:flex;align-items:flex-end;justify-content:space-between;}
+.page-title{font-family:var(--display);font-size:1.4rem;font-weight:800;letter-spacing:-0.02em;}
+.page-sub{font-size:0.82rem;color:var(--texto2);margin-top:4px;}
+.risk-score-badge{display:flex;flex-direction:column;align-items:center;gap:4px;}
+.risk-score{font-family:var(--display);font-size:2rem;font-weight:800;color:var(--verde);}
+.risk-label{font-size:0.7rem;color:var(--texto2);text-transform:uppercase;letter-spacing:0.08em;}
+
+/* ── GRID PRINCIPAL ── */
+.risk-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;}
+.risk-grid-wide{display:grid;grid-template-columns:1.5fr 1fr;gap:16px;}
+
+.card{background:var(--bg2);border:1px solid var(--linea);border-radius:12px;overflow:hidden;}
+.card-header{padding:14px 18px;border-bottom:1px solid var(--linea);display:flex;align-items:center;justify-content:space-between;}
+.card-title{font-size:0.85rem;font-weight:500;display:flex;align-items:center;gap:8px;}
+.card-body{padding:18px;}
+
+/* ── CALCULADORA POSITION SIZING ── */
+.calc-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.calc-field{display:flex;flex-direction:column;gap:5px;}
+.calc-label{font-size:0.7rem;color:var(--texto2);text-transform:uppercase;letter-spacing:0.06em;}
+.calc-input{background:var(--bg3);border:1px solid var(--linea2);border-radius:7px;padding:9px 11px;font-family:var(--mono);font-size:0.9rem;color:var(--texto);outline:none;width:100%;transition:border-color 0.2s;}
+.calc-input:focus{border-color:var(--verde);}
+.calc-result{background:rgba(0,230,118,0.06);border:1px solid rgba(0,230,118,0.15);border-radius:10px;padding:14px;margin-top:14px;}
+.calc-result-row{display:flex;justify-content:space-between;align-items:center;padding:5px 0;font-size:0.85rem;}
+.calc-result-label{color:var(--texto2);}
+.calc-result-val{font-family:var(--mono);font-weight:500;}
+.calc-sep{border-top:1px solid rgba(0,230,118,0.15);margin:8px 0;}
+.calc-result-main{font-size:1rem;font-weight:600;}
+.calc-btn{width:100%;margin-top:12px;padding:11px;background:var(--verde);color:#000;border:none;border-radius:8px;font-family:var(--sans);font-size:0.9rem;font-weight:600;cursor:pointer;transition:all 0.2s;}
+.calc-btn:hover{background:#fff;transform:translateY(-1px);}
+
+/* ── INDICADORES DE RIESGO ── */
+.risk-indicators{display:flex;flex-direction:column;gap:10px;}
+.risk-ind{display:flex;align-items:center;gap:12px;padding:12px;background:var(--bg3);border-radius:8px;}
+.risk-ind-icon{font-size:1.2rem;flex-shrink:0;}
+.risk-ind-info{flex:1;}
+.risk-ind-name{font-size:0.82rem;font-weight:500;margin-bottom:2px;}
+.risk-ind-val{font-family:var(--mono);font-size:0.78rem;color:var(--texto2);}
+.risk-ind-bar-wrap{width:80px;flex-shrink:0;}
+.risk-ind-bar{height:6px;background:var(--bg4);border-radius:3px;overflow:hidden;}
+.risk-ind-fill{height:100%;border-radius:3px;transition:width 0.6s ease;}
+.risk-ind-pct{font-family:var(--mono);font-size:0.7rem;margin-top:3px;text-align:right;}
+
+/* ── PORTAFOLIO RIESGO ── */
+.port-risk-table{width:100%;border-collapse:collapse;font-size:0.78rem;}
+.port-risk-table th{padding:8px 10px;text-align:left;font-size:0.65rem;text-transform:uppercase;letter-spacing:0.07em;color:var(--texto3);border-bottom:1px solid var(--linea);font-weight:400;}
+.port-risk-table td{padding:9px 10px;border-bottom:1px solid rgba(255,255,255,0.03);}
+.port-risk-table tr:hover td{background:var(--bg3);}
+.dd-bar{display:inline-block;height:4px;border-radius:2px;vertical-align:middle;margin-right:6px;}
+
+/* ── REGLAS DE ORO ── */
+.rules-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.rule-card{background:var(--bg3);border:1px solid var(--linea);border-radius:10px;padding:14px;}
+.rule-num{font-family:var(--display);font-size:1.8rem;font-weight:800;opacity:0.15;line-height:1;margin-bottom:6px;}
+.rule-title{font-size:0.85rem;font-weight:500;margin-bottom:5px;}
+.rule-desc{font-size:0.75rem;color:var(--texto2);line-height:1.5;}
+.rule-example{margin-top:8px;font-family:var(--mono);font-size:0.72rem;background:var(--bg4);border-radius:5px;padding:6px 8px;}
+
+/* ── SEMÁFORO ── */
+.semaforo{display:flex;flex-direction:column;gap:8px;align-items:center;padding:8px 0;}
+.semaforo-item{display:flex;align-items:center;gap:10px;width:100%;padding:10px 14px;border-radius:8px;}
+.sem-dot{width:14px;height:14px;border-radius:50%;flex-shrink:0;}
+.sem-info{flex:1;}
+.sem-label{font-size:0.82rem;font-weight:500;}
+.sem-range{font-size:0.72rem;color:var(--texto2);margin-top:2px;}
+.sem-current{font-family:var(--mono);font-size:0.78rem;}
+
+/* Scrollbar */
+::-webkit-scrollbar{width:4px;}
+::-webkit-scrollbar-track{background:transparent;}
+::-webkit-scrollbar-thumb{background:var(--bg4);border-radius:2px;}
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.fade-in{animation:fadeIn 0.4s ease both;}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="logo">Invertir<span>CL</span></div>
+  <div class="top-nav">
+    <div class="tnav" onclick="location.href='dashboard.html'">Dashboard</div>
+    <div class="tnav" onclick="location.href='simulator.html'">Simulador</div>
+    <div class="tnav" onclick="location.href='backtest.html'">Backtest</div>
+    <div class="tnav active">Riesgo</div>
+    <div class="tnav" onclick="location.href='learn.html'">Aprender</div>
+  </div>
+  <div class="hora" id="horaEl">09:31:42</div>
+</div>
+
+<div class="main">
+
+  <!-- Header -->
+  <div class="page-header fade-in">
+    <div>
+      <div class="page-title">🛡️ Gestión de Riesgo</div>
+      <div class="page-sub">Calcula tu tamaño de posición, controla el riesgo y protege tu capital</div>
+    </div>
+    <div class="risk-score-badge">
+      <div class="risk-score" id="riskScore">72</div>
+      <div class="risk-label">Score de riesgo</div>
+      <div style="font-size:0.7rem;color:var(--verde)">Conservador ✓</div>
+    </div>
+  </div>
+
+  <!-- Fila 1: Calculadora + Indicadores -->
+  <div class="risk-grid-wide fade-in">
+
+    <!-- Calculadora Position Sizing -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">🧮 Calculadora de Posición</div>
+        <span style="font-size:0.72rem;color:var(--texto2)">¿Cuántas acciones comprar?</span>
+      </div>
+      <div class="card-body">
+        <div class="calc-grid">
+          <div class="calc-field">
+            <div class="calc-label">Capital total ($)</div>
+            <input class="calc-input" id="cCapital" value="10000000" oninput="calcular()">
+          </div>
+          <div class="calc-field">
+            <div class="calc-label">Riesgo máx. por trade</div>
+            <input class="calc-input" id="cRiesgo" value="2" oninput="calcular()" style="max-width:80px">
+            <span style="font-size:0.72rem;color:var(--texto2);margin-top:2px">% del capital</span>
+          </div>
+          <div class="calc-field">
+            <div class="calc-label">Precio de entrada ($)</div>
+            <input class="calc-input" id="cEntrada" value="8420" oninput="calcular()">
+          </div>
+          <div class="calc-field">
+            <div class="calc-label">Stop Loss ($)</div>
+            <input class="calc-input" id="cStop" value="8210" oninput="calcular()">
+          </div>
+        </div>
+
+        <div class="calc-result" id="calcResult">
+          <div class="calc-result-row">
+            <span class="calc-result-label">Riesgo en $ por acción</span>
+            <span class="calc-result-val" id="rPorAccion">$210</span>
+          </div>
+          <div class="calc-result-row">
+            <span class="calc-result-label">Capital máximo en riesgo</span>
+            <span class="calc-result-val" id="rCapitalRiesgo">$200.000</span>
+          </div>
+          <div class="calc-sep"></div>
+          <div class="calc-result-row calc-result-main">
+            <span class="calc-result-label">📦 Acciones a comprar</span>
+            <span class="calc-result-val pos" id="rAcciones" style="font-size:1.2rem;color:var(--verde)">952</span>
+          </div>
+          <div class="calc-result-row">
+            <span class="calc-result-label">Total de la operación</span>
+            <span class="calc-result-val" id="rTotal">$8.016.240</span>
+          </div>
+          <div class="calc-result-row">
+            <span class="calc-result-label">% del portafolio</span>
+            <span class="calc-result-val" id="rPctPortfolio">80.2%</span>
+          </div>
+        </div>
+
+        <div style="background:rgba(245,197,24,0.06);border:1px solid rgba(245,197,24,0.15);border-radius:8px;padding:10px 12px;margin-top:12px;font-size:0.75rem;color:var(--texto2);line-height:1.6">
+          💡 <b style="color:var(--amarillo)">Regla del 2%:</b> Nunca arriesgues más del 2% de tu capital en un solo trade. Así puedes perder 50 trades seguidos y aún conservar tu capital.
+        </div>
+      </div>
+    </div>
+
+    <!-- Indicadores de riesgo del portafolio -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">📊 Tu portafolio actual</div>
+      </div>
+      <div class="card-body">
+        <div class="risk-indicators" id="riskIndicators"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Fila 2: Tabla posiciones + Semáforo -->
+  <div class="risk-grid-wide fade-in">
+
+    <!-- Tabla riesgo por posición -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">📋 Riesgo por posición</div>
+        <span style="font-size:0.72rem;color:var(--texto2)">Capital simulado</span>
+      </div>
+      <div class="card-body" style="padding:0">
+        <table class="port-risk-table">
+          <thead>
+            <tr>
+              <th>Acción</th>
+              <th>Posición</th>
+              <th>Stop Loss</th>
+              <th>Pérdida máx.</th>
+              <th>% capital</th>
+              <th>Drawdown</th>
+            </tr>
+          </thead>
+          <tbody id="posTable"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Semáforo de riesgo -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">🚦 Semáforo de riesgo</div>
+      </div>
+      <div class="card-body">
+        <div class="semaforo" id="semaforo"></div>
+        <div style="margin-top:14px;padding:12px;background:var(--bg3);border-radius:8px;font-size:0.78rem;color:var(--texto2);line-height:1.6">
+          <b style="color:var(--texto)">Tu estado actual:</b> Riesgo <span style="color:var(--verde)">BAJO</span>. Tu portafolio está bien diversificado y el drawdown máximo está controlado. Puedes abrir nuevas posiciones con confianza.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Fila 3: Reglas de oro -->
+  <div class="card fade-in">
+    <div class="card-header">
+      <div class="card-title">⭐ Reglas de oro del riesgo</div>
+      <span style="font-size:0.72rem;color:var(--texto2)">Lo que todo inversor debe saber</span>
+    </div>
+    <div class="card-body">
+      <div class="rules-grid" id="rulesGrid"></div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ── CALCULAR POSITION SIZING ──────────────────────────────────
+function calcular() {
+  const capital = parseFloat(document.getElementById('cCapital').value) || 0;
+  const riesgo  = parseFloat(document.getElementById('cRiesgo').value) || 2;
+  const entrada = parseFloat(document.getElementById('cEntrada').value) || 0;
+  const stop    = parseFloat(document.getElementById('cStop').value) || 0;
+
+  const capitalRiesgo = capital * riesgo / 100;
+  const riesgoPorAcc  = Math.abs(entrada - stop);
+  const acciones      = riesgoPorAcc > 0 ? Math.floor(capitalRiesgo / riesgoPorAcc) : 0;
+  const total         = acciones * entrada;
+  const pctPort       = capital > 0 ? (total / capital * 100).toFixed(1) : 0;
+
+  document.getElementById('rPorAccion').textContent    = '$' + riesgoPorAcc.toLocaleString('es-CL',{maximumFractionDigits:0});
+  document.getElementById('rCapitalRiesgo').textContent= '$' + capitalRiesgo.toLocaleString('es-CL',{maximumFractionDigits:0});
+  document.getElementById('rAcciones').textContent     = acciones.toLocaleString('es-CL');
+  document.getElementById('rTotal').textContent        = '$' + total.toLocaleString('es-CL',{maximumFractionDigits:0});
+  document.getElementById('rPctPortfolio').textContent = pctPort + '%';
+
+  // Color warning
+  const col = pctPort > 30 ? 'var(--rojo)' : pctPort > 20 ? 'var(--amarillo)' : 'var(--verde)';
+  document.getElementById('rPctPortfolio').style.color = col;
+}
+
+// ── INDICADORES DE RIESGO ─────────────────────────────────────
+const indicadores = [
+  { icon:'📉', name:'Drawdown máximo', val:'-8.4%',  pct:28, color:'var(--verde)',  label:'Bajo' },
+  { icon:'🔄', name:'Correlación portafolio', val:'0.31',  pct:31, color:'var(--verde)',  label:'Baja' },
+  { icon:'⚖️', name:'Concentración', val:'45%',  pct:45, color:'var(--amarillo)', label:'Moderada' },
+  { icon:'📊', name:'Beta del portafolio', val:'0.72',  pct:36, color:'var(--verde)',  label:'Defensivo' },
+  { icon:'💧', name:'Liquidez media', val:'Alta',   pct:80, color:'var(--verde)',  label:'Alta' },
+];
+
+function renderIndicadores() {
+  const c = document.getElementById('riskIndicators');
+  c.innerHTML = indicadores.map(ind => `
+    <div class="risk-ind">
+      <span class="risk-ind-icon">${ind.icon}</span>
+      <div class="risk-ind-info">
+        <div class="risk-ind-name">${ind.name}</div>
+        <div class="risk-ind-val">${ind.val} — <span style="color:${ind.color}">${ind.label}</span></div>
+      </div>
+      <div class="risk-ind-bar-wrap">
+        <div class="risk-ind-bar">
+          <div class="risk-ind-fill" style="width:${ind.pct}%;background:${ind.color}"></div>
+        </div>
+        <div class="risk-ind-pct" style="color:${ind.color}">${ind.pct}%</div>
+      </div>
+    </div>
+  `).join('');
+}
+
+// ── TABLA POSICIONES ──────────────────────────────────────────
+const posiciones = [
+  { sym:'COPEC', qty:100, precio:8420, stop:8210, entry:8183 },
+  { sym:'SQM-B', qty:50,  precio:38200, stop:36800, entry:38960 },
+  { sym:'BCI',   qty:30,  precio:28500, stop:27400, entry:28100 },
+];
+const capital = 11284500;
+
+function renderPosTable() {
+  const tb = document.getElementById('posTable');
+  tb.innerHTML = posiciones.map(p => {
+    const posVal   = p.qty * p.precio;
+    const maxLoss  = (p.precio - p.stop) * p.qty;
+    const pctCap   = (posVal / capital * 100).toFixed(1);
+    const dd       = ((p.precio - p.stop) / p.precio * 100).toFixed(1);
+    const ddWidth  = Math.min(parseFloat(dd) * 5, 100);
+    const color    = parseFloat(dd) > 5 ? 'var(--rojo)' : parseFloat(dd) > 3 ? 'var(--amarillo)' : 'var(--verde)';
+    return `<tr>
+      <td style="font-weight:500">${p.sym}</td>
+      <td style="font-family:var(--mono)">$${posVal.toLocaleString('es-CL',{maximumFractionDigits:0})}</td>
+      <td style="font-family:var(--mono);color:var(--rojo)">$${p.stop.toLocaleString('es-CL')}</td>
+      <td style="font-family:var(--mono);color:var(--rojo)">-$${maxLoss.toLocaleString('es-CL',{maximumFractionDigits:0})}</td>
+      <td style="font-family:var(--mono)">${pctCap}%</td>
+      <td>
+        <span class="dd-bar" style="width:${ddWidth}px;height:4px;background:${color};opacity:0.7;display:inline-block;border-radius:2px;vertical-align:middle"></span>
+        <span style="font-family:var(--mono);font-size:0.75rem;color:${color}">-${dd}%</span>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+// ── SEMÁFORO ──────────────────────────────────────────────────
+const semItems = [
+  { color:'#00e676', label:'Riesgo BAJO',    range:'Drawdown < 10% · Correlación < 0.4', current:'Tu estado actual ✓', active:true },
+  { color:'#f5c518', label:'Riesgo MEDIO',   range:'Drawdown 10-20% · Correlación 0.4-0.7', current:'', active:false },
+  { color:'#ff3d57', label:'Riesgo ALTO',    range:'Drawdown > 20% · Correlación > 0.7', current:'', active:false },
+];
+
+function renderSemaforo() {
+  const c = document.getElementById('semaforo');
+  c.innerHTML = semItems.map(s => `
+    <div class="semaforo-item" style="background:${s.active?`${s.color}11`:'var(--bg3)'};border:1px solid ${s.active?`${s.color}33`:'transparent'}">
+      <div class="sem-dot" style="background:${s.color};${!s.active?'opacity:0.3':''}"></div>
+      <div class="sem-info">
+        <div class="sem-label" style="color:${s.active?s.color:'var(--texto2)'}">${s.label}</div>
+        <div class="sem-range">${s.range}</div>
+      </div>
+      ${s.active?`<span style="font-size:0.7rem;color:${s.color};font-weight:600">◀ Aquí</span>`:''}
+    </div>
+  `).join('');
+}
+
+// ── REGLAS DE ORO ─────────────────────────────────────────────
+const reglas = [
+  { num:'01', title:'Regla del 2%', color:'var(--verde)',
+    desc:'Nunca arriesgues más del 2% de tu capital en un solo trade. Es la regla más importante del trading profesional.',
+    example:'Capital $10M → Riesgo máx: $200.000/trade' },
+  { num:'02', title:'Relación R/R mínima 2:1', color:'var(--azul)',
+    desc:'Por cada $1 que arriesgues, debes poder ganar al menos $2. Si el R/R es menor, la operación no vale la pena.',
+    example:'Stop: -$100 → Take Profit mínimo: +$200' },
+  { num:'03', title:'Diversifica, no concentres', color:'var(--amarillo)',
+    desc:'Ninguna posición debe superar el 20-25% de tu portafolio. Si fallas en una, no pierdes todo.',
+    example:'Máx 4-5 posiciones activas simultáneas' },
+  { num:'04', title:'Respeta el stop loss siempre', color:'var(--purpura)',
+    desc:'Mover el stop loss para evitar una pérdida es el error más costoso. El stop está ahí para protegerte.',
+    example:'Si COPEC cae a $8.210 → Vende, sin excepciones' },
+];
+
+function renderReglas() {
+  const c = document.getElementById('rulesGrid');
+  c.innerHTML = reglas.map(r => `
+    <div class="rule-card">
+      <div class="rule-num" style="color:${r.color}">${r.num}</div>
+      <div class="rule-title" style="color:${r.color}">${r.title}</div>
+      <div class="rule-desc">${r.desc}</div>
+      <div class="rule-example" style="color:${r.color};border-left:2px solid ${r.color};padding-left:8px">${r.example}</div>
+    </div>
+  `).join('');
+}
+
+// ── RELOJ ─────────────────────────────────────────────────────
+function reloj() {
+  const el = document.getElementById('horaEl');
+  if (!el) return;
+  const n = new Date();
+  el.textContent = [n.getHours(),n.getMinutes(),n.getSeconds()].map(v=>String(v).padStart(2,'0')).join(':');
+}
+
+// ── INIT ──────────────────────────────────────────────────────
+calcular();
+renderIndicadores();
+renderPosTable();
+renderSemaforo();
+renderReglas();
+reloj();
+setInterval(reloj, 1000);
+</script>
+</body>
+</html>

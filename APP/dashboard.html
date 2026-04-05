@@ -1,0 +1,1457 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>InvertirCL — Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:    #07090d;
+  --bg2:   #0d1117;
+  --bg3:   #131a22;
+  --bg4:   #1a222c;
+  --verde: #00e676;
+  --verde2:#00c853;
+  --rojo:  #ff3d57;
+  --azul:  #4a9eff;
+  --amarillo:#f5c518;
+  --linea: rgba(255,255,255,0.06);
+  --linea2:rgba(255,255,255,0.1);
+  --texto: #e2e8f0;
+  --texto2:#8a9bb0;
+  --texto3:#4a5568;
+  --mono:  'DM Mono', monospace;
+  --sans:  'DM Sans', sans-serif;
+  --display:'Syne', sans-serif;
+  --sidebar:220px;
+  --topbar: 52px;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin:0; padding:0; }
+html, body { height:100%; overflow:hidden; }
+body {
+  font-family: var(--sans);
+  background: var(--bg);
+  color: var(--texto);
+  display: flex;
+  flex-direction: column;
+}
+
+/* ══ TOPBAR ══════════════════════════════════════════════════ */
+.topbar {
+  height: var(--topbar);
+  background: var(--bg2);
+  border-bottom: 1px solid var(--linea);
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  gap: 16px;
+  flex-shrink: 0;
+  z-index: 10;
+}
+
+.logo {
+  font-family: var(--display);
+  font-weight: 800;
+  font-size: 1rem;
+  color: var(--verde);
+  letter-spacing: -0.02em;
+  white-space: nowrap;
+}
+.logo span { color: var(--texto2); }
+
+.top-ticker {
+  flex: 1;
+  display: flex;
+  gap: 4px;
+  overflow: hidden;
+}
+
+.tick-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 12px;
+  border-radius: 6px;
+  background: var(--bg3);
+  border: 1px solid var(--linea);
+  white-space: nowrap;
+  font-size: 0.78rem;
+}
+.tick-sym {
+  color: var(--texto2);
+  font-size: 0.7rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+.tick-price {
+  font-family: var(--mono);
+  font-size: 0.82rem;
+  color: var(--texto);
+}
+.tick-chg {
+  font-size: 0.72rem;
+  font-family: var(--mono);
+}
+.pos { color: var(--verde); }
+.neg { color: var(--rojo); }
+.neu { color: var(--texto2); }
+
+.top-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.hora {
+  font-family: var(--mono);
+  font-size: 0.78rem;
+  color: var(--texto2);
+}
+
+.avatar {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--verde), var(--azul));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: #000;
+  cursor: pointer;
+}
+
+/* ══ LAYOUT PRINCIPAL ══════════════════════════════════════ */
+.layout {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+/* ══ SIDEBAR ══════════════════════════════════════════════ */
+.sidebar {
+  width: var(--sidebar);
+  background: var(--bg2);
+  border-right: 1px solid var(--linea);
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  overflow-y: auto;
+}
+
+.nav-section {
+  padding: 16px 12px 8px;
+}
+
+.nav-label {
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--texto3);
+  margin-bottom: 6px;
+  padding-left: 8px;
+}
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 10px;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  color: var(--texto2);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+  margin-bottom: 2px;
+}
+
+.nav-item:hover { background: var(--bg3); color: var(--texto); }
+
+.nav-item.active {
+  background: rgba(0,230,118,0.1);
+  color: var(--verde);
+  border: 1px solid rgba(0,230,118,0.15);
+}
+
+.nav-icon { font-size: 1rem; width: 20px; text-align: center; }
+
+.nav-badge {
+  margin-left: auto;
+  font-size: 0.6rem;
+  background: var(--verde);
+  color: #000;
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-weight: 700;
+}
+
+.sidebar-bottom {
+  margin-top: auto;
+  padding: 12px;
+  border-top: 1px solid var(--linea);
+}
+
+.capital-card {
+  background: var(--bg3);
+  border: 1px solid var(--linea);
+  border-radius: 10px;
+  padding: 14px;
+}
+
+.capital-label {
+  font-size: 0.68rem;
+  color: var(--texto3);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.capital-amount {
+  font-family: var(--display);
+  font-size: 1.1rem;
+  font-weight: 700;
+  margin: 4px 0 2px;
+}
+
+.capital-sub {
+  font-size: 0.72rem;
+}
+
+.progress-bar {
+  height: 4px;
+  background: var(--bg4);
+  border-radius: 2px;
+  margin-top: 10px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--verde), var(--azul));
+  border-radius: 2px;
+  width: 62%;
+  transition: width 1s ease;
+}
+
+/* ══ MAIN CONTENT ══════════════════════════════════════════ */
+.main {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+/* ══ FILA SUPERIOR — KPIs ══════════════════════════════════ */
+.kpi-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+}
+
+.kpi-card {
+  background: var(--bg2);
+  border: 1px solid var(--linea);
+  border-radius: 10px;
+  padding: 14px 16px;
+  position: relative;
+  overflow: hidden;
+  cursor: pointer;
+  transition: border-color 0.2s;
+}
+
+.kpi-card:hover { border-color: var(--linea2); }
+
+.kpi-card.highlight { border-color: rgba(0,230,118,0.25); }
+.kpi-card.highlight::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 2px;
+  background: var(--verde);
+}
+
+.kpi-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 8px;
+}
+
+.kpi-sym {
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--texto2);
+}
+
+.kpi-icon { font-size: 0.9rem; }
+
+.kpi-price {
+  font-family: var(--display);
+  font-size: 1.4rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1;
+}
+
+.kpi-row-bottom {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 6px;
+}
+
+.kpi-change {
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.kpi-sparkline {
+  width: 60px;
+  height: 24px;
+}
+
+/* Tooltip educativo */
+.edu-tip {
+  position: absolute;
+  bottom: 100%;
+  left: 0;
+  background: var(--bg4);
+  border: 1px solid var(--linea2);
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 0.75rem;
+  color: var(--texto);
+  line-height: 1.5;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transform: translateY(4px);
+  transition: opacity 0.2s, transform 0.2s;
+  z-index: 50;
+  max-width: 220px;
+  white-space: normal;
+}
+
+.kpi-card:hover .edu-tip { opacity: 1; transform: translateY(-4px); }
+
+/* ══ FILA MEDIA — Gráfico + Panel derecho ══════════════════ */
+.mid-row {
+  display: grid;
+  grid-template-columns: 1fr 300px;
+  gap: 14px;
+  min-height: 0;
+}
+
+/* ── Gráfico principal ── */
+.chart-panel {
+  background: var(--bg2);
+  border: 1px solid var(--linea);
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--linea);
+  flex-shrink: 0;
+}
+
+.panel-title {
+  font-size: 0.85rem;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.panel-tabs {
+  display: flex;
+  gap: 4px;
+}
+
+.ptab {
+  padding: 4px 10px;
+  border-radius: 5px;
+  font-size: 0.72rem;
+  color: var(--texto2);
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.ptab:hover { background: var(--bg3); color: var(--texto); }
+.ptab.active { background: rgba(0,230,118,0.1); color: var(--verde); }
+
+.chart-area {
+  flex: 1;
+  padding: 12px 16px;
+  position: relative;
+}
+
+/* SVG chart falso pero convincente */
+.chart-svg { width: 100%; height: 100%; min-height: 180px; }
+
+/* ── Panel derecho — Mis posiciones ── */
+.positions-panel {
+  background: var(--bg2);
+  border: 1px solid var(--linea);
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.pos-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px;
+}
+
+.pos-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.15s;
+  margin-bottom: 4px;
+}
+
+.pos-item:hover { background: var(--bg3); }
+
+.pos-logo {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: var(--bg4);
+  border: 1px solid var(--linea);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--texto2);
+  flex-shrink: 0;
+}
+
+.pos-info { flex: 1; min-width: 0; }
+
+.pos-name {
+  font-size: 0.82rem;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pos-qty {
+  font-size: 0.7rem;
+  color: var(--texto2);
+  margin-top: 1px;
+}
+
+.pos-right { text-align: right; }
+
+.pos-value {
+  font-family: var(--mono);
+  font-size: 0.82rem;
+}
+
+.pos-pnl {
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  margin-top: 1px;
+}
+
+.pos-add-btn {
+  margin: 8px;
+  padding: 9px;
+  border: 1px dashed rgba(0,230,118,0.3);
+  border-radius: 8px;
+  text-align: center;
+  font-size: 0.78rem;
+  color: var(--verde);
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.pos-add-btn:hover { background: rgba(0,230,118,0.05); }
+
+/* ══ FILA INFERIOR — Acciones + Noticias + Aprender ═══════ */
+.bottom-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr 280px;
+  gap: 14px;
+}
+
+/* ── Tabla de acciones ── */
+.table-panel {
+  background: var(--bg2);
+  border: 1px solid var(--linea);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.mkt-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.78rem;
+}
+
+.mkt-table th {
+  padding: 8px 12px;
+  text-align: left;
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--texto3);
+  border-bottom: 1px solid var(--linea);
+  font-weight: 400;
+}
+
+.mkt-table th:last-child, .mkt-table td:last-child { text-align: right; padding-right: 14px; }
+
+.mkt-table tr:hover td { background: var(--bg3); }
+
+.mkt-table td {
+  padding: 9px 12px;
+  border-bottom: 1px solid rgba(255,255,255,0.03);
+  color: var(--texto);
+}
+
+.mkt-sym { font-weight: 500; font-size: 0.82rem; }
+.mkt-name { color: var(--texto2); font-size: 0.72rem; }
+.mkt-price { font-family: var(--mono); }
+.mkt-vol { color: var(--texto2); font-family: var(--mono); }
+
+.heat-bar {
+  display: inline-block;
+  width: 40px;
+  height: 4px;
+  border-radius: 2px;
+  vertical-align: middle;
+  margin-right: 6px;
+}
+
+/* ── Panel de aprendizaje ── */
+.learn-panel {
+  background: var(--bg2);
+  border: 1px solid var(--linea);
+  border-radius: 10px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.learn-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px;
+}
+
+.learn-item {
+  display: flex;
+  gap: 10px;
+  padding: 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  margin-bottom: 4px;
+  transition: background 0.15s;
+}
+
+.learn-item:hover { background: var(--bg3); }
+
+.learn-thumb {
+  width: 44px;
+  height: 44px;
+  border-radius: 6px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+}
+
+.learn-info { flex: 1; min-width: 0; }
+
+.learn-title {
+  font-size: 0.8rem;
+  font-weight: 500;
+  line-height: 1.3;
+  margin-bottom: 4px;
+}
+
+.learn-meta {
+  font-size: 0.68rem;
+  color: var(--texto2);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.learn-tag {
+  background: var(--bg4);
+  border-radius: 3px;
+  padding: 1px 6px;
+  font-size: 0.62rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.learn-start-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin: 8px;
+  padding: 10px;
+  background: rgba(0,230,118,0.1);
+  border: 1px solid rgba(0,230,118,0.2);
+  border-radius: 8px;
+  font-size: 0.8rem;
+  color: var(--verde);
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.learn-start-btn:hover { background: rgba(0,230,118,0.18); }
+
+/* ══ PANEL DE BIENVENIDA (primer uso) ══════════════════════ */
+.welcome-banner {
+  background: linear-gradient(135deg, rgba(0,230,118,0.06), rgba(74,158,255,0.06));
+  border: 1px solid rgba(0,230,118,0.15);
+  border-radius: 10px;
+  padding: 16px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.welcome-text h3 {
+  font-family: var(--display);
+  font-size: 0.95rem;
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+
+.welcome-text p {
+  font-size: 0.8rem;
+  color: var(--texto2);
+  line-height: 1.5;
+}
+
+.welcome-steps {
+  display: flex;
+  gap: 12px;
+  flex-shrink: 0;
+}
+
+.w-step {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--bg2);
+  border: 1px solid var(--linea);
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 0.78rem;
+  cursor: pointer;
+  transition: border-color 0.2s;
+}
+
+.w-step:hover { border-color: var(--verde); }
+.w-step-num {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--verde);
+  color: #000;
+  font-size: 0.68rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.w-step.done .w-step-num { background: var(--azul); }
+
+.welcome-close {
+  color: var(--texto3);
+  cursor: pointer;
+  font-size: 1rem;
+  padding: 4px;
+  flex-shrink: 0;
+}
+
+/* ══ SCROLLBAR ═════════════════════════════════════════════ */
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--bg4); border-radius: 2px; }
+
+/* ── TOPBAR NAV ──────────────────────────────────────────── */
+.tnav { padding:6px 14px; border-radius:6px; font-size:0.82rem; color:var(--texto2); cursor:pointer; transition:all 0.15s; }
+.tnav:hover { background:var(--bg3); color:var(--texto); }
+.tnav.active { background:rgba(0,230,118,0.1); color:var(--verde); }
+
+/* ══ ANIMACIONES ════════════════════════════════════════════ */
+@keyframes fadeIn { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
+.fade-in { animation: fadeIn 0.4s ease both; }
+
+@keyframes ticker-flash {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+</style>
+</head>
+<body>
+
+<!-- ══ TOPBAR ══════════════════════════════════════════════ -->
+<div class="topbar">
+  <div class="logo">Invertir<span>CL</span></div>
+
+  <div style="display:flex;align-items:center;gap:4px;margin-left:16px;">
+    <div class="tnav active">Dashboard</div>
+    <div class="tnav" onclick="irA('simulator.html')">Simulador</div>
+    <div class="tnav" onclick="irA('backtest.html')">Backtest</div>
+    <div class="tnav" onclick="irA('risk.html')">Riesgo</div>
+    <div class="tnav" onclick="irA('learn.html')">Aprender</div>
+  </div>
+
+  <div class="top-ticker" id="topTicker">
+    <div class="tick-item">
+      <span class="tick-sym">USD/CLP</span>
+      <span class="tick-price" id="t-usd">$927.40</span>
+      <span class="tick-chg pos" id="t-usd-ch">▲+1.23%</span>
+    </div>
+    <div class="tick-item">
+      <span class="tick-sym">IPSA</span>
+      <span class="tick-price" id="t-ipsa">7,284</span>
+      <span class="tick-chg neg" id="t-ipsa-ch">▼−0.41%</span>
+    </div>
+    <div class="tick-item">
+      <span class="tick-sym">UF</span>
+      <span class="tick-price">$38,741</span>
+      <span class="tick-chg pos">▲+0.08%</span>
+    </div>
+    <div class="tick-item">
+      <span class="tick-sym">EUR/CLP</span>
+      <span class="tick-price" id="t-eur">$1,018</span>
+      <span class="tick-chg neg" id="t-eur-ch">▼−0.32%</span>
+    </div>
+    <div class="tick-item">
+      <span class="tick-sym">Cobre</span>
+      <span class="tick-price" id="t-cu">$4.82</span>
+      <span class="tick-chg pos" id="t-cu-ch">▲+0.74%</span>
+    </div>
+    <div class="tick-item">
+      <span class="tick-sym">BTC</span>
+      <span class="tick-price" id="t-btc">$70,784</span>
+      <span class="tick-chg pos" id="t-btc-ch">▲+3.91%</span>
+    </div>
+  </div>
+
+  <div class="top-right">
+    <div class="hora" id="horaEl">09:31:42</div>
+    <div style="width:1px;height:24px;background:var(--linea)"></div>
+    <div style="font-size:0.78rem;color:var(--texto2)">Joaquín O.</div>
+    <div class="avatar">JO</div>
+  </div>
+</div>
+
+<!-- ══ LAYOUT ══════════════════════════════════════════════ -->
+<div class="layout">
+
+  <!-- ══ SIDEBAR ══════════════════════════════════════════ -->
+  <div class="sidebar">
+    <div class="nav-section">
+      <div class="nav-label">Principal</div>
+      <div class="nav-item active">
+        <span class="nav-icon">📊</span> Dashboard
+      </div>
+      <div class="nav-item" onclick="irA('simulator.html')">
+        <span class="nav-icon">🎮</span> Simulador
+        <span class="nav-badge">NUEVO</span>
+      </div>
+      <div class="nav-item" onclick="irA('backtest.html')">
+        <span class="nav-icon">🔬</span> Backtest
+      </div>
+    </div>
+
+    <div class="nav-section">
+      <div class="nav-label">Mercado</div>
+      <div class="nav-item" onclick="document.querySelector('.kpi-row')?.scrollIntoView({behavior:'smooth'})">
+        <span class="nav-icon">📈</span> IPSA
+      </div>
+      <div class="nav-item" onclick="document.querySelector('.table-panel:last-child')?.scrollIntoView({behavior:'smooth'})">
+        <span class="nav-icon">💵</span> Divisas
+      </div>
+      <div class="nav-item" onclick="document.querySelector('.table-panel')?.scrollIntoView({behavior:'smooth'})">
+        <span class="nav-icon">🏢</span> Acciones
+      </div>
+      <div class="nav-item" onclick="actualizarKPI('k-cu','k-cu-ch',Market.FALLBACKS.cobre.valor,null,false)">
+        <span class="nav-icon">🛢️</span> Commodities
+      </div>
+    </div>
+
+    <div class="nav-section">
+      <div class="nav-label">Herramientas</div>
+      <div class="nav-item" onclick="irA('risk.html')">
+        <span class="nav-icon">🛡️</span> Gestión Riesgo
+      </div>
+      <div class="nav-item" onclick="irA('learn.html')">
+        <span class="nav-icon">🎓</span> Aprender
+      </div>
+      <div class="nav-item" onclick="irA('ajustes.html')" style="opacity:0.45;cursor:not-allowed" title="Próximamente">
+        <span class="nav-icon">⚙️</span> Ajustes
+      </div>
+    </div>
+
+    <!-- Capital simulado -->
+    <div class="sidebar-bottom">
+      <div class="capital-card">
+        <div class="capital-label">Capital simulado</div>
+        <div class="capital-amount pos">$11.284.500</div>
+        <div class="capital-sub pos">▲ +12.84% desde inicio</div>
+        <div class="progress-bar">
+          <div class="progress-fill" id="progFill"></div>
+        </div>
+        <div style="display:flex;justify-content:space-between;margin-top:6px;font-size:0.65rem;color:var(--texto3)">
+          <span>$10M inicial</span>
+          <span>Meta: $15M</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ MAIN ═══════════════════════════════════════════════ -->
+  <div class="main">
+
+    <!-- Banner bienvenida -->
+    <div class="welcome-banner fade-in" id="welcomeBanner">
+      <div class="welcome-text">
+        <h3>👋 Hola Joaquín — empieza aquí</h3>
+        <p>Sigue estos 3 pasos para hacer tu primera inversión simulada en el mercado chileno.</p>
+      </div>
+      <div class="welcome-steps">
+        <div class="w-step done">
+          <div class="w-step-num">✓</div>
+          <span>Ver dashboard</span>
+        </div>
+        <div class="w-step" onclick="irA('simulator.html')">
+          <div class="w-step-num">2</div>
+          <span>Abrir simulador</span>
+        </div>
+        <div class="w-step">
+          <div class="w-step-num">3</div>
+          <span>Tu primer trade</span>
+        </div>
+      </div>
+      <div class="welcome-close" onclick="this.parentElement.style.display='none'">✕</div>
+    </div>
+
+    <!-- KPIs -->
+    <div class="kpi-row fade-in">
+      <div class="kpi-card highlight">
+        <div class="edu-tip">💡 El <b>USD/CLP</b> es el tipo de cambio entre el dólar y el peso chileno. Cuando sube, el dólar vale más pesos. Afecta a empresas exportadoras como COPEC.</div>
+        <div class="kpi-header">
+          <span class="kpi-sym">USD / CLP</span>
+          <span class="kpi-icon">💵</span>
+        </div>
+        <div class="kpi-price" id="k-usd">$927.40</div>
+        <div class="kpi-row-bottom">
+          <span class="kpi-change pos" id="k-usd-ch">▲ +8.92 (+0.97%)</span>
+          <svg class="kpi-sparkline" id="sp-usd"></svg>
+        </div>
+      </div>
+
+      <div class="kpi-card">
+        <div class="edu-tip">💡 El <b>IPSA</b> es el índice bursátil más importante de Chile. Agrupa las 30 acciones con mayor volumen de la Bolsa de Santiago. Es el "S&P500 chileno".</div>
+        <div class="kpi-header">
+          <span class="kpi-sym">IPSA</span>
+          <span class="kpi-icon">📈</span>
+        </div>
+        <div class="kpi-price" id="k-ipsa">7.284</div>
+        <div class="kpi-row-bottom">
+          <span class="kpi-change neg" id="k-ipsa-ch">▼ −30.2 (−0.41%)</span>
+          <svg class="kpi-sparkline" id="sp-ipsa"></svg>
+        </div>
+      </div>
+
+      <div class="kpi-card">
+        <div class="edu-tip">💡 La <b>UF</b> (Unidad de Fomento) es una unidad de cuenta indexada a la inflación en Chile. Muchos contratos, créditos y arriendos se denominan en UF.</div>
+        <div class="kpi-header">
+          <span class="kpi-sym">UF</span>
+          <span class="kpi-icon">🇨🇱</span>
+        </div>
+        <div class="kpi-price">$38.741</div>
+        <div class="kpi-row-bottom">
+          <span class="kpi-change pos">▲ +31.2 (+0.08%)</span>
+          <svg class="kpi-sparkline" id="sp-uf"></svg>
+        </div>
+      </div>
+
+      <div class="kpi-card">
+        <div class="edu-tip">💡 El <b>Cobre</b> (USD/lb) es el principal producto de exportación de Chile. Cuando su precio sube, el peso chileno generalmente se aprecia y el dólar baja.</div>
+        <div class="kpi-header">
+          <span class="kpi-sym">Cobre USD/lb</span>
+          <span class="kpi-icon">🛢️</span>
+        </div>
+        <div class="kpi-price" id="k-cu">$4.824</div>
+        <div class="kpi-row-bottom">
+          <span class="kpi-change pos" id="k-cu-ch">▲ +0.035 (+0.74%)</span>
+          <svg class="kpi-sparkline" id="sp-cu"></svg>
+        </div>
+      </div>
+    </div>
+
+    <!-- Mid row: gráfico + posiciones -->
+    <div class="mid-row fade-in">
+
+      <!-- Gráfico IPSA -->
+      <div class="chart-panel">
+        <div class="panel-header">
+          <div class="panel-title">
+            📈 IPSA — Índice Bursátil Chileno
+            <span style="font-size:0.72rem;color:var(--texto2);font-weight:300">Bolsa de Santiago</span>
+          </div>
+          <div class="panel-tabs">
+            <div class="ptab active">1D</div>
+            <div class="ptab">1S</div>
+            <div class="ptab">1M</div>
+            <div class="ptab">3M</div>
+            <div class="ptab">1A</div>
+          </div>
+        </div>
+        <div class="chart-area">
+          <svg class="chart-svg" id="mainChart" viewBox="0 0 600 200" preserveAspectRatio="none">
+            <!-- Gradiente -->
+            <defs>
+              <linearGradient id="chartGrad" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="#00e676" stop-opacity="0.15"/>
+                <stop offset="100%" stop-color="#00e676" stop-opacity="0"/>
+              </linearGradient>
+              <linearGradient id="chartGradRed" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="#ff3d57" stop-opacity="0.12"/>
+                <stop offset="100%" stop-color="#ff3d57" stop-opacity="0"/>
+              </linearGradient>
+            </defs>
+            <!-- Grid lines -->
+            <line x1="0" y1="50"  x2="600" y2="50"  stroke="rgba(255,255,255,0.04)" stroke-width="1"/>
+            <line x1="0" y1="100" x2="600" y2="100" stroke="rgba(255,255,255,0.04)" stroke-width="1"/>
+            <line x1="0" y1="150" x2="600" y2="150" stroke="rgba(255,255,255,0.04)" stroke-width="1"/>
+            <!-- Labels eje Y -->
+            <text x="4" y="48"  font-family="DM Mono" font-size="9" fill="rgba(255,255,255,0.3)">7,350</text>
+            <text x="4" y="98"  font-family="DM Mono" font-size="9" fill="rgba(255,255,255,0.3)">7,300</text>
+            <text x="4" y="148" font-family="DM Mono" font-size="9" fill="rgba(255,255,255,0.3)">7,250</text>
+            <!-- Área bajo la curva -->
+            <path id="chartArea" fill="url(#chartGrad)" stroke="none"/>
+            <!-- Línea principal -->
+            <path id="chartLine" fill="none" stroke="#00e676" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            <!-- Punto actual -->
+            <circle id="chartDot" r="4" fill="#00e676" stroke="#07090d" stroke-width="2"/>
+            <!-- Labels eje X -->
+            <text x="30"  y="198" font-family="DM Mono" font-size="8" fill="rgba(255,255,255,0.25)">09:30</text>
+            <text x="150" y="198" font-family="DM Mono" font-size="8" fill="rgba(255,255,255,0.25)">11:00</text>
+            <text x="270" y="198" font-family="DM Mono" font-size="8" fill="rgba(255,255,255,0.25)">12:30</text>
+            <text x="390" y="198" font-family="DM Mono" font-size="8" fill="rgba(255,255,255,0.25)">14:00</text>
+            <text x="510" y="198" font-family="DM Mono" font-size="8" fill="rgba(255,255,255,0.25)">15:30</text>
+          </svg>
+        </div>
+      </div>
+
+      <!-- Panel posiciones -->
+      <div class="positions-panel">
+        <div class="panel-header">
+          <div class="panel-title">💼 Mi portafolio</div>
+          <span style="font-size:0.72rem;color:var(--texto2)">simulado</span>
+        </div>
+        <div class="pos-list">
+          <div class="pos-item">
+            <div class="pos-logo" style="color:#e8a838">CP</div>
+            <div class="pos-info">
+              <div class="pos-name">COPEC</div>
+              <div class="pos-qty">100 acciones · $8.420 c/u</div>
+            </div>
+            <div class="pos-right">
+              <div class="pos-value">$842.000</div>
+              <div class="pos-pnl pos">▲ +$24.000 (+2.9%)</div>
+            </div>
+          </div>
+          <div class="pos-item">
+            <div class="pos-logo" style="color:#4a9eff">SQM</div>
+            <div class="pos-info">
+              <div class="pos-name">SQM-B</div>
+              <div class="pos-qty">50 acciones · $38.200 c/u</div>
+            </div>
+            <div class="pos-right">
+              <div class="pos-value">$1.910.000</div>
+              <div class="pos-pnl neg">▼ −$45.000 (−2.3%)</div>
+            </div>
+          </div>
+          <div class="pos-item">
+            <div class="pos-logo" style="color:#00e676">BCI</div>
+            <div class="pos-info">
+              <div class="pos-name">BCI</div>
+              <div class="pos-qty">30 acciones · $28.500 c/u</div>
+            </div>
+            <div class="pos-right">
+              <div class="pos-value">$855.000</div>
+              <div class="pos-pnl pos">▲ +$12.000 (+1.4%)</div>
+            </div>
+          </div>
+          <div class="pos-item">
+            <div class="pos-logo" style="color:#9b59b6">CCU</div>
+            <div class="pos-info">
+              <div class="pos-name">CCU</div>
+              <div class="pos-qty">80 acciones · $6.800 c/u</div>
+            </div>
+            <div class="pos-right">
+              <div class="pos-value">$544.000</div>
+              <div class="pos-pnl pos">▲ +$8.500 (+1.6%)</div>
+            </div>
+          </div>
+        </div>
+        <div class="pos-add-btn" onclick="irA('simulator.html')">
+          + Abrir nueva posición
+        </div>
+      </div>
+    </div>
+
+    <!-- Bottom row: tabla + aprender -->
+    <div class="bottom-row fade-in">
+
+      <!-- Tabla acciones IPSA -->
+      <div class="table-panel">
+        <div class="panel-header">
+          <div class="panel-title">🏢 Principales acciones IPSA</div>
+          <span style="font-size:0.72rem;color:var(--verde);cursor:pointer">Ver todas →</span>
+        </div>
+        <table class="mkt-table">
+          <thead>
+            <tr>
+              <th>Acción</th>
+              <th>Precio</th>
+              <th>Variación</th>
+              <th>Volumen</th>
+              <th>Tendencia</th>
+            </tr>
+          </thead>
+          <tbody id="accionesTable">
+            <!-- generado por JS -->
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Divisas -->
+      <div class="table-panel">
+        <div class="panel-header">
+          <div class="panel-title">💱 Divisas vs Peso Chileno</div>
+          <span style="font-size:0.72rem;color:var(--texto2)">Tiempo real</span>
+        </div>
+        <table class="mkt-table">
+          <thead>
+            <tr>
+              <th>Divisa</th>
+              <th>CLP</th>
+              <th>Variación</th>
+              <th>Semana</th>
+              <th>Tendencia</th>
+            </tr>
+          </thead>
+          <tbody id="divisasTable">
+            <!-- generado por JS -->
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Módulos educativos -->
+      <div class="learn-panel">
+        <div class="panel-header">
+          <div class="panel-title">🎓 Aprende ahora</div>
+          <span style="font-size:0.72rem;color:var(--verde)">Ver todo</span>
+        </div>
+        <div class="learn-list">
+          <div class="learn-item">
+            <div class="learn-thumb" style="background:rgba(0,230,118,0.1)">📈</div>
+            <div class="learn-info">
+              <div class="learn-title">¿Qué es el IPSA y cómo funciona?</div>
+              <div class="learn-meta">
+                <span>4 min</span>
+                <span class="learn-tag" style="color:var(--verde)">Básico</span>
+              </div>
+            </div>
+          </div>
+          <div class="learn-item">
+            <div class="learn-thumb" style="background:rgba(74,158,255,0.1)">💵</div>
+            <div class="learn-info">
+              <div class="learn-title">Cómo el dólar afecta tus inversiones</div>
+              <div class="learn-meta">
+                <span>6 min</span>
+                <span class="learn-tag" style="color:var(--azul)">Intermedio</span>
+              </div>
+            </div>
+          </div>
+          <div class="learn-item">
+            <div class="learn-thumb" style="background:rgba(245,197,24,0.1)">🛡️</div>
+            <div class="learn-info">
+              <div class="learn-title">Stop loss: protege tu capital</div>
+              <div class="learn-meta">
+                <span>5 min</span>
+                <span class="learn-tag" style="color:var(--amarillo)">Esencial</span>
+              </div>
+            </div>
+          </div>
+          <div class="learn-item">
+            <div class="learn-thumb" style="background:rgba(155,89,182,0.1)">🔬</div>
+            <div class="learn-info">
+              <div class="learn-title">Cómo leer un gráfico de velas</div>
+              <div class="learn-meta">
+                <span>8 min</span>
+                <span class="learn-tag" style="color:#9b59b6">Técnico</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="learn-start-btn">
+          🚀 Empezar lección del día
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script src="JS/market.js"></script>
+<script src="JS/poller.js"></script>
+<script>
+// ── DATOS SIMULADOS ──────────────────────────────────────────
+const acciones = [
+  { sym:'COPEC', name:'Copec S.A.', precio:8420, ch:+2.9, vol:'48.2M' },
+  { sym:'SQM-B', name:'SQM Serie B', precio:38200, ch:-2.3, vol:'31.5M' },
+  { sym:'BCI',   name:'Banco BCI', precio:28500, ch:+1.4, vol:'22.1M' },
+  { sym:'CCU',   name:'Compañía Cerv.', precio:6800, ch:+1.6, vol:'18.7M' },
+  { sym:'FALABELLA', name:'Falabella', precio:2840, ch:-0.8, vol:'41.3M' },
+  { sym:'ENTEL', name:'Entel', precio:4210, ch:+0.3, vol:'9.4M' },
+];
+
+const divisas = [
+  { sym:'USD', name:'Dólar EE.UU.', clp:927.40, ch:+0.97, sem:+1.23 },
+  { sym:'EUR', name:'Euro', clp:1018.50, ch:-0.32, sem:-0.44 },
+  { sym:'GBP', name:'Libra Esterlina', clp:1184.20, ch:+0.18, sem:+0.65 },
+  { sym:'JPY', name:'Yen Japonés (×100)', clp:621.80, ch:-0.54, sem:-1.12 },
+  { sym:'BRL', name:'Real Brasileño', clp:164.30, ch:-0.21, sem:-0.88 },
+  { sym:'ARS', name:'Peso Argentino', clp:0.98, ch:-2.14, sem:-5.33 },
+];
+
+// ── TABLA ACCIONES ───────────────────────────────────────────
+function renderAcciones() {
+  const tb = document.getElementById('accionesTable');
+  tb.innerHTML = acciones.map(a => {
+    const isPos = a.ch >= 0;
+    const color = isPos ? 'var(--verde)' : 'var(--rojo)';
+    const barW  = Math.min(Math.abs(a.ch) * 15, 40);
+    const barC  = isPos ? 'var(--verde)' : 'var(--rojo)';
+    return `
+      <tr style="cursor:pointer">
+        <td>
+          <div class="mkt-sym">${a.sym}</div>
+          <div class="mkt-name">${a.name}</div>
+        </td>
+        <td><span class="mkt-price">$${a.precio.toLocaleString('es-CL')}</span></td>
+        <td><span style="color:${color};font-family:var(--mono);font-size:0.78rem">${isPos?'▲':'▼'} ${isPos?'+':''}${a.ch}%</span></td>
+        <td><span class="mkt-vol">${a.vol}</span></td>
+        <td>
+          <span class="heat-bar" style="background:${barC};opacity:0.7;width:${barW}px"></span>
+          <span style="font-size:0.68rem;color:${color}">${isPos?'Alza':'Baja'}</span>
+        </td>
+      </tr>`;
+  }).join('');
+}
+
+function renderDivisas() {
+  const tb = document.getElementById('divisasTable');
+  tb.innerHTML = divisas.map(d => {
+    const isPos = d.ch >= 0;
+    const isSemPos = d.sem >= 0;
+    const color = isPos ? 'var(--verde)' : 'var(--rojo)';
+    const colorSem = isSemPos ? 'var(--verde)' : 'var(--rojo)';
+    const barW = Math.min(Math.abs(d.ch) * 20, 40);
+    return `
+      <tr style="cursor:pointer">
+        <td>
+          <div class="mkt-sym">${d.sym}</div>
+          <div class="mkt-name">${d.name}</div>
+        </td>
+        <td><span class="mkt-price">$${d.clp.toLocaleString('es-CL',{minimumFractionDigits:2,maximumFractionDigits:2})}</span></td>
+        <td><span style="color:${color};font-family:var(--mono);font-size:0.78rem">${isPos?'▲':'▼'} ${isPos?'+':''}${d.ch}%</span></td>
+        <td><span style="color:${colorSem};font-family:var(--mono);font-size:0.78rem">${isSemPos?'+':''}${d.sem}%</span></td>
+        <td>
+          <span class="heat-bar" style="background:${color};opacity:0.7;width:${barW}px"></span>
+        </td>
+      </tr>`;
+  }).join('');
+}
+
+// ── GRÁFICO IPSA ─────────────────────────────────────────────
+let chartPoints = [];
+function initChart() {
+  // Generar datos históricos del día simulados
+  const n = 60;
+  let v = 7315;
+  for (let i = 0; i < n; i++) {
+    v += (Math.random() - 0.48) * 8;
+    chartPoints.push(v);
+  }
+  drawChart();
+}
+
+function drawChart() {
+  const line = document.getElementById('chartLine');
+  const area = document.getElementById('chartArea');
+  const dot  = document.getElementById('chartDot');
+
+  const pts = chartPoints;
+  const min = Math.min(...pts) - 10;
+  const max = Math.max(...pts) + 10;
+  const w = 600, h = 190;
+
+  const x = (i) => (i / (pts.length-1)) * w;
+  const y = (v) => h - ((v - min) / (max - min)) * h;
+
+  const d = pts.map((v,i) => `${i===0?'M':'L'}${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(' ');
+  const areaD = d + ` L${w},${h} L0,${h} Z`;
+
+  line.setAttribute('d', d);
+  area.setAttribute('d', areaD);
+
+  const lx = x(pts.length-1);
+  const ly = y(pts[pts.length-1]);
+  dot.setAttribute('cx', lx);
+  dot.setAttribute('cy', ly);
+
+  // Color según tendencia
+  const isPos = pts[pts.length-1] >= pts[0];
+  line.setAttribute('stroke', isPos ? '#00e676' : '#ff3d57');
+  area.setAttribute('fill', isPos ? 'url(#chartGrad)' : 'url(#chartGradRed)');
+  dot.setAttribute('fill', isPos ? '#00e676' : '#ff3d57');
+}
+
+// ── SPARKLINES ───────────────────────────────────────────────
+function drawSparkline(id, isPos) {
+  const svg = document.getElementById(id);
+  if (!svg) return;
+  const n = 12;
+  let v = 50;
+  const pts = [];
+  for (let i = 0; i < n; i++) {
+    v += (Math.random() - (isPos ? 0.4 : 0.6)) * 10;
+    v = Math.max(10, Math.min(90, v));
+    pts.push(v);
+  }
+  const w = 60, h = 24;
+  const x = i => (i / (n-1)) * w;
+  const y = v => h - (v / 100) * h;
+  const d = pts.map((v,i) => `${i===0?'M':'L'}${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(' ');
+  const color = isPos ? '#00e676' : '#ff3d57';
+  svg.innerHTML = `<path d="${d}" fill="none" stroke="${color}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" opacity="0.8"/>`;
+}
+
+// ── DATOS REALES — Market.js ────────────────────────────────
+async function cargarDatosReales() {
+  try {
+    const data = await Market.getAll();
+
+    // USD/CLP
+    if (data.usdclp) {
+      const u = data.usdclp;
+      const usdVal = parseFloat(u.promedio || u.venta);
+      actualizarTicker('t-usd', 't-usd-ch', '$' + usdVal.toLocaleString('es-CL',{minimumFractionDigits:2,maximumFractionDigits:2}), null, u.live);
+      actualizarKPI('k-usd', 'k-usd-ch', usdVal, null, u.live);
+      // Guardar referencia para calcular variación
+      window._usdBase = window._usdBase || usdVal;
+    }
+
+    // UF
+    if (data.uf) {
+      const v = data.uf.valor;
+      document.getElementById('t-uf') && (document.getElementById('t-uf').textContent = '$' + Math.round(v).toLocaleString('es-CL'));
+    }
+
+    // Cobre
+    if (data.cobre) {
+      const v = data.cobre.valor;
+      actualizarTicker('t-cu', 't-cu-ch', '$' + v.toFixed(2), null, false);
+      actualizarKPI('k-cu', 'k-cu-ch', v, null, false);
+    }
+
+    // Euro
+    if (data.euro) {
+      const v = data.euro.valor;
+      actualizarTicker('t-eur', 't-eur-ch', '$' + Math.round(v).toLocaleString('es-CL'), null, false);
+    }
+
+    // IPSA
+    if (data.ipsa) {
+      const p = data.ipsa;
+      const isPos = p.changePct >= 0;
+      const priceStr = p.price.toLocaleString('es-CL',{minimumFractionDigits:1,maximumFractionDigits:1});
+      const pEl = document.getElementById('t-ipsa');
+      const cEl = document.getElementById('t-ipsa-ch');
+      if (pEl) pEl.textContent = priceStr;
+      if (cEl) {
+        cEl.textContent = `${isPos?'▲':'▼'}${isPos?'+':''}${p.changePct}%`;
+        cEl.className = `tick-chg ${isPos?'pos':'neg'}`;
+      }
+      actualizarKPI('k-ipsa', 'k-ipsa-ch', p.price, p.changePct, false);
+    }
+
+    console.log('[Dashboard] Datos reales cargados:', Object.keys(data).filter(k=>data[k]));
+  } catch(e) {
+    console.warn('[Dashboard] Error cargando datos reales, usando fallback:', e);
+    animarTickersFallback();
+  }
+}
+
+function actualizarTicker(idPrice, idChange, priceStr, pct, live) {
+  const pEl = document.getElementById(idPrice);
+  const cEl = document.getElementById(idChange);
+  if (pEl) {
+    pEl.textContent = priceStr;
+    if (live) pEl.title = '⚡ Precio en tiempo real';
+  }
+  if (cEl && pct !== null) {
+    const isPos = pct >= 0;
+    cEl.textContent = `${isPos?'▲':'▼'}${isPos?'+':''}${pct.toFixed(2)}%`;
+    cEl.className = `tick-chg ${isPos?'pos':'neg'}`;
+  }
+}
+
+function actualizarKPI(idPrice, idChange, val, pct, live) {
+  const pEl = document.getElementById(idPrice);
+  const cEl = document.getElementById(idChange);
+  if (pEl) pEl.textContent = val.toLocaleString('es-CL',{minimumFractionDigits:2,maximumFractionDigits:2});
+  if (cEl && pct !== null) {
+    const isPos = pct >= 0;
+    cEl.textContent = `${isPos?'▲':'▼'} ${isPos?'+':''}${pct.toFixed(2)}%`;
+    cEl.className = `kpi-change ${isPos?'pos':'neg'}`;
+  }
+}
+
+// Fallback con variación aleatoria si la API falla
+function animarTickersFallback() {
+  const bases = { usd:927.40, ipsa:7284, cu:4.82 };
+  setInterval(() => {
+    Object.entries(bases).forEach(([k,base]) => {
+      const chg = (Math.random()-0.48)*base*0.002;
+      bases[k] += chg;
+    });
+  }, 2500);
+}
+
+function animarTickers() {
+  // Carga inicial de datos reales
+  cargarDatosReales();
+
+  // Refrescar APIs cada 30 segundos
+  setInterval(cargarDatosReales, 30_000);
+
+  // Iniciar StockPoller para acciones en tiempo real (interpolación cada 2s)
+  if (typeof StockPoller !== 'undefined') {
+    StockPoller.start(['COPEC.SN', 'SQM-B.SN', 'BCI.SN', 'CCU.SN', 'FALABELLA.SN', 'ENTEL.SN']);
+    StockPoller.subscribe('ALL', d => {
+      // Actualizar tabla de acciones cuando llega nuevo precio
+      actualizarFilaAccion(d.symbol, d.price, d.changePct);
+    });
+  }
+
+  // Variación leve del gráfico (generado localmente entre fetches reales)
+  setInterval(() => {
+    const last  = chartPoints[chartPoints.length - 1];
+    const newPt = last + (Math.random() - 0.48) * 3;
+    chartPoints.push(newPt);
+    if (chartPoints.length > 80) chartPoints.shift();
+    drawChart();
+  }, 5000);
+}
+
+// Actualizar una fila específica de la tabla de acciones con precio real
+function actualizarFilaAccion(symbol, price, changePct) {
+  const nemo = symbol.replace('.SN', '');
+  const rows = document.querySelectorAll('#accionesTable tr');
+  rows.forEach(row => {
+    const symEl = row.querySelector('.mkt-sym');
+    if (symEl && symEl.textContent === nemo) {
+      const priceEl = row.querySelector('.mkt-price');
+      if (priceEl) priceEl.textContent = '$' + price.toLocaleString('es-CL');
+      const chgEl = row.querySelector('[data-chg]');
+      if (chgEl && changePct !== undefined) {
+        const isPos = changePct >= 0;
+        chgEl.textContent = `${isPos?'▲':'▼'} ${isPos?'+':''}${changePct.toFixed(2)}%`;
+        chgEl.style.color = isPos ? 'var(--verde)' : 'var(--rojo)';
+      }
+    }
+  });
+}
+
+// ── RELOJ ────────────────────────────────────────────────────
+function actualizarReloj() {
+  const el = document.getElementById('horaEl');
+  if (!el) return;
+  const now = new Date();
+  const h = String(now.getHours()).padStart(2,'0');
+  const m = String(now.getMinutes()).padStart(2,'0');
+  const s = String(now.getSeconds()).padStart(2,'0');
+  el.textContent = `${h}:${m}:${s}`;
+}
+
+// ── NAVEGACIÓN ───────────────────────────────────────────────
+function irA(url) {
+  window.location.href = url;
+}
+
+// Tabs gráfico
+document.querySelectorAll('.ptab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.ptab').forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+    // Re-generar datos para la ventana seleccionada
+    chartPoints = [];
+    initChart();
+  });
+});
+
+// ── INIT ─────────────────────────────────────────────────────
+renderAcciones();
+renderDivisas();
+initChart();
+drawSparkline('sp-usd', true);
+drawSparkline('sp-ipsa', false);
+drawSparkline('sp-uf', true);
+drawSparkline('sp-cu', true);
+animarTickers();
+actualizarReloj();
+setInterval(actualizarReloj, 1000);
+</script>
+
+<!-- ── FOOTER DISCLAIMER LEGAL ── -->
+<div style="background:#0d1117;border-top:1px solid rgba(255,255,255,0.06);padding:16px 32px;font-size:0.72rem;color:#4a5568;line-height:1.6;text-align:center;flex-shrink:0;">
+  <strong style="color:#8a9bb0">⚠️ Aviso Legal:</strong> InvertirCL es una plataforma de <strong style="color:#8a9bb0">educación financiera y simulación</strong>. No constituye asesoría de inversión ni está regulada por la CMF. Los resultados de simulación no garantizan rendimientos futuros. El usuario es el único responsable de sus decisiones de inversión con dinero real. ·
+  <a href="legal.html" style="color:#4a5568;text-decoration:underline">Términos</a> ·
+  <a href="legal.html" style="color:#4a5568;text-decoration:underline">Privacidad</a> ·
+  <a href="legal.html" style="color:#4a5568;text-decoration:underline">Disclaimer</a>
+</div>
+</body>
+</html>

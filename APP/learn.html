@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>InvertirCL — Aprende</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:#07090d; --bg2:#0d1117; --bg3:#131a22; --bg4:#1a222c;
+  --verde:#00e676; --rojo:#ff3d57; --azul:#4a9eff; --amarillo:#f5c518; --purpura:#9b59b6;
+  --linea:rgba(255,255,255,0.06); --linea2:rgba(255,255,255,0.1);
+  --texto:#e2e8f0; --texto2:#8a9bb0; --texto3:#4a5568;
+  --mono:'DM Mono',monospace; --sans:'DM Sans',sans-serif; --display:'Syne',sans-serif;
+  --topbar:52px;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html,body{height:100%;overflow:hidden;}
+body{font-family:var(--sans);background:var(--bg);color:var(--texto);display:flex;flex-direction:column;}
+
+.topbar{height:var(--topbar);background:var(--bg2);border-bottom:1px solid var(--linea);display:flex;align-items:center;padding:0 16px;gap:12px;flex-shrink:0;}
+.logo{font-family:var(--display);font-weight:800;font-size:1rem;color:var(--verde);}
+.logo span{color:var(--texto2);}
+.top-nav{display:flex;gap:4px;margin-left:12px;}
+.tnav{padding:6px 14px;border-radius:6px;font-size:0.82rem;color:var(--texto2);cursor:pointer;transition:all 0.15s;}
+.tnav:hover{background:var(--bg3);color:var(--texto);}
+.tnav.active{background:rgba(0,230,118,0.1);color:var(--verde);}
+.hora{margin-left:auto;font-family:var(--mono);font-size:0.78rem;color:var(--texto2);}
+
+/* ── LAYOUT ── */
+.layout{display:flex;flex:1;overflow:hidden;}
+
+/* ── SIDEBAR ── */
+.sidebar{width:240px;background:var(--bg2);border-right:1px solid var(--linea);overflow-y:auto;flex-shrink:0;}
+.sb-section{padding:14px 12px 8px;}
+.sb-label{font-size:0.65rem;text-transform:uppercase;letter-spacing:0.1em;color:var(--texto3);margin-bottom:8px;padding-left:8px;}
+.sb-item{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:8px;cursor:pointer;transition:all 0.15s;margin-bottom:3px;}
+.sb-item:hover{background:var(--bg3);}
+.sb-item.active{background:rgba(0,230,118,0.08);border:1px solid rgba(0,230,118,0.15);}
+.sb-icon{font-size:1rem;width:22px;text-align:center;flex-shrink:0;}
+.sb-info{flex:1;min-width:0;}
+.sb-name{font-size:0.82rem;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.sb-name.active-text{color:var(--verde);}
+.sb-meta{font-size:0.68rem;color:var(--texto2);display:flex;align-items:center;gap:6px;margin-top:2px;}
+.sb-tag{padding:1px 5px;border-radius:3px;font-size:0.6rem;text-transform:uppercase;letter-spacing:0.04em;}
+.sb-check{margin-left:auto;flex-shrink:0;}
+
+/* Progreso general */
+.progress-card{margin:12px;background:var(--bg3);border:1px solid var(--linea);border-radius:10px;padding:14px;}
+.prog-label{font-size:0.68rem;color:var(--texto3);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px;}
+.prog-bar{height:6px;background:var(--bg4);border-radius:3px;overflow:hidden;margin-bottom:6px;}
+.prog-fill{height:100%;background:linear-gradient(90deg,var(--verde),var(--azul));border-radius:3px;transition:width 0.6s;}
+.prog-text{font-family:var(--mono);font-size:0.75rem;color:var(--texto2);}
+
+/* ── MAIN ── */
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden;}
+
+/* Video placeholder */
+.video-area{background:#000;border-bottom:1px solid var(--linea);flex-shrink:0;position:relative;display:flex;align-items:center;justify-content:center;min-height:280px;max-height:320px;}
+.video-thumb{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;background:radial-gradient(ellipse at center,#1a222c,#07090d);}
+.video-icon{font-size:3rem;opacity:0.8;}
+.video-title-overlay{font-family:var(--display);font-size:1.1rem;font-weight:700;text-align:center;max-width:400px;line-height:1.3;}
+.video-duration{font-family:var(--mono);font-size:0.75rem;color:var(--texto2);}
+.play-btn{width:60px;height:60px;border-radius:50%;background:rgba(0,230,118,0.9);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all 0.2s;border:none;}
+.play-btn:hover{background:#fff;transform:scale(1.08);}
+.play-icon{font-size:1.4rem;margin-left:4px;}
+
+/* Barra de progreso video */
+.video-bar{position:absolute;bottom:0;left:0;right:0;padding:12px 16px;background:linear-gradient(transparent,rgba(0,0,0,0.8));}
+.vbar-track{height:3px;background:rgba(255,255,255,0.2);border-radius:2px;margin-bottom:8px;cursor:pointer;}
+.vbar-fill{height:100%;background:var(--verde);border-radius:2px;width:35%;}
+.vbar-controls{display:flex;align-items:center;gap:10px;font-size:0.78rem;color:var(--texto2);}
+.vbar-time{font-family:var(--mono);}
+
+/* Contenido del módulo */
+.module-content{flex:1;overflow-y:auto;padding:20px;}
+.module-header{margin-bottom:16px;}
+.module-tag{display:inline-flex;align-items:center;gap:6px;font-size:0.7rem;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px;}
+.module-title{font-family:var(--display);font-size:1.3rem;font-weight:800;letter-spacing:-0.02em;margin-bottom:8px;}
+.module-intro{font-size:0.9rem;color:var(--texto2);line-height:1.7;max-width:680px;}
+
+/* Viñetas clave */
+.key-points{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:16px;}
+.key-point{background:var(--bg2);border:1px solid var(--linea);border-radius:10px;padding:14px;display:flex;gap:10px;}
+.kp-icon{font-size:1.2rem;flex-shrink:0;}
+.kp-info{}
+.kp-title{font-size:0.82rem;font-weight:500;margin-bottom:4px;}
+.kp-desc{font-size:0.75rem;color:var(--texto2);line-height:1.5;}
+
+/* Glosario chileno */
+.glosario{margin-top:20px;}
+.glosario-title{font-size:0.78rem;font-weight:500;text-transform:uppercase;letter-spacing:0.08em;color:var(--texto3);margin-bottom:10px;}
+.glosario-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;}
+.glosario-item{background:var(--bg2);border:1px solid var(--linea);border-radius:8px;padding:12px;cursor:pointer;transition:border-color 0.15s;}
+.glosario-item:hover{border-color:var(--verde);}
+.glosario-term{font-size:0.82rem;font-weight:600;color:var(--verde);margin-bottom:4px;}
+.glosario-def{font-size:0.72rem;color:var(--texto2);line-height:1.5;}
+
+/* Quiz */
+.quiz-section{margin-top:20px;background:rgba(74,158,255,0.05);border:1px solid rgba(74,158,255,0.15);border-radius:12px;padding:18px;}
+.quiz-title{font-size:0.9rem;font-weight:600;margin-bottom:12px;display:flex;align-items:center;gap:8px;}
+.quiz-q{font-size:0.88rem;margin-bottom:14px;line-height:1.5;}
+.quiz-options{display:flex;flex-direction:column;gap:7px;}
+.quiz-opt{padding:10px 14px;border:1px solid var(--linea2);border-radius:8px;cursor:pointer;font-size:0.84rem;transition:all 0.15s;}
+.quiz-opt:hover{border-color:var(--azul);color:var(--azul);}
+.quiz-opt.correct{border-color:var(--verde);background:rgba(0,230,118,0.08);color:var(--verde);}
+.quiz-opt.wrong{border-color:var(--rojo);background:rgba(255,61,87,0.08);color:var(--rojo);}
+.quiz-feedback{margin-top:12px;padding:10px 12px;border-radius:8px;font-size:0.82rem;display:none;line-height:1.5;}
+.quiz-feedback.show{display:block;}
+.quiz-feedback.ok{background:rgba(0,230,118,0.08);border:1px solid rgba(0,230,118,0.2);color:var(--verde);}
+.quiz-feedback.err{background:rgba(255,61,87,0.08);border:1px solid rgba(255,61,87,0.2);color:var(--rojo);}
+
+/* Botones navegación módulo */
+.module-nav{display:flex;justify-content:space-between;align-items:center;padding:14px 20px;border-top:1px solid var(--linea);flex-shrink:0;background:var(--bg2);}
+.nav-btn{display:flex;align-items:center;gap:8px;padding:9px 18px;border-radius:8px;font-size:0.85rem;cursor:pointer;border:none;font-family:var(--sans);transition:all 0.2s;}
+.nav-btn.prev{background:var(--bg3);color:var(--texto2);}
+.nav-btn.prev:hover{color:var(--texto);}
+.nav-btn.next{background:var(--verde);color:#000;font-weight:600;}
+.nav-btn.next:hover{background:#fff;}
+.nav-progress{font-size:0.78rem;color:var(--texto2);font-family:var(--mono);}
+
+/* Scrollbar */
+::-webkit-scrollbar{width:4px;}
+::-webkit-scrollbar-track{background:transparent;}
+::-webkit-scrollbar-thumb{background:var(--bg4);border-radius:2px;}
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.fade-in{animation:fadeIn 0.35s ease both;}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="logo">Invertir<span>CL</span></div>
+  <div class="top-nav">
+    <div class="tnav" onclick="location.href='dashboard.html'">Dashboard</div>
+    <div class="tnav" onclick="location.href='simulator.html'">Simulador</div>
+    <div class="tnav" onclick="location.href='backtest.html'">Backtest</div>
+    <div class="tnav" onclick="location.href='risk.html'">Riesgo</div>
+    <div class="tnav active">Aprender</div>
+  </div>
+  <div class="hora" id="horaEl">09:31:42</div>
+</div>
+
+<div class="layout">
+
+<!-- ── SIDEBAR ── -->
+<div class="sidebar">
+  <div class="progress-card">
+    <div class="prog-label">Tu progreso</div>
+    <div class="prog-bar"><div class="prog-fill" style="width:32%"></div></div>
+    <div class="prog-text">4 de 12 módulos completados</div>
+  </div>
+
+  <div class="sb-section">
+    <div class="sb-label">Fundamentos</div>
+    <div id="sidebarModulos"></div>
+  </div>
+</div>
+
+<!-- ── MAIN ── -->
+<div class="main">
+
+  <!-- Video -->
+  <div class="video-area fade-in">
+    <div class="video-thumb" id="videoThumb">
+      <div class="video-icon">📈</div>
+      <div class="video-title-overlay" id="videoTitleOverlay">¿Qué es el IPSA y cómo funciona?</div>
+      <button class="play-btn" onclick="playVideo()">
+        <span class="play-icon">▶</span>
+      </button>
+      <div class="video-duration" id="videoDuration">4 minutos</div>
+    </div>
+    <div class="video-bar">
+      <div class="vbar-track" onclick="clickBar(event,this)">
+        <div class="vbar-fill" id="vbarFill"></div>
+      </div>
+      <div class="vbar-controls">
+        <span id="playIcon" style="cursor:pointer" onclick="playVideo()">▶</span>
+        <span class="vbar-time" id="vbarTime">1:24 / 4:00</span>
+        <span style="margin-left:auto;cursor:pointer;font-size:0.82rem">⛶ Pantalla completa</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Contenido -->
+  <div class="module-content fade-in" id="moduleContent">
+  </div>
+
+  <!-- Navegación -->
+  <div class="module-nav">
+    <button class="nav-btn prev" onclick="navModulo(-1)">← Anterior</button>
+    <span class="nav-progress" id="navProg">Módulo 1 de 12</span>
+    <button class="nav-btn next" onclick="navModulo(1)">Siguiente →</button>
+  </div>
+
+</div>
+</div>
+
+<script>
+// ── MÓDULOS ───────────────────────────────────────────────────
+const modulos = [
+  {
+    id:'ipsa', icon:'📈', name:'¿Qué es el IPSA?', dur:'4 min', tag:'Básico', tagColor:'var(--verde)', done:true,
+    title:'¿Qué es el IPSA y cómo funciona?',
+    intro:'El IPSA (Índice de Precio Selectivo de Acciones) es el principal indicador bursátil de Chile. Agrupa las 30 acciones con mayor presencia bursátil en la Bolsa de Santiago. Entender el IPSA es el primer paso para invertir en el mercado local.',
+    puntos:[
+      { icon:'🏢', title:'Las 30 empresas más grandes', desc:'COPEC, SQM, Falabella, BCI y otras 26 empresas componen el índice. Son las más transadas de Chile.' },
+      { icon:'📊', title:'Se mueve con la economía', desc:'Cuando Chile va bien, el IPSA tiende a subir. Cuando hay crisis, cae. Es el termómetro de la economía.' },
+      { icon:'💰', title:'Puedes invertir en él', desc:'Comprando acciones de las empresas del IPSA o a través de fondos mutuos indexados.' },
+      { icon:'⏰', title:'Horario de la Bolsa', desc:'La Bolsa de Santiago opera de 09:30 a 17:30 hora chilena, de lunes a viernes.' },
+    ],
+    glosario:[
+      { term:'IPSA', def:'Índice de Precio Selectivo de Acciones. El "S&P500 chileno".' },
+      { term:'Bolsa de Santiago', def:'Mercado donde se compran y venden acciones de empresas chilenas.' },
+      { term:'Presencia bursátil', def:'Qué tan seguido se transa una acción. Mayor presencia = más líquida.' },
+      { term:'Acción', def:'Fracción de propiedad de una empresa. Al comprar, eres dueño de una parte.' },
+      { term:'Índice', def:'Número que resume el comportamiento de un conjunto de acciones.' },
+      { term:'Punto del índice', def:'Unidad de medida del IPSA. Si sube de 7.000 a 7.100 subió 100 puntos.' },
+    ],
+    quiz:{
+      pregunta:'¿Cuántas empresas componen el IPSA?',
+      opciones:['10 empresas','20 empresas','30 empresas','50 empresas'],
+      correcta:2,
+      feedback:'¡Correcto! El IPSA incluye las 30 acciones con mayor presencia bursátil en la Bolsa de Santiago.',
+      feedbackErr:'No es eso. El IPSA incluye exactamente 30 empresas — las de mayor presencia bursátil en Chile.',
+    }
+  },
+  {
+    id:'usd', icon:'💵', name:'Dólar y tipo de cambio', dur:'6 min', tag:'Básico', tagColor:'var(--verde)', done:true,
+    title:'Cómo el dólar afecta tus inversiones en Chile',
+    intro:'El tipo de cambio USD/CLP es uno de los factores más importantes para cualquier inversor chileno. Impacta en el valor de tus inversiones, en el precio de las empresas exportadoras y en el poder de compra general.',
+    puntos:[
+      { icon:'⚖️', title:'Relación inversa con el cobre', desc:'Chile es el mayor productor de cobre del mundo. Cuando el cobre sube, el peso se aprecia (dólar baja). Son inversamente correlacionados.' },
+      { icon:'📉', title:'Impacto en empresas exportadoras', desc:'COPEC y SQM venden en dólares. Si el dólar sube, sus ingresos en pesos aumentan — sus acciones suelen subir.' },
+      { icon:'🛒', title:'Inflación importada', desc:'Chile importa muchos bienes. Un dólar caro encarece las importaciones y genera inflación, lo que afecta el consumo.' },
+      { icon:'🏦', title:'Banco Central interviene', desc:'Cuando el dólar se sale de control, el Banco Central puede vender reservas para estabilizar el tipo de cambio.' },
+    ],
+    glosario:[
+      { term:'USD/CLP', def:'Tipo de cambio entre el dólar estadounidense y el peso chileno.' },
+      { term:'Apreciación', def:'El peso vale más — necesitas menos pesos para comprar un dólar.' },
+      { term:'Depreciación', def:'El peso vale menos — necesitas más pesos para comprar un dólar.' },
+      { term:'Dólar observado', def:'Tipo de cambio oficial calculado diariamente por el Banco Central.' },
+      { term:'Reservas internacionales', def:'Dólares que el Banco Central guarda para estabilizar el peso.' },
+      { term:'Carry trade', def:'Estrategia de invertir en monedas de alta tasa para ganar el diferencial.' },
+    ],
+    quiz:{
+      pregunta:'Si el precio del cobre sube mucho, ¿qué le suele pasar al dólar en Chile?',
+      opciones:['Sube — el dólar se encarece','Baja — el peso se aprecia','No cambia','Depende del Banco Central'],
+      correcta:1,
+      feedback:'¡Exacto! Chile es el mayor productor de cobre. Cuando el cobre sube, entran más dólares al país y el peso se aprecia (el dólar baja).',
+      feedbackErr:'Recuerda que el cobre y el dólar tienen relación inversa en Chile. Más exportaciones de cobre = más dólares = peso más fuerte = dólar más barato.',
+    }
+  },
+  {
+    id:'stop', icon:'🛡️', name:'Stop loss: protege tu capital', dur:'5 min', tag:'Esencial', tagColor:'var(--amarillo)', done:true,
+    title:'Stop Loss: la herramienta más importante del trading',
+    intro:'El stop loss es una orden automática que vende tu posición si el precio cae a un nivel determinado. Es la diferencia entre un trader que pierde un poco y uno que lo pierde todo. Sin stop loss, no existe la gestión de riesgo.',
+    puntos:[
+      { icon:'🚨', title:'¿Qué es exactamente?', desc:'Una orden pre-programada: "Si COPEC cae a $8.210, vende automáticamente". No tienes que estar mirando la pantalla.' },
+      { icon:'📐', title:'¿Dónde ponerlo?', desc:'Generalmente 2-5% bajo el precio de entrada. Debe estar en un nivel donde, si llega ahí, tu tesis de inversión ya falló.' },
+      { icon:'🧠', title:'El error más común', desc:'Mover el stop hacia abajo para "darle más espacio". Esto destroza las cuentas. El stop está donde está por una razón.' },
+      { icon:'💡', title:'Stop = límite de pérdida máxima', desc:'Si entras en $8.420 con stop en $8.210, lo máximo que puedes perder es $210 por acción. Conoces el riesgo antes de entrar.' },
+    ],
+    glosario:[
+      { term:'Stop Loss', def:'Orden para vender automáticamente si el precio cae a cierto nivel.' },
+      { term:'Stop Market', def:'Vende al precio de mercado cuando se activa el stop. Puede haber slippage.' },
+      { term:'Stop Limit', def:'Coloca una orden límite al activarse. Más control, pero puede no ejecutarse.' },
+      { term:'Trailing Stop', def:'Stop que se mueve con el precio. Si sube, el stop sube; si cae, vende.' },
+      { term:'Slippage', def:'Diferencia entre el precio esperado de ejecución y el precio real.' },
+      { term:'Take Profit', def:'Lo opuesto al stop: vende automáticamente si el precio sube al objetivo.' },
+    ],
+    quiz:{
+      pregunta:'Compraste COPEC a $8.420. ¿Dónde pondrías el stop loss con la regla del 2.5%?',
+      opciones:['$8.000','$8.210','$8.350','$8.500'],
+      correcta:1,
+      feedback:'¡Correcto! $8.420 × (1 - 0.025) = $8.209 ≈ $8.210. Exactamente el 2.5% bajo el precio de entrada.',
+      feedbackErr:'Con la regla del 2.5%: $8.420 × 0.975 = $8.210. Ese es el nivel correcto del stop loss.',
+    }
+  },
+  {
+    id:'velas', icon:'🕯️', name:'Cómo leer velas japonesas', dur:'8 min', tag:'Técnico', tagColor:'var(--purpura)', done:true,
+    title:'Velas japonesas: lee el mercado en un vistazo',
+    intro:'Las velas japonesas son la forma más común de visualizar precios en los mercados financieros. Cada vela muestra 4 precios clave en un período de tiempo: apertura, cierre, máximo y mínimo. Saber leerlas es fundamental para el análisis técnico.',
+    puntos:[
+      { icon:'🟩', title:'Vela verde (alcista)', desc:'El precio subió durante el período. La parte inferior del cuerpo es el precio de apertura y la superior es el cierre.' },
+      { icon:'🟥', title:'Vela roja (bajista)', desc:'El precio bajó. La parte superior del cuerpo es el precio de apertura y la inferior es el cierre.' },
+      { icon:'➖', title:'Las mechas o sombras', desc:'Las líneas que sobresalen arriba y abajo del cuerpo muestran el máximo y mínimo del período. Mucha mecha = indecisión.' },
+      { icon:'📏', title:'Tamaño importa', desc:'Velas grandes = movimiento fuerte con convicción. Velas pequeñas = indecisión o baja volatilidad. El contexto lo es todo.' },
+    ],
+    glosario:[
+      { term:'Cuerpo de la vela', def:'Diferencia entre apertura y cierre. El bloque principal de la vela.' },
+      { term:'Mecha superior', def:'Línea que va del cierre al máximo (vela verde) o del precio de apertura al máximo (vela roja).' },
+      { term:'Doji', def:'Vela con cuerpo muy pequeño. Apertura y cierre casi iguales. Señal de indecisión.' },
+      { term:'Martillo', def:'Vela con cuerpo pequeño arriba y mecha larga abajo. Señal de reversión alcista.' },
+      { term:'Engulfing', def:'Una vela que "engulle" a la anterior. Señal de cambio de tendencia.' },
+      { term:'Temporalidad', def:'El período que representa cada vela: 1 minuto, 5 minutos, 1 hora, 1 día, etc.' },
+    ],
+    quiz:{
+      pregunta:'Una vela verde tiene apertura en $100 y cierre en $108. ¿Cuál fue el movimiento?',
+      opciones:['Bajó $8','Subió $8 (8%)','Se quedó igual','No se puede saber'],
+      correcta:1,
+      feedback:'¡Perfecto! Una vela verde significa que el precio subió. De $100 a $108 son $8 de ganancia, equivalente al 8%.',
+      feedbackErr:'Recuerda: vela verde = precio subió. Abrió en $100 y cerró en $108 → subió $8.',
+    }
+  },
+  { id:'uf', icon:'🇨🇱', name:'La UF y cómo usarla', dur:'5 min', tag:'Chile', tagColor:'var(--azul)', done:false, title:'La UF explicada', intro:'...', puntos:[], glosario:[], quiz:null },
+  { id:'fondos', icon:'🏦', name:'Fondos mutuos en Chile', dur:'7 min', tag:'Chile', tagColor:'var(--azul)', done:false, title:'Fondos mutuos', intro:'...', puntos:[], glosario:[], quiz:null },
+  { id:'rsi', icon:'📊', name:'RSI: comprar en el suelo', dur:'6 min', tag:'Técnico', tagColor:'var(--purpura)', done:false, title:'RSI', intro:'...', puntos:[], glosario:[], quiz:null },
+  { id:'ema', icon:'〰️', name:'Medias móviles EMA', dur:'7 min', tag:'Técnico', tagColor:'var(--purpura)', done:false, title:'EMAs', intro:'...', puntos:[], glosario:[], quiz:null },
+  { id:'diversificar', icon:'⚖️', name:'Cómo diversificar', dur:'5 min', tag:'Estrategia', tagColor:'var(--amarillo)', done:false, title:'Diversificación', intro:'...', puntos:[], glosario:[], quiz:null },
+  { id:'macro', icon:'🌍', name:'Macroeconomía y mercados', dur:'9 min', tag:'Avanzado', tagColor:'var(--rojo)', done:false, title:'Macro', intro:'...', puntos:[], glosario:[], quiz:null },
+  { id:'etf', icon:'📦', name:'ETFs: diversificación fácil', dur:'6 min', tag:'Estrategia', tagColor:'var(--amarillo)', done:false, title:'ETFs', intro:'...', puntos:[], glosario:[], quiz:null },
+  { id:'psico', icon:'🧠', name:'Psicología del inversor', dur:'8 min', tag:'Avanzado', tagColor:'var(--rojo)', done:false, title:'Psicología', intro:'...', puntos:[], glosario:[], quiz:null },
+];
+
+let moduloActual = 0;
+let quizRespondido = false;
+
+// ── SIDEBAR ───────────────────────────────────────────────────
+function renderSidebar() {
+  const c = document.getElementById('sidebarModulos');
+  c.innerHTML = modulos.map((m,i) => `
+    <div class="sb-item ${i===moduloActual?'active':''}" onclick="irModulo(${i})">
+      <span class="sb-icon">${m.icon}</span>
+      <div class="sb-info">
+        <div class="sb-name ${i===moduloActual?'active-text':''}">${m.name}</div>
+        <div class="sb-meta">
+          <span class="sb-tag" style="background:${m.tagColor}22;color:${m.tagColor}">${m.tag}</span>
+          <span>${m.dur}</span>
+        </div>
+      </div>
+      <span class="sb-check">${m.done?'✅':''}</span>
+    </div>
+  `).join('');
+}
+
+// ── CONTENIDO MÓDULO ──────────────────────────────────────────
+function renderModulo(idx) {
+  const m = modulos[idx];
+  quizRespondido = false;
+
+  // Video
+  document.getElementById('videoTitleOverlay').textContent = m.title;
+  document.getElementById('videoDuration').textContent = m.dur;
+  document.getElementById('vbarFill').style.width = m.done ? '100%' : '0%';
+  document.getElementById('vbarTime').textContent = m.done ? `${m.dur} / ${m.dur}` : `0:00 / ${m.dur}`;
+
+  // Nav
+  document.getElementById('navProg').textContent = `Módulo ${idx+1} de ${modulos.length}`;
+
+  // Contenido
+  const c = document.getElementById('moduleContent');
+
+  if (!m.puntos || m.puntos.length === 0) {
+    c.innerHTML = `
+      <div class="module-header">
+        <div class="module-tag"><span class="sb-tag" style="background:${m.tagColor}22;color:${m.tagColor}">${m.tag}</span> · ${m.dur}</div>
+        <div class="module-title">${m.title || m.name}</div>
+        <div class="module-intro" style="color:var(--verde)">🚧 Este módulo está en construcción. ¡Vuelve pronto!</div>
+      </div>`;
+    return;
+  }
+
+  const quizHTML = m.quiz ? `
+    <div class="quiz-section">
+      <div class="quiz-title">🎯 Pon a prueba lo aprendido</div>
+      <div class="quiz-q">${m.quiz.pregunta}</div>
+      <div class="quiz-options" id="quizOpts">
+        ${m.quiz.opciones.map((o,i)=>`<div class="quiz-opt" onclick="responder(${i},${m.quiz.correcta},'${m.quiz.feedback.replace(/'/g,"\\'")}','${m.quiz.feedbackErr.replace(/'/g,"\\'")}',this)">${o}</div>`).join('')}
+      </div>
+      <div class="quiz-feedback" id="quizFeedback"></div>
+    </div>` : '';
+
+  c.innerHTML = `
+    <div class="module-header">
+      <div class="module-tag">
+        <span class="sb-tag" style="background:${m.tagColor}22;color:${m.tagColor}">${m.tag}</span>
+        <span style="color:var(--texto3)">·</span>
+        <span style="color:var(--texto2)">${m.dur}</span>
+      </div>
+      <div class="module-title">${m.title}</div>
+      <div class="module-intro">${m.intro}</div>
+    </div>
+
+    <div class="key-points">
+      ${m.puntos.map(p=>`
+        <div class="key-point">
+          <span class="kp-icon">${p.icon}</span>
+          <div class="kp-info">
+            <div class="kp-title">${p.title}</div>
+            <div class="kp-desc">${p.desc}</div>
+          </div>
+        </div>
+      `).join('')}
+    </div>
+
+    <div class="glosario">
+      <div class="glosario-title">📚 Glosario del módulo</div>
+      <div class="glosario-grid">
+        ${m.glosario.map(g=>`
+          <div class="glosario-item">
+            <div class="glosario-term">${g.term}</div>
+            <div class="glosario-def">${g.def}</div>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+
+    ${quizHTML}
+  `;
+}
+
+function responder(idx, correcta, feedback, feedbackErr, el) {
+  if (quizRespondido) return;
+  quizRespondido = true;
+
+  const opts = document.querySelectorAll('.quiz-opt');
+  opts.forEach((o,i) => {
+    if (i === correcta) o.classList.add('correct');
+    else if (i === idx && i !== correcta) o.classList.add('wrong');
+  });
+
+  const fb = document.getElementById('quizFeedback');
+  const isOk = idx === correcta;
+  fb.textContent = isOk ? '✅ ' + feedback : '❌ ' + feedbackErr;
+  fb.className = `quiz-feedback show ${isOk?'ok':'err'}`;
+
+  if (isOk) {
+    modulos[moduloActual].done = true;
+    renderSidebar();
+  }
+}
+
+function irModulo(idx) {
+  moduloActual = idx;
+  renderSidebar();
+  renderModulo(idx);
+  document.getElementById('moduleContent').scrollTop = 0;
+}
+
+function navModulo(dir) {
+  const next = moduloActual + dir;
+  if (next >= 0 && next < modulos.length) irModulo(next);
+}
+
+function playVideo() {
+  const icon = document.getElementById('playIcon');
+  icon.textContent = icon.textContent === '▶' ? '⏸' : '▶';
+}
+
+function clickBar(e, el) {
+  const rect = el.getBoundingClientRect();
+  const pct  = (e.clientX - rect.left) / rect.width * 100;
+  document.getElementById('vbarFill').style.width = pct + '%';
+}
+
+// ── RELOJ ─────────────────────────────────────────────────────
+function reloj() {
+  const el = document.getElementById('horaEl');
+  if (!el) return;
+  const n = new Date();
+  el.textContent = [n.getHours(),n.getMinutes(),n.getSeconds()].map(v=>String(v).padStart(2,'0')).join(':');
+}
+
+// ── INIT ──────────────────────────────────────────────────────
+renderSidebar();
+renderModulo(0);
+reloj();
+setInterval(reloj, 1000);
+</script>
+</body>
+</html>
