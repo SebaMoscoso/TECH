@@ -1,0 +1,1106 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>InvertirCL — Heatmap de Liquidez</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:#07090d; --bg2:#0d1117; --bg3:#131a22; --bg4:#1a222c;
+  --verde:#00e676; --rojo:#ff3d57; --azul:#4a9eff; --amarillo:#f5c518;
+  --purpura:#9b59b6; --naranja:#ff6b35; --cyan:#00bcd4;
+  --linea:rgba(255,255,255,0.06); --linea2:rgba(255,255,255,0.1);
+  --texto:#e2e8f0; --texto2:#8a9bb0; --texto3:#4a5568;
+  --mono:'DM Mono',monospace; --sans:'DM Sans',sans-serif; --display:'Syne',sans-serif;
+  --compra-strong:rgba(0,230,118,0.55);
+  --compra-mid:rgba(0,230,118,0.30);
+  --compra-weak:rgba(0,230,118,0.12);
+  --venta-strong:rgba(255,61,87,0.55);
+  --venta-mid:rgba(255,61,87,0.30);
+  --venta-weak:rgba(255,61,87,0.12);
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html{scroll-behavior:smooth;}
+body{font-family:var(--sans);background:var(--bg);color:var(--texto);line-height:1.6;min-height:100vh;overflow-x:hidden;}
+
+/* ── TOPBAR ── */
+.topbar{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:0 24px;height:52px;
+  background:var(--bg2);border-bottom:1px solid var(--linea);
+  position:sticky;top:0;z-index:100;
+}
+.topbar-logo{font-family:var(--display);font-size:1rem;font-weight:800;color:var(--verde);letter-spacing:-0.02em;text-decoration:none;}
+.topbar-logo span{color:var(--texto2);font-weight:400;}
+.tnav{display:flex;gap:2px;}
+.tnav a{
+  font-size:0.75rem;color:var(--texto2);text-decoration:none;padding:6px 14px;
+  border-radius:6px;transition:all 0.15s;white-space:nowrap;
+}
+.tnav a:hover{background:var(--bg3);color:var(--texto);}
+.tnav a.active{background:rgba(0,230,118,0.1);color:var(--verde);}
+.topbar-right{display:flex;align-items:center;gap:10px;}
+.live-dot{width:6px;height:6px;border-radius:50%;background:var(--verde);animation:pulse 2s infinite;}
+@keyframes pulse{0%,100%{opacity:1;box-shadow:0 0 0 0 rgba(0,230,118,0.4)}50%{opacity:0.6;box-shadow:0 0 0 4px rgba(0,230,118,0)}}
+.live-label{font-family:var(--mono);font-size:0.68rem;color:var(--verde);}
+
+/* ── LAYOUT ── */
+.main-layout{display:grid;grid-template-columns:260px 1fr 320px;gap:0;height:calc(100vh - 52px);}
+
+/* ── SIDEBAR IZQUIERDO — Selector de activo y controles ── */
+.sidebar-left{
+  background:var(--bg2);border-right:1px solid var(--linea);
+  display:flex;flex-direction:column;overflow-y:auto;
+}
+.sidebar-section{padding:16px;border-bottom:1px solid var(--linea);}
+.sidebar-label{font-size:0.65rem;text-transform:uppercase;letter-spacing:0.1em;color:var(--texto3);margin-bottom:10px;}
+
+/* Selector de activo */
+.asset-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;}
+.asset-btn{
+  background:var(--bg3);border:1px solid var(--linea);border-radius:8px;
+  padding:10px 8px;cursor:pointer;text-align:center;transition:all 0.2s;
+}
+.asset-btn:hover{border-color:var(--linea2);background:var(--bg4);}
+.asset-btn.active{background:rgba(0,230,118,0.08);border-color:rgba(0,230,118,0.3);}
+.asset-ticker{font-family:var(--display);font-size:0.8rem;font-weight:700;color:var(--texto);}
+.asset-btn.active .asset-ticker{color:var(--verde);}
+.asset-price{font-family:var(--mono);font-size:0.65rem;color:var(--texto2);margin-top:2px;}
+.asset-chg{font-family:var(--mono);font-size:0.62rem;margin-top:1px;}
+.asset-chg.pos{color:var(--verde);}
+.asset-chg.neg{color:var(--rojo);}
+
+/* Precio actual destacado */
+.current-price-card{
+  background:var(--bg3);border:1px solid var(--linea);border-radius:10px;padding:14px;
+  text-align:center;
+}
+.cp-label{font-size:0.65rem;text-transform:uppercase;letter-spacing:0.1em;color:var(--texto3);margin-bottom:4px;}
+.cp-value{font-family:var(--display);font-size:1.6rem;font-weight:800;color:var(--texto);}
+.cp-change{font-family:var(--mono);font-size:0.76rem;margin-top:4px;padding:3px 10px;border-radius:4px;display:inline-block;}
+.cp-change.pos{background:rgba(0,230,118,0.1);color:var(--verde);}
+.cp-change.neg{background:rgba(255,61,87,0.1);color:var(--rojo);}
+
+/* Controles */
+.control-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;}
+.control-label{font-size:0.78rem;color:var(--texto2);}
+.control-val{font-family:var(--mono);font-size:0.78rem;color:var(--texto);}
+.slider-wrap{position:relative;width:100%;margin-top:4px;}
+input[type=range]{
+  width:100%;-webkit-appearance:none;background:var(--bg3);height:4px;border-radius:2px;outline:none;cursor:pointer;
+}
+input[type=range]::-webkit-slider-thumb{
+  -webkit-appearance:none;width:14px;height:14px;border-radius:50%;
+  background:var(--verde);cursor:pointer;border:2px solid var(--bg2);
+  box-shadow:0 0 6px rgba(0,230,118,0.4);
+}
+
+/* Toggle depth / view */
+.toggle-group{display:flex;gap:4px;background:var(--bg3);border-radius:8px;padding:3px;}
+.toggle-btn{flex:1;padding:5px;border-radius:6px;border:none;background:transparent;color:var(--texto2);font-size:0.7rem;cursor:pointer;transition:all 0.15s;font-family:var(--sans);}
+.toggle-btn.active{background:var(--bg4);color:var(--texto);box-shadow:0 1px 3px rgba(0,0,0,0.3);}
+
+/* Leyenda S/R */
+.sr-legend{display:flex;flex-direction:column;gap:8px;}
+.sr-item{display:flex;align-items:center;gap:10px;padding:8px;border-radius:6px;background:var(--bg3);}
+.sr-dot{width:10px;height:10px;border-radius:2px;flex-shrink:0;}
+.sr-info{flex:1;}
+.sr-name{font-size:0.72rem;color:var(--texto);}
+.sr-price{font-family:var(--mono);font-size:0.68rem;color:var(--texto2);}
+.sr-strength{font-size:0.6rem;color:var(--texto3);}
+
+/* Estadísticas sidebar */
+.stat-mini{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.stat-mini-item{background:var(--bg3);border-radius:6px;padding:8px 10px;}
+.stat-mini-label{font-size:0.62rem;color:var(--texto3);text-transform:uppercase;letter-spacing:0.06em;}
+.stat-mini-val{font-family:var(--mono);font-size:0.88rem;color:var(--texto);margin-top:2px;}
+.stat-mini-val.verde{color:var(--verde);}
+.stat-mini-val.rojo{color:var(--rojo);}
+.stat-mini-val.azul{color:var(--azul);}
+
+/* ── CENTRO — Heatmap principal ── */
+.center-panel{display:flex;flex-direction:column;overflow:hidden;background:var(--bg);}
+.center-header{
+  padding:14px 20px;border-bottom:1px solid var(--linea);
+  display:flex;align-items:center;justify-content:space-between;background:var(--bg2);
+  flex-shrink:0;
+}
+.center-title{font-family:var(--display);font-size:0.95rem;font-weight:700;display:flex;align-items:center;gap:10px;}
+.badge-edu{
+  font-size:0.6rem;padding:2px 8px;border-radius:4px;text-transform:uppercase;letter-spacing:0.06em;
+  background:rgba(74,158,255,0.1);color:var(--azul);border:1px solid rgba(74,158,255,0.2);
+}
+.center-meta{display:flex;align-items:center;gap:12px;}
+.meta-chip{font-size:0.72rem;color:var(--texto2);display:flex;align-items:center;gap:5px;}
+.meta-chip strong{color:var(--texto);}
+
+/* Heatmap canvas area */
+.heatmap-wrap{flex:1;position:relative;overflow:hidden;padding:12px 20px;}
+#heatmapCanvas{width:100%;height:100%;display:block;border-radius:8px;}
+
+/* Precio flotante sobre heatmap */
+.price-crosshair{
+  position:absolute;left:0;right:0;pointer-events:none;
+  border-top:1px dashed rgba(245,197,24,0.6);transition:top 0.1s;
+  display:flex;align-items:center;
+}
+.price-crosshair-label{
+  font-family:var(--mono);font-size:0.68rem;background:var(--amarillo);color:#000;
+  padding:1px 6px;border-radius:3px;margin-left:8px;white-space:nowrap;
+}
+
+/* Axis labels */
+.axis-wrap{position:absolute;top:12px;bottom:12px;right:20px;width:60px;pointer-events:none;overflow:hidden;}
+.axis-label{
+  position:absolute;right:0;transform:translateY(-50%);
+  font-family:var(--mono);font-size:0.62rem;color:var(--texto3);white-space:nowrap;
+}
+
+/* ── SIDEBAR DERECHO — Order book + métricas ── */
+.sidebar-right{
+  background:var(--bg2);border-left:1px solid var(--linea);
+  display:flex;flex-direction:column;overflow-y:auto;
+}
+
+/* Order book */
+.ob-header{padding:14px 16px 10px;border-bottom:1px solid var(--linea);}
+.ob-title{font-family:var(--display);font-size:0.85rem;font-weight:700;margin-bottom:2px;}
+.ob-sub{font-size:0.68rem;color:var(--texto2);}
+.ob-spread{
+  display:flex;align-items:center;justify-content:center;
+  padding:6px;margin:0 16px;border-radius:6px;
+  background:rgba(245,197,24,0.06);border:1px solid rgba(245,197,24,0.15);
+}
+.ob-spread-label{font-size:0.65rem;color:var(--texto3);margin-right:6px;}
+.ob-spread-val{font-family:var(--mono);font-size:0.75rem;color:var(--amarillo);}
+
+/* Tabla order book */
+.ob-table{width:100%;}
+.ob-row{
+  display:grid;grid-template-columns:1fr 1fr 1fr;
+  padding:3px 16px;font-family:var(--mono);font-size:0.7rem;
+  position:relative;cursor:default;transition:background 0.1s;
+}
+.ob-row:hover{background:rgba(255,255,255,0.02);}
+.ob-row.header{color:var(--texto3);font-size:0.62rem;text-transform:uppercase;letter-spacing:0.06em;padding-bottom:5px;border-bottom:1px solid var(--linea);}
+.ob-row.ask .price-col{color:var(--rojo);}
+.ob-row.bid .price-col{color:var(--verde);}
+.ob-row .size-col{text-align:right;}
+.ob-row .total-col{text-align:right;color:var(--texto3);}
+.ob-bg{
+  position:absolute;top:0;right:0;bottom:0;
+  pointer-events:none;border-radius:2px 0 0 2px;opacity:0.18;
+}
+.ob-bg.ask{background:var(--rojo);}
+.ob-bg.bid{background:var(--verde);}
+.ob-section-label{
+  padding:6px 16px 4px;font-size:0.62rem;text-transform:uppercase;letter-spacing:0.08em;color:var(--texto3);
+}
+
+/* Análisis de presión */
+.pressure-section{padding:14px 16px;border-top:1px solid var(--linea);}
+.pressure-title{font-size:0.7rem;text-transform:uppercase;letter-spacing:0.08em;color:var(--texto3);margin-bottom:10px;}
+.pressure-bar-wrap{position:relative;height:8px;background:var(--bg3);border-radius:4px;overflow:hidden;margin-bottom:6px;}
+.pressure-fill-buy{position:absolute;left:0;top:0;bottom:0;background:var(--verde);border-radius:4px 0 0 4px;transition:width 0.5s ease;}
+.pressure-fill-sell{position:absolute;right:0;top:0;bottom:0;background:var(--rojo);border-radius:0 4px 4px 0;transition:width 0.5s ease;}
+.pressure-labels{display:flex;justify-content:space-between;font-family:var(--mono);font-size:0.7rem;}
+.pressure-label-buy{color:var(--verde);}
+.pressure-label-sell{color:var(--rojo);}
+
+/* Señales S/R */
+.signals-section{padding:14px 16px;border-top:1px solid var(--linea);}
+.signals-title{font-size:0.7rem;text-transform:uppercase;letter-spacing:0.08em;color:var(--texto3);margin-bottom:8px;}
+.signal-item{
+  display:flex;align-items:flex-start;gap:8px;padding:8px;
+  border-radius:6px;margin-bottom:6px;border:1px solid;
+}
+.signal-item.resistencia{background:rgba(255,61,87,0.04);border-color:rgba(255,61,87,0.12);}
+.signal-item.soporte{background:rgba(0,230,118,0.04);border-color:rgba(0,230,118,0.12);}
+.signal-icon{font-size:0.9rem;line-height:1.2;}
+.signal-body{flex:1;}
+.signal-type{font-size:0.65rem;text-transform:uppercase;letter-spacing:0.06em;}
+.signal-item.resistencia .signal-type{color:var(--rojo);}
+.signal-item.soporte .signal-type{color:var(--verde);}
+.signal-price{font-family:var(--mono);font-size:0.8rem;color:var(--texto);font-weight:500;}
+.signal-desc{font-size:0.68rem;color:var(--texto2);line-height:1.4;margin-top:1px;}
+
+/* Tooltip educativo */
+.edu-tooltip{
+  position:fixed;bottom:20px;right:340px;
+  background:var(--bg2);border:1px solid rgba(74,158,255,0.3);border-radius:10px;
+  padding:12px 16px;max-width:280px;z-index:200;
+  box-shadow:0 8px 32px rgba(0,0,0,0.4);
+  animation:slideUp 0.3s ease;display:none;
+}
+.edu-tooltip.visible{display:block;}
+@keyframes slideUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.edu-tip-header{display:flex;align-items:center;gap:6px;margin-bottom:6px;}
+.edu-tip-icon{font-size:0.9rem;}
+.edu-tip-title{font-size:0.75rem;font-weight:600;color:var(--azul);}
+.edu-tip-body{font-size:0.73rem;color:var(--texto2);line-height:1.55;}
+.edu-tip-close{
+  position:absolute;top:8px;right:10px;background:none;border:none;
+  color:var(--texto3);cursor:pointer;font-size:0.9rem;line-height:1;
+}
+
+/* Info bar bottom */
+.info-bar{
+  padding:8px 20px;background:var(--bg2);border-top:1px solid var(--linea);
+  display:flex;align-items:center;gap:20px;flex-shrink:0;
+}
+.info-bar-item{display:flex;align-items:center;gap:6px;font-size:0.7rem;color:var(--texto2);}
+.info-bar-dot{width:6px;height:6px;border-radius:50%;}
+.info-bar-val{font-family:var(--mono);color:var(--texto);}
+
+/* Scrollbar */
+::-webkit-scrollbar{width:4px;}
+::-webkit-scrollbar-track{background:transparent;}
+::-webkit-scrollbar-thumb{background:var(--bg4);border-radius:2px;}
+::-webkit-scrollbar-thumb:hover{background:var(--texto3);}
+
+/* Animaciones de actualización */
+@keyframes flashGreen{0%{background:rgba(0,230,118,0.15)}100%{background:transparent}}
+@keyframes flashRed{0%{background:rgba(255,61,87,0.15)}100%{background:transparent}}
+.flash-green{animation:flashGreen 0.5s ease;}
+.flash-red{animation:flashRed 0.5s ease;}
+</style>
+</head>
+<body>
+
+<!-- TOPBAR -->
+<div class="topbar">
+  <a href="dashboard.html" class="topbar-logo">Invertir<span>CL</span></a>
+  <nav class="tnav">
+    <a href="dashboard.html">Dashboard</a>
+    <a href="simulator.html">Simulador</a>
+    <a href="backtest.html">Backtest</a>
+    <a href="risk.html">Riesgo</a>
+    <a href="learn.html">Aprender</a>
+    <a href="heatmap.html" class="active">Liquidez</a>
+  </nav>
+  <div class="topbar-right">
+    <div class="live-dot"></div>
+    <span class="live-label" id="lastUpdate">Actualizando...</span>
+  </div>
+</div>
+
+<!-- LAYOUT PRINCIPAL -->
+<div class="main-layout">
+
+  <!-- ══ SIDEBAR IZQUIERDO ══ -->
+  <div class="sidebar-left">
+
+    <!-- Selector activo -->
+    <div class="sidebar-section">
+      <div class="sidebar-label">Activo</div>
+      <div class="asset-grid" id="assetGrid">
+        <div class="asset-btn active" onclick="seleccionarActivo('COPEC.SN')">
+          <div class="asset-ticker">COPEC</div>
+          <div class="asset-price" id="price-COPEC.SN">—</div>
+          <div class="asset-chg" id="chg-COPEC.SN">—</div>
+        </div>
+        <div class="asset-btn" onclick="seleccionarActivo('SQM-B.SN')">
+          <div class="asset-ticker">SQM-B</div>
+          <div class="asset-price" id="price-SQM-B.SN">—</div>
+          <div class="asset-chg" id="chg-SQM-B.SN">—</div>
+        </div>
+        <div class="asset-btn" onclick="seleccionarActivo('BCI.SN')">
+          <div class="asset-ticker">BCI</div>
+          <div class="asset-price" id="price-BCI.SN">—</div>
+          <div class="asset-chg" id="chg-BCI.SN">—</div>
+        </div>
+        <div class="asset-btn" onclick="seleccionarActivo('ENTEL.SN')">
+          <div class="asset-ticker">ENTEL</div>
+          <div class="asset-price" id="price-ENTEL.SN">—</div>
+          <div class="asset-chg" id="chg-ENTEL.SN">—</div>
+        </div>
+        <div class="asset-btn" onclick="seleccionarActivo('CCU.SN')">
+          <div class="asset-ticker">CCU</div>
+          <div class="asset-price" id="price-CCU.SN">—</div>
+          <div class="asset-chg" id="chg-CCU.SN">—</div>
+        </div>
+        <div class="asset-btn" onclick="seleccionarActivo('FALABELLA.SN')">
+          <div class="asset-ticker">FALA</div>
+          <div class="asset-price" id="price-FALABELLA.SN">—</div>
+          <div class="asset-chg" id="chg-FALABELLA.SN">—</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Precio actual -->
+    <div class="sidebar-section">
+      <div class="current-price-card">
+        <div class="cp-label" id="cpLabel">COPEC — Precio actual</div>
+        <div class="cp-value" id="cpValue">$8.420</div>
+        <div class="cp-change pos" id="cpChange">+1.24%</div>
+      </div>
+    </div>
+
+    <!-- Control de profundidad -->
+    <div class="sidebar-section">
+      <div class="sidebar-label">Profundidad del book</div>
+      <div class="control-row">
+        <span class="control-label">Niveles visibles</span>
+        <span class="control-val" id="depthVal">20</span>
+      </div>
+      <input type="range" min="10" max="40" value="20" id="depthSlider"
+        oninput="document.getElementById('depthVal').textContent=this.value;renderHeatmap()">
+
+      <div style="margin-top:14px;">
+        <div class="sidebar-label">Vista</div>
+        <div class="toggle-group">
+          <button class="toggle-btn active" onclick="setVista('heatmap',this)">Heatmap</button>
+          <button class="toggle-btn" onclick="setVista('book',this)">Book</button>
+          <button class="toggle-btn" onclick="setVista('ambos',this)">Ambos</button>
+        </div>
+      </div>
+
+      <div style="margin-top:14px;">
+        <div class="sidebar-label">Velocidad simulación</div>
+        <div class="control-row">
+          <span class="control-label">Intervalo</span>
+          <span class="control-val" id="speedVal">1.5s</span>
+        </div>
+        <input type="range" min="5" max="30" value="15" id="speedSlider"
+          oninput="setSpeed(this.value)">
+      </div>
+    </div>
+
+    <!-- Niveles S/R detectados -->
+    <div class="sidebar-section">
+      <div class="sidebar-label">Niveles S/R detectados</div>
+      <div class="sr-legend" id="srLegend">
+        <!-- generado por JS -->
+      </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="sidebar-section">
+      <div class="sidebar-label">Microestructura</div>
+      <div class="stat-mini">
+        <div class="stat-mini-item">
+          <div class="stat-mini-label">Spread</div>
+          <div class="stat-mini-val azul" id="statSpread">0.04%</div>
+        </div>
+        <div class="stat-mini-item">
+          <div class="stat-mini-label">Imbalance</div>
+          <div class="stat-mini-val verde" id="statImbalance">+38%</div>
+        </div>
+        <div class="stat-mini-item">
+          <div class="stat-mini-label">Liq. Bid</div>
+          <div class="stat-mini-val verde" id="statLiqBid">$124M</div>
+        </div>
+        <div class="stat-mini-item">
+          <div class="stat-mini-label">Liq. Ask</div>
+          <div class="stat-mini-val rojo" id="statLiqAsk">$89M</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ══ CENTRO — Heatmap ══ -->
+  <div class="center-panel">
+    <div class="center-header">
+      <div class="center-title">
+        🔥 Heatmap de Liquidez
+        <span class="badge-edu">EDUCATIVO</span>
+      </div>
+      <div class="center-meta">
+        <div class="meta-chip">
+          <span style="width:8px;height:8px;border-radius:50%;background:var(--verde);display:inline-block;"></span>
+          <strong>Soportes</strong> = acumulación compradora
+        </div>
+        <div class="meta-chip">
+          <span style="width:8px;height:8px;border-radius:50%;background:var(--rojo);display:inline-block;"></span>
+          <strong>Resistencias</strong> = muro vendedor
+        </div>
+        <button onclick="mostrarEdu()" style="background:rgba(74,158,255,0.1);border:1px solid rgba(74,158,255,0.2);color:var(--azul);border-radius:6px;padding:4px 10px;font-size:0.7rem;cursor:pointer;font-family:var(--sans);">
+          💡 ¿Cómo leer esto?
+        </button>
+      </div>
+    </div>
+
+    <div class="heatmap-wrap" id="heatmapWrap">
+      <canvas id="heatmapCanvas"></canvas>
+      <div class="price-crosshair" id="priceLine">
+        <div class="price-crosshair-label" id="priceLineLabel">$8.420</div>
+      </div>
+      <div class="axis-wrap" id="axisWrap"></div>
+    </div>
+
+    <div class="info-bar">
+      <div class="info-bar-item">
+        <div class="info-bar-dot" style="background:var(--verde)"></div>
+        <span>Zona de demanda fuerte (&gt;2× volumen promedio)</span>
+      </div>
+      <div class="info-bar-item">
+        <div class="info-bar-dot" style="background:rgba(0,230,118,0.4)"></div>
+        <span>Soporte moderado</span>
+      </div>
+      <div class="info-bar-item">
+        <div class="info-bar-dot" style="background:var(--rojo)"></div>
+        <span>Resistencia fuerte (muro vendedor)</span>
+      </div>
+      <div class="info-bar-item">
+        <div class="info-bar-dot" style="background:var(--amarillo)"></div>
+        <span>Precio actual</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ SIDEBAR DERECHO — Order Book ══ -->
+  <div class="sidebar-right">
+    <div class="ob-header">
+      <div class="ob-title">Order Book Simulado</div>
+      <div class="ob-sub">Basado en distribución histórica de liquidez</div>
+    </div>
+
+    <!-- Asks (ventas) -->
+    <div class="ob-section-label">Vendedores (Ask)</div>
+    <div id="obAsks" style="display:flex;flex-direction:column-reverse;"></div>
+
+    <!-- Spread -->
+    <div style="padding:6px 0;">
+      <div class="ob-spread">
+        <span class="ob-spread-label">Spread</span>
+        <span class="ob-spread-val" id="spreadDisplay">$3.36 · 0.04%</span>
+      </div>
+    </div>
+
+    <!-- Bids (compras) -->
+    <div class="ob-section-label">Compradores (Bid)</div>
+    <div id="obBids"></div>
+
+    <!-- Presión compradora/vendedora -->
+    <div class="pressure-section">
+      <div class="pressure-title">Presión de mercado</div>
+      <div class="pressure-bar-wrap">
+        <div class="pressure-fill-buy" id="pressureBuy" style="width:58%"></div>
+        <div class="pressure-fill-sell" id="pressureSell" style="width:42%"></div>
+      </div>
+      <div class="pressure-labels">
+        <span class="pressure-label-buy" id="pressureBuyLabel">58% Compradora</span>
+        <span class="pressure-label-sell" id="pressureSellLabel">42% Vendedora</span>
+      </div>
+    </div>
+
+    <!-- Señales educativas -->
+    <div class="signals-section">
+      <div class="signals-title">Señales detectadas</div>
+      <div id="signalsList">
+        <!-- generado por JS -->
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Tooltip educativo -->
+<div class="edu-tooltip" id="eduTooltip">
+  <button class="edu-tip-close" onclick="cerrarEdu()">✕</button>
+  <div class="edu-tip-header">
+    <span class="edu-tip-icon">📚</span>
+    <span class="edu-tip-title">Cómo leer el Heatmap de Liquidez</span>
+  </div>
+  <div class="edu-tip-body">
+    <p style="margin-bottom:8px;">El <strong style="color:var(--texto)">heatmap</strong> muestra dónde se concentran las órdenes pendientes en el mercado. Los colores representan la <em>intensidad de liquidez</em>:</p>
+    <p style="margin-bottom:8px;">🟢 <strong style="color:var(--verde)">Verde intenso</strong> = muchos compradores a ese precio → <em>soporte</em>. El precio tiende a rebotar desde ahí.</p>
+    <p style="margin-bottom:8px;">🔴 <strong style="color:var(--rojo)">Rojo intenso</strong> = muchos vendedores → <em>resistencia</em>. El precio tiene dificultad para subir.</p>
+    <p>💡 <strong style="color:var(--amarillo)">Línea amarilla</strong> = precio actual. Observa en qué zonas de liquidez está operando.</p>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════
+// DATOS Y ESTADO
+// ══════════════════════════════════════════
+
+const ACTIVOS = {
+  'COPEC.SN':    { nombre:'COPEC',    precio:8420,   vol:0.018, color:'#00e676' },
+  'SQM-B.SN':   { nombre:'SQM-B',    precio:42800,  vol:0.025, color:'#4a9eff' },
+  'BCI.SN':     { nombre:'BCI',      precio:31500,  vol:0.014, color:'#9b59b6' },
+  'ENTEL.SN':   { nombre:'ENTEL',    precio:1240,   vol:0.016, color:'#ff6b35' },
+  'CCU.SN':     { nombre:'CCU',      precio:7850,   vol:0.012, color:'#00bcd4' },
+  'FALABELLA.SN':{ nombre:'FALABELLA', precio:980,   vol:0.022, color:'#f5c518' }
+};
+
+let activoActual  = 'COPEC.SN';
+let precioActual  = 8420;
+let precioBase    = 8420;
+let vistaActual   = 'heatmap';
+let intervalId    = null;
+let speedMs       = 1500;
+let bookData      = { asks:[], bids:[] };
+let srLevels      = [];
+let heatmapData   = [];   // array de {precio, liquidezBid, liquidezAsk}
+let tickHistory   = [];
+let animFrame     = null;
+let priceChangeDir = 0;
+
+// ══════════════════════════════════════════
+// INICIALIZACIÓN
+// ══════════════════════════════════════════
+
+window.addEventListener('DOMContentLoaded', () => {
+  resizeCanvas();  // primero dimensionar el canvas
+  inicializarActivo('COPEC.SN');  // luego inicializar (llama renderHeatmap con canvas ya dimensionado)
+  iniciarSimulacion();
+  window.addEventListener('resize', () => { resizeCanvas(); renderHeatmap(); });
+});
+
+function inicializarActivo(ticker) {
+  const a = ACTIVOS[ticker];
+  activoActual  = ticker;
+  precioBase    = a.precio;
+  precioActual  = a.precio + (Math.random()-0.5)*a.precio*0.005;
+  tickHistory   = [];
+  heatmapData   = [];
+
+  // UI
+  document.querySelectorAll('.asset-btn').forEach(b => b.classList.remove('active'));
+  const btns = document.querySelectorAll('.asset-btn');
+  const idx  = Object.keys(ACTIVOS).indexOf(ticker);
+  if(btns[idx]) btns[idx].classList.add('active');
+
+  document.getElementById('cpLabel').textContent = a.nombre + ' — Precio actual';
+  actualizarPrecioDisplay(precioActual, 0);
+
+  // Generar S/R a partir del precio base y volatilidad
+  generarNivelesSR();
+  generarHeatmapInicial();
+  renderBook();
+  renderSRLegend();
+  renderSignals();
+  renderHeatmap();
+  actualizarStats();
+}
+
+// ══════════════════════════════════════════
+// NIVELES S/R — BASADOS EN VOLATILIDAD
+// ══════════════════════════════════════════
+
+function generarNivelesSR() {
+  const a     = ACTIVOS[activoActual];
+  const p     = precioBase;
+  const sigma = p * a.vol;
+
+  // Niveles de soporte y resistencia tipo "psychological + vol-based"
+  srLevels = [
+    // Resistencias (encima del precio)
+    { tipo:'resistencia', precio: Math.round((p + sigma*0.8)/10)*10,  fuerza:'fuerte',  toque:3, desc:'Máximo semanal reciente' },
+    { tipo:'resistencia', precio: Math.round((p + sigma*1.4)/10)*10,  fuerza:'moderado', toque:2, desc:'Zona de oferta histórica' },
+    { tipo:'resistencia', precio: Math.round((p + sigma*2.1)/10)*10,  fuerza:'débil',   toque:1, desc:'Resistencia de largo plazo' },
+    // Soportes (debajo del precio)
+    { tipo:'soporte',     precio: Math.round((p - sigma*0.7)/10)*10,  fuerza:'fuerte',  toque:4, desc:'Piso psicológico clave' },
+    { tipo:'soporte',     precio: Math.round((p - sigma*1.3)/10)*10,  fuerza:'moderado', toque:2, desc:'Mínimo del mes anterior' },
+    { tipo:'soporte',     precio: Math.round((p - sigma*2.0)/10)*10,  fuerza:'débil',   toque:1, desc:'Soporte estructural' },
+  ].sort((a,b) => b.precio - a.precio);
+}
+
+// ══════════════════════════════════════════
+// HEATMAP DATA — DISTRIBUCIÓN DE LIQUIDEZ
+// ══════════════════════════════════════════
+
+function generarHeatmapInicial() {
+  const niveles = parseInt(document.getElementById('depthSlider').value);
+  const a       = ACTIVOS[activoActual];
+  const p       = precioActual;
+  const tick    = Math.max(1, Math.round(p * 0.0005)); // tick size ~0.05%
+  const rango   = niveles * tick;
+
+  heatmapData = [];
+  for(let i = -niveles; i <= niveles; i++) {
+    const precio = Math.round(p + i * tick);
+    // Liquidez base gaussiana — más cerca del precio, más liquidez
+    const distNorm = Math.abs(i) / niveles;
+    const baseVol  = Math.exp(-distNorm * 3) * (0.5 + Math.random()*0.5);
+
+    // Amplificar si coincide con un nivel S/R
+    let srMultiplier = 1.0;
+    for(const sr of srLevels) {
+      const dist = Math.abs(sr.precio - precio) / (p * 0.005);
+      if(dist < 2) {
+        const mult = sr.fuerza === 'fuerte' ? 4.5 : sr.fuerza === 'moderado' ? 2.8 : 1.8;
+        srMultiplier = Math.max(srMultiplier, mult * Math.exp(-dist));
+      }
+    }
+
+    const liquidez = baseVol * srMultiplier;
+    const esBid    = i < 0;  // debajo del precio → comprador
+    heatmapData.push({
+      precio,
+      liquidezBid: esBid ? liquidez * (0.7 + Math.random()*0.6) : liquidez * 0.05 * Math.random(),
+      liquidezAsk: !esBid ? liquidez * (0.7 + Math.random()*0.6) : liquidez * 0.05 * Math.random(),
+      srMultiplier
+    });
+  }
+}
+
+// ══════════════════════════════════════════
+// ORDER BOOK SIMULADO
+// ══════════════════════════════════════════
+
+function generarBook() {
+  const a    = ACTIVOS[activoActual];
+  const p    = precioActual;
+  const tick = Math.max(1, Math.round(p * 0.0005));
+  const spread = tick;
+
+  bookData.asks = [];
+  bookData.bids = [];
+  let totalAsk = 0;
+  let totalBid = 0;
+
+  for(let i = 0; i < 10; i++) {
+    const askPrice = Math.round(p + spread + i * tick + Math.random()*tick*0.3);
+    const bidPrice = Math.round(p - spread - i * tick - Math.random()*tick*0.3);
+
+    // Tamaño base con amplificación en S/R
+    let askMult = 1, bidMult = 1;
+    for(const sr of srLevels) {
+      if(sr.tipo === 'resistencia') {
+        const d = Math.abs(sr.precio - askPrice) / (tick*3);
+        if(d < 1.5) askMult = Math.max(askMult, (sr.fuerza==='fuerte'?6:sr.fuerza==='moderado'?3.5:2) * (1.5-d));
+      } else {
+        const d = Math.abs(sr.precio - bidPrice) / (tick*3);
+        if(d < 1.5) bidMult = Math.max(bidMult, (sr.fuerza==='fuerte'?6:sr.fuerza==='moderado'?3.5:2) * (1.5-d));
+      }
+    }
+
+    const askSize = Math.round((500 + Math.random()*2000) * askMult);
+    const bidSize = Math.round((500 + Math.random()*2000) * bidMult);
+    totalAsk += askSize;
+    totalBid += bidSize;
+
+    bookData.asks.push({ precio:askPrice, size:askSize, total:totalAsk });
+    bookData.bids.push({ precio:bidPrice, size:bidSize, total:totalBid });
+  }
+
+  bookData.maxTotal = Math.max(totalAsk, totalBid);
+  bookData.spread   = bookData.asks[0].precio - bookData.bids[0].precio;
+  bookData.totalBid = totalBid;
+  bookData.totalAsk = totalAsk;
+}
+
+function renderBook() {
+  generarBook();
+  const fmt   = v => v.toLocaleString('es-CL');
+  const fmtS  = v => v >= 1000 ? (v/1000).toFixed(1)+'K' : v.toString();
+  const maxT  = bookData.maxTotal;
+
+  // Asks
+  const asksEl = document.getElementById('obAsks');
+  asksEl.innerHTML = '';
+  // Cabecera
+  const hdr = document.createElement('div');
+  hdr.className = 'ob-row header';
+  hdr.innerHTML = '<span>Precio (CLP)</span><span class="size-col">Cantidad</span><span class="total-col">Total</span>';
+  asksEl.appendChild(hdr);
+
+  bookData.asks.slice().reverse().forEach(row => {
+    const el = document.createElement('div');
+    el.className = 'ob-row ask';
+    const pct = (row.total / maxT * 100).toFixed(1);
+    el.innerHTML = `
+      <div class="ob-bg ask" style="width:${pct}%"></div>
+      <span class="price-col">$${fmt(row.precio)}</span>
+      <span class="size-col">${fmtS(row.size)}</span>
+      <span class="total-col">${fmtS(row.total)}</span>
+    `;
+    asksEl.appendChild(el);
+  });
+
+  // Bids
+  const bidsEl = document.getElementById('obBids');
+  bidsEl.innerHTML = '';
+  bookData.bids.forEach(row => {
+    const el = document.createElement('div');
+    el.className = 'ob-row bid';
+    const pct = (row.total / maxT * 100).toFixed(1);
+    el.innerHTML = `
+      <div class="ob-bg bid" style="width:${pct}%"></div>
+      <span class="price-col">$${fmt(row.precio)}</span>
+      <span class="size-col">${fmtS(row.size)}</span>
+      <span class="total-col">${fmtS(row.total)}</span>
+    `;
+    bidsEl.appendChild(el);
+  });
+
+  // Spread
+  const pct = (bookData.spread / precioActual * 100).toFixed(3);
+  document.getElementById('spreadDisplay').textContent =
+    `$${fmt(bookData.spread)} · ${pct}%`;
+  document.getElementById('statSpread').textContent = pct + '%';
+}
+
+// ══════════════════════════════════════════
+// CANVAS HEATMAP
+// ══════════════════════════════════════════
+
+function resizeCanvas() {
+  const wrap   = document.getElementById('heatmapWrap');
+  const canvas = document.getElementById('heatmapCanvas');
+  canvas.width  = wrap.clientWidth  - 40;  // padding
+  canvas.height = wrap.clientHeight - 10;
+}
+
+function renderHeatmap() {
+  const canvas = document.getElementById('heatmapCanvas');
+  const ctx    = canvas.getContext('2d');
+  const W      = canvas.width;
+  const H      = canvas.height;
+  if(!W || !H || heatmapData.length === 0) return;
+
+  ctx.clearRect(0,0,W,H);
+
+  // Fondo
+  ctx.fillStyle = '#07090d';
+  ctx.fillRect(0,0,W,H);
+
+  const niveles  = heatmapData.length;
+  const rowH     = H / niveles;
+  const maxLiq   = Math.max(...heatmapData.map(d => Math.max(d.liquidezBid, d.liquidezAsk)));
+  const maxPrice = heatmapData[0].precio;
+  const minPrice = heatmapData[niveles-1].precio;
+
+  // Grid sutil
+  ctx.strokeStyle = 'rgba(255,255,255,0.03)';
+  ctx.lineWidth   = 1;
+  for(let i=0; i<=10; i++) {
+    const x = W * i/10;
+    ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,H); ctx.stroke();
+  }
+
+  // Dibujar cada nivel de precio
+  heatmapData.forEach((d, i) => {
+    const y  = i * rowH;
+    const isAbovePrice = d.precio >= precioActual;
+
+    // Intensidad de color
+    const bidIntensity = Math.min(d.liquidezBid / maxLiq, 1);
+    const askIntensity = Math.min(d.liquidezAsk / maxLiq, 1);
+    const liq          = isAbovePrice ? askIntensity : bidIntensity;
+
+    // Barra de liquidez — parte izquierda (colorida)
+    const barW = W * liq;
+    if(isAbovePrice) {
+      // Rojo — vendedores
+      const alpha = 0.08 + liq * 0.55;
+      ctx.fillStyle = `rgba(255,61,87,${alpha})`;
+    } else {
+      // Verde — compradores
+      const alpha = 0.08 + liq * 0.55;
+      ctx.fillStyle = `rgba(0,230,118,${alpha})`;
+    }
+    ctx.fillRect(0, y, barW, rowH - 0.5);
+
+    // Glow en niveles muy intensos (S/R fuertes)
+    if(liq > 0.6) {
+      const gradient = ctx.createLinearGradient(0, y, barW*1.5, y);
+      if(isAbovePrice) {
+        gradient.addColorStop(0, `rgba(255,61,87,${liq*0.3})`);
+        gradient.addColorStop(1, 'rgba(255,61,87,0)');
+      } else {
+        gradient.addColorStop(0, `rgba(0,230,118,${liq*0.3})`);
+        gradient.addColorStop(1, 'rgba(0,230,118,0)');
+      }
+      ctx.fillStyle = gradient;
+      ctx.fillRect(barW, y, W*0.3, rowH);
+    }
+
+    // Separador sutil
+    if(i < niveles-1) {
+      ctx.fillStyle = 'rgba(0,0,0,0.3)';
+      ctx.fillRect(0, y + rowH - 0.5, W, 0.5);
+    }
+  });
+
+  // Líneas de S/R
+  srLevels.forEach(sr => {
+    const norm = (maxPrice - sr.precio) / (maxPrice - minPrice);
+    if(norm < 0 || norm > 1) return;
+    const y = norm * H;
+
+    ctx.beginPath();
+    ctx.setLineDash([4, 4]);
+    ctx.lineWidth   = sr.fuerza==='fuerte' ? 1.5 : 1;
+    ctx.strokeStyle = sr.tipo === 'soporte'
+      ? `rgba(0,230,118,${sr.fuerza==='fuerte'?0.7:0.4})`
+      : `rgba(255,61,87,${sr.fuerza==='fuerte'?0.7:0.4})`;
+    ctx.moveTo(0, y);
+    ctx.lineTo(W, y);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // Label S/R
+    const lbl = (sr.tipo === 'soporte' ? 'S' : 'R') + ' ' + sr.precio.toLocaleString('es-CL');
+    ctx.font     = '10px "DM Mono", monospace';
+    ctx.fillStyle = sr.tipo === 'soporte'
+      ? `rgba(0,230,118,${sr.fuerza==='fuerte'?0.9:0.6})`
+      : `rgba(255,61,87,${sr.fuerza==='fuerte'?0.9:0.6})`;
+    ctx.fillText(lbl, W - ctx.measureText(lbl).width - 6, y - 3);
+  });
+
+  // Línea de precio actual
+  const pNorm = (maxPrice - precioActual) / (maxPrice - minPrice);
+  if(pNorm >= 0 && pNorm <= 1) {
+    const py = pNorm * H;
+
+    // Glow line
+    ctx.shadowColor  = 'rgba(245,197,24,0.6)';
+    ctx.shadowBlur   = 8;
+    ctx.beginPath();
+    ctx.setLineDash([]);
+    ctx.lineWidth   = 1.5;
+    ctx.strokeStyle = 'rgba(245,197,24,0.9)';
+    ctx.moveTo(0, py);
+    ctx.lineTo(W, py);
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+
+    // Label precio
+    const priceLabel = '$' + Math.round(precioActual).toLocaleString('es-CL');
+    const lW = ctx.measureText(priceLabel).width + 12;
+    ctx.fillStyle   = 'rgba(245,197,24,1)';
+    ctx.fillRect(8, py - 9, lW, 16);
+    ctx.font      = 'bold 10px "DM Mono", monospace';
+    ctx.fillStyle = '#000';
+    ctx.fillText(priceLabel, 14, py + 3);
+  }
+
+  // Axis labels derecha
+  renderAxisLabels(maxPrice, minPrice);
+}
+
+function renderAxisLabels(maxP, minP) {
+  const wrap = document.getElementById('axisWrap');
+  wrap.innerHTML = '';
+  const H    = document.getElementById('heatmapCanvas').height;
+  const pasos = 8;
+  for(let i=0; i<=pasos; i++) {
+    const frac  = i / pasos;
+    const precio = Math.round(maxP - frac * (maxP - minP));
+    const y      = frac * H;
+    const lbl    = document.createElement('div');
+    lbl.className   = 'axis-label';
+    lbl.style.top   = y + 'px';
+    lbl.textContent = '$' + precio.toLocaleString('es-CL');
+    wrap.appendChild(lbl);
+  }
+}
+
+// ══════════════════════════════════════════
+// SIMULACIÓN DE PRECIO EN TIEMPO REAL
+// ══════════════════════════════════════════
+
+function iniciarSimulacion() {
+  if(intervalId) clearInterval(intervalId);
+  intervalId = setInterval(tick, speedMs);
+}
+
+function tick() {
+  const a    = ACTIVOS[activoActual];
+  const rand = (Math.random() - 0.5) * 2;
+  const sigma = a.precio * a.vol * 0.05;
+  const meanRevert = (precioBase - precioActual) * 0.03;
+
+  // Drift hacia S/R cercanos (imán de liquidez)
+  let srDrift = 0;
+  for(const sr of srLevels) {
+    const dist = sr.precio - precioActual;
+    const abs  = Math.abs(dist);
+    if(abs < a.precio * 0.03) {
+      srDrift += (dist / abs) * sigma * 0.4 * (1 - abs/(a.precio*0.03));
+    }
+  }
+
+  priceChangeDir = rand * sigma + meanRevert + srDrift;
+  precioActual  += priceChangeDir;
+  precioActual   = Math.max(a.precio * 0.85, Math.min(a.precio * 1.15, precioActual));
+
+  tickHistory.push(precioActual);
+  if(tickHistory.length > 200) tickHistory.shift();
+
+  // Actualizar liquidez (pequeños cambios)
+  actualizarLiquidezDinamica();
+
+  const chgPct = ((precioActual - a.precio) / a.precio * 100);
+  actualizarPrecioDisplay(precioActual, chgPct);
+  actualizarPreciosAsset();
+  renderBook();
+  renderHeatmap();
+  actualizarStats();
+
+  const now = new Date();
+  document.getElementById('lastUpdate').textContent =
+    now.toLocaleTimeString('es-CL', {hour:'2-digit',minute:'2-digit',second:'2-digit'});
+}
+
+function actualizarLiquidezDinamica() {
+  // Pequeñas fluctuaciones en la liquidez para simular orden flow
+  heatmapData.forEach(d => {
+    d.liquidezBid *= 0.92 + Math.random()*0.16;
+    d.liquidezAsk *= 0.92 + Math.random()*0.16;
+    // Restaurar forma gaussiana base para no degenerar
+    const i    = heatmapData.indexOf(d);
+    const n    = heatmapData.length;
+    const midI = n / 2;
+    const dist = Math.abs(i - midI) / midI;
+    const base = Math.exp(-dist * 2) * 0.3;
+    d.liquidezBid = Math.max(d.liquidezBid, base * (d.precio < precioActual ? 0.8 : 0.05));
+    d.liquidezAsk = Math.max(d.liquidezAsk, base * (d.precio > precioActual ? 0.8 : 0.05));
+  });
+}
+
+function actualizarPrecioDisplay(precio, chgPct) {
+  const fmt = Math.round(precio).toLocaleString('es-CL');
+  document.getElementById('cpValue').textContent = '$' + fmt;
+  const chgEl  = document.getElementById('cpChange');
+  const sign   = chgPct >= 0 ? '+' : '';
+  chgEl.textContent = sign + chgPct.toFixed(2) + '%';
+  chgEl.className   = 'cp-change ' + (chgPct >= 0 ? 'pos' : 'neg');
+}
+
+function actualizarPreciosAsset() {
+  Object.keys(ACTIVOS).forEach(ticker => {
+    const a    = ACTIVOS[ticker];
+    const esActivo = ticker === activoActual;
+    const chg  = esActivo
+      ? ((precioActual - a.precio) / a.precio * 100)
+      : (Math.random()-0.48)*2;
+
+    const priceEl = document.getElementById('price-' + ticker);
+    const chgEl   = document.getElementById('chg-' + ticker);
+    if(!priceEl || !chgEl) return;
+
+    const p = esActivo ? precioActual : a.precio * (1 + chg/100);
+    priceEl.textContent = '$' + Math.round(p).toLocaleString('es-CL');
+    chgEl.textContent   = (chg>=0?'+':'') + chg.toFixed(2) + '%';
+    chgEl.className     = 'asset-chg ' + (chg>=0?'pos':'neg');
+  });
+}
+
+function actualizarStats() {
+  // Imbalance (bid vs ask presión)
+  const bidLiq = heatmapData.filter(d=>d.precio < precioActual).reduce((s,d)=>s+d.liquidezBid,0);
+  const askLiq = heatmapData.filter(d=>d.precio > precioActual).reduce((s,d)=>s+d.liquidezAsk,0);
+  const total  = bidLiq + askLiq;
+  const bidPct = total > 0 ? (bidLiq/total*100) : 50;
+  const askPct = 100 - bidPct;
+
+  const sign = bidPct > askPct ? '+' : '-';
+  document.getElementById('statImbalance').textContent = sign + Math.abs(bidPct-askPct).toFixed(0) + '%';
+  document.getElementById('statImbalance').className = 'stat-mini-val ' + (bidPct>askPct?'verde':'rojo');
+
+  // Presión
+  document.getElementById('pressureBuy').style.width  = bidPct.toFixed(0) + '%';
+  document.getElementById('pressureSell').style.width = askPct.toFixed(0) + '%';
+  document.getElementById('pressureBuyLabel').textContent  = bidPct.toFixed(0) + '% Compradora';
+  document.getElementById('pressureSellLabel').textContent = askPct.toFixed(0) + '% Vendedora';
+
+  // Liquidez total simulada (millones CLP)
+  const bidM = (bidLiq * precioActual * 0.0002).toFixed(0);
+  const askM = (askLiq * precioActual * 0.0002).toFixed(0);
+  document.getElementById('statLiqBid').textContent = '$' + bidM + 'M';
+  document.getElementById('statLiqAsk').textContent = '$' + askM + 'M';
+}
+
+// ══════════════════════════════════════════
+// RENDER LEYENDA S/R Y SEÑALES
+// ══════════════════════════════════════════
+
+function renderSRLegend() {
+  const el    = document.getElementById('srLegend');
+  el.innerHTML = '';
+  srLevels.forEach(sr => {
+    const color = sr.tipo === 'soporte' ? '#00e676' : '#ff3d57';
+    const opac  = sr.fuerza === 'fuerte' ? '1' : sr.fuerza === 'moderado' ? '0.7' : '0.45';
+    el.innerHTML += `
+      <div class="sr-item">
+        <div class="sr-dot" style="background:${color};opacity:${opac};"></div>
+        <div class="sr-info">
+          <div class="sr-name">${sr.tipo === 'soporte' ? '🟢' : '🔴'} ${sr.fuerza.charAt(0).toUpperCase()+sr.fuerza.slice(1)} ${sr.tipo}</div>
+          <div class="sr-price">$${sr.precio.toLocaleString('es-CL')} · ${sr.toque} toque${sr.toque>1?'s':''}</div>
+          <div class="sr-strength">${sr.desc}</div>
+        </div>
+      </div>
+    `;
+  });
+}
+
+function renderSignals() {
+  const el = document.getElementById('signalsList');
+  el.innerHTML = '';
+
+  const resistencias = srLevels.filter(s=>s.tipo==='resistencia').slice(0,2);
+  const soportes     = srLevels.filter(s=>s.tipo==='soporte').slice(0,2);
+
+  resistencias.forEach(sr => {
+    const dist = ((sr.precio - precioActual)/precioActual*100).toFixed(1);
+    el.innerHTML += `
+      <div class="signal-item resistencia">
+        <div class="signal-icon">🔴</div>
+        <div class="signal-body">
+          <div class="signal-type">Resistencia ${sr.fuerza}</div>
+          <div class="signal-price">$${sr.precio.toLocaleString('es-CL')}</div>
+          <div class="signal-desc">${sr.desc} · +${dist}% desde precio actual</div>
+        </div>
+      </div>
+    `;
+  });
+
+  soportes.forEach(sr => {
+    const dist = ((precioActual - sr.precio)/precioActual*100).toFixed(1);
+    el.innerHTML += `
+      <div class="signal-item soporte">
+        <div class="signal-icon">🟢</div>
+        <div class="signal-body">
+          <div class="signal-type">Soporte ${sr.fuerza}</div>
+          <div class="signal-price">$${sr.precio.toLocaleString('es-CL')}</div>
+          <div class="signal-desc">${sr.desc} · -${dist}% desde precio actual</div>
+        </div>
+      </div>
+    `;
+  });
+}
+
+// ══════════════════════════════════════════
+// CONTROLES UI
+// ══════════════════════════════════════════
+
+function seleccionarActivo(ticker) {
+  inicializarActivo(ticker);
+}
+
+function setVista(vista, btn) {
+  vistaActual = vista;
+  document.querySelectorAll('.toggle-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  // En implementación completa, switchear entre canvas/book/ambos
+  renderHeatmap();
+}
+
+function setSpeed(val) {
+  const ms = Math.round(val * 100);
+  speedMs  = ms;
+  document.getElementById('speedVal').textContent = (ms/1000).toFixed(1) + 's';
+  iniciarSimulacion();
+}
+
+function mostrarEdu() {
+  document.getElementById('eduTooltip').classList.add('visible');
+}
+
+function cerrarEdu() {
+  document.getElementById('eduTooltip').classList.remove('visible');
+}
+
+// Mostrar tip al inicio
+setTimeout(() => mostrarEdu(), 1200);
+setTimeout(() => cerrarEdu(), 7000);
+</script>
+</body>
+</html>
