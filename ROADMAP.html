@@ -1,0 +1,1085 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>InvertirCL — Roadmap v3</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:#07090d; --bg2:#0d1117; --bg3:#131a22; --bg4:#1a222c;
+  --verde:#00e676; --rojo:#ff3d57; --azul:#4a9eff; --amarillo:#f5c518;
+  --purpura:#9b59b6; --naranja:#ff6b35; --cyan:#00bcd4;
+  --seba:#4a9eff; --joaq:#00e676;
+  --linea:rgba(255,255,255,0.06); --linea2:rgba(255,255,255,0.1);
+  --texto:#e2e8f0; --texto2:#8a9bb0; --texto3:#4a5568;
+  --mono:'DM Mono',monospace; --sans:'DM Sans',sans-serif; --display:'Syne',sans-serif;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html{scroll-behavior:smooth;}
+body{font-family:var(--sans);background:var(--bg);color:var(--texto);line-height:1.6;padding-bottom:80px;}
+
+/* HERO */
+.hero{padding:56px 48px 44px;background:linear-gradient(180deg,rgba(0,230,118,0.04) 0%,transparent 100%);border-bottom:1px solid var(--linea);position:relative;overflow:hidden;}
+.hero::before{content:'';position:absolute;inset:0;background-image:linear-gradient(rgba(0,230,118,0.02) 1px,transparent 1px),linear-gradient(90deg,rgba(0,230,118,0.02) 1px,transparent 1px);background-size:40px 40px;pointer-events:none;}
+.hero-tag{display:inline-flex;align-items:center;gap:8px;background:rgba(0,230,118,0.08);border:1px solid rgba(0,230,118,0.2);border-radius:100px;padding:5px 14px;font-size:0.75rem;color:var(--verde);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:20px;}
+.dot{width:6px;height:6px;border-radius:50%;background:var(--verde);animation:pulse 2s infinite;}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.3}}
+h1{font-family:var(--display);font-size:2.6rem;font-weight:800;letter-spacing:-0.03em;line-height:1.05;margin-bottom:14px;}
+h1 .verde{color:var(--verde);}
+.hero-sub{font-size:0.95rem;color:var(--texto2);max-width:580px;font-weight:300;margin-bottom:22px;}
+.hero-meta{display:flex;gap:20px;flex-wrap:wrap;}
+.meta-item{display:flex;align-items:center;gap:8px;font-size:0.82rem;color:var(--texto2);}
+.meta-item strong{color:var(--texto);}
+
+/* PROGRESS GLOBAL */
+.progress-global{max-width:1100px;margin:28px auto 0;padding:0 48px;}
+.prog-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;}
+.prog-title{font-size:0.75rem;text-transform:uppercase;letter-spacing:0.08em;color:var(--texto3);}
+.prog-pct{font-family:var(--mono);font-size:0.88rem;color:var(--verde);}
+.prog-bar{height:6px;background:var(--bg3);border-radius:3px;overflow:hidden;}
+.prog-fill{height:100%;background:linear-gradient(90deg,var(--verde),var(--azul));border-radius:3px;transition:width 1s ease;}
+.prog-sub{display:flex;gap:20px;margin-top:8px;}
+.prog-item{font-size:0.72rem;color:var(--texto3);display:flex;align-items:center;gap:6px;}
+.prog-dot{width:8px;height:8px;border-radius:50%;}
+
+/* DIVISIÓN */
+.division{max-width:1100px;margin:24px auto 0;padding:0 48px;}
+.div-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+.div-card{border-radius:12px;padding:18px 22px;border:1px solid;}
+.div-card.seba{background:rgba(74,158,255,0.05);border-color:rgba(74,158,255,0.2);}
+.div-card.joaq{background:rgba(0,230,118,0.05);border-color:rgba(0,230,118,0.2);}
+.div-card h3{font-family:var(--display);font-size:0.95rem;font-weight:700;margin-bottom:4px;}
+.div-card.seba h3{color:var(--azul);}
+.div-card.joaq h3{color:var(--verde);}
+.div-card p{font-size:0.76rem;color:var(--texto2);line-height:1.55;}
+.div-rol{font-size:0.65rem;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:6px;opacity:0.6;}
+.div-card.seba .div-rol{color:var(--azul);}
+.div-card.joaq .div-rol{color:var(--verde);}
+
+/* SYNC */
+.sync{max-width:1100px;margin:16px auto 0;padding:0 48px;}
+.sync-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;}
+.sync-card{background:var(--bg2);border:1px solid var(--linea);border-radius:10px;padding:14px 16px;}
+.sync-n{font-family:var(--mono);font-size:1.2rem;color:var(--texto3);line-height:1;}
+.sync-t{font-size:0.82rem;font-weight:500;margin:6px 0 3px;}
+.sync-d{font-size:0.72rem;color:var(--texto2);line-height:1.5;}
+
+/* STATS */
+.stats-row{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;padding:24px 48px;max-width:1100px;margin:0 auto;}
+.stat-card{background:var(--bg2);border:1px solid var(--linea);border-radius:10px;padding:14px;text-align:center;}
+.stat-num{font-family:var(--display);font-size:1.6rem;font-weight:800;line-height:1;}
+.stat-label{font-size:0.65rem;color:var(--texto2);margin-top:5px;text-transform:uppercase;letter-spacing:0.06em;}
+
+/* LEYENDA */
+.legend{display:flex;flex-wrap:wrap;gap:8px;padding:0 48px 20px;max-width:1100px;margin:0 auto;align-items:center;}
+.legend-sep{font-size:0.68rem;color:var(--texto3);text-transform:uppercase;letter-spacing:0.08em;margin-right:2px;}
+
+/* BADGE */
+.badge{display:inline-flex;align-items:center;gap:4px;font-size:0.63rem;padding:2px 8px;border-radius:4px;text-transform:uppercase;letter-spacing:0.06em;font-weight:600;white-space:nowrap;}
+.badge.p0{background:rgba(255,61,87,0.15);color:var(--rojo);border:1px solid rgba(255,61,87,0.25);}
+.badge.p1{background:rgba(245,197,24,0.12);color:var(--amarillo);border:1px solid rgba(245,197,24,0.2);}
+.badge.p2{background:rgba(0,230,118,0.1);color:var(--verde);border:1px solid rgba(0,230,118,0.2);}
+.badge.p3{background:rgba(74,158,255,0.1);color:var(--azul);border:1px solid rgba(74,158,255,0.2);}
+.badge.p4{background:rgba(155,89,182,0.1);color:var(--purpura);border:1px solid rgba(155,89,182,0.2);}
+.badge.sim{background:rgba(74,158,255,0.08);color:var(--azul);border:1px solid rgba(74,158,255,0.15);}
+.badge.nuevo{background:rgba(0,230,118,0.08);color:var(--verde);border:1px solid rgba(0,230,118,0.15);}
+.badge.hecho{background:rgba(0,230,118,0.12);color:var(--verde);border:1px solid rgba(0,230,118,0.3);}
+.badge.oj{background:rgba(0,230,118,0.06);color:rgba(0,230,118,0.8);border:1px solid rgba(0,230,118,0.12);}
+.badge.os{background:rgba(74,158,255,0.06);color:rgba(74,158,255,0.8);border:1px solid rgba(74,158,255,0.12);}
+.badge.oc{background:rgba(155,89,182,0.06);color:rgba(155,89,182,0.8);border:1px solid rgba(155,89,182,0.12);}
+.badge.asig-s{background:rgba(74,158,255,0.12);color:var(--azul);border:1px solid rgba(74,158,255,0.3);font-size:0.66rem;}
+.badge.asig-j{background:rgba(0,230,118,0.1);color:var(--verde);border:1px solid rgba(0,230,118,0.25);font-size:0.66rem;}
+.badge.asig-ambos{background:rgba(255,107,53,0.1);color:var(--naranja);border:1px solid rgba(255,107,53,0.25);font-size:0.66rem;}
+
+/* SPRINT */
+.section{padding:36px 48px 0;max-width:1100px;margin:0 auto;}
+.section-tag{font-size:0.65rem;text-transform:uppercase;letter-spacing:0.12em;color:var(--texto3);margin-bottom:6px;}
+.section-title{font-family:var(--display);font-size:1.3rem;font-weight:800;letter-spacing:-0.02em;margin-bottom:20px;}
+.sprint{background:var(--bg2);border:1px solid var(--linea);border-radius:14px;overflow:hidden;margin-bottom:16px;}
+.sprint-header{padding:14px 18px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--linea);flex-wrap:wrap;gap:8px;}
+.sprint-title{font-family:var(--display);font-size:0.95rem;font-weight:700;display:flex;align-items:center;gap:8px;}
+.sprint-meta{font-size:0.72rem;color:var(--texto2);display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+
+/* ITEM */
+.item{display:flex;align-items:flex-start;gap:12px;padding:13px 18px;border-bottom:1px solid rgba(255,255,255,0.03);transition:background 0.15s;position:relative;}
+.item:last-child{border-bottom:none;}
+.item:hover{background:rgba(255,255,255,0.015);}
+.item.done-item{opacity:0.45;}
+.item.asig-seba{border-left:2px solid rgba(74,158,255,0.3);}
+.item.asig-joaq{border-left:2px solid rgba(0,230,118,0.25);}
+.item.asig-ambos-item{border-left:2px solid rgba(255,107,53,0.3);}
+.item.is-new{border-left:2px solid rgba(0,188,212,0.4);}
+.item-num{font-family:var(--mono);font-size:0.68rem;color:var(--texto3);padding-top:2px;width:26px;flex-shrink:0;}
+.item-body{flex:1;}
+.item-header{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:4px;}
+.item-name{font-size:0.86rem;font-weight:500;}
+.item-desc{font-size:0.76rem;color:var(--texto2);line-height:1.55;}
+.item-note{font-size:0.71rem;margin-top:5px;padding:4px 10px;border-radius:0 4px 4px 0;line-height:1.5;}
+.item-note.sim{color:var(--azul);background:rgba(74,158,255,0.05);border-left:2px solid rgba(74,158,255,0.3);}
+.item-note.done{color:var(--verde);background:rgba(0,230,118,0.05);border-left:2px solid rgba(0,230,118,0.3);}
+.item-note.warn{color:var(--amarillo);background:rgba(245,197,24,0.05);border-left:2px solid rgba(245,197,24,0.3);}
+.item-check{width:20px;height:20px;border-radius:5px;border:1px solid var(--linea2);flex-shrink:0;margin-top:2px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.2s;}
+.item-check:hover{border-color:var(--verde);}
+.item-check.done{background:rgba(0,230,118,0.15);border-color:var(--verde);}
+.item-check.done::after{content:'✓';font-size:0.68rem;color:var(--verde);}
+
+/* NOTAS */
+.nota-box{max-width:1100px;margin:24px auto 0;padding:0 48px;}
+.nota{border-radius:10px;padding:14px 18px;font-size:0.8rem;line-height:1.7;margin-bottom:10px;}
+.nota.azul{background:rgba(74,158,255,0.05);border:1px solid rgba(74,158,255,0.15);}
+.nota.verde{background:rgba(0,230,118,0.04);border:1px solid rgba(0,230,118,0.15);}
+.nota.rojo{background:rgba(255,61,87,0.04);border:1px solid rgba(255,61,87,0.15);}
+.nota b{font-weight:500;}
+.nota.azul b{color:var(--azul);}
+.nota.verde b{color:var(--verde);}
+.nota.rojo b{color:var(--rojo);}
+
+::-webkit-scrollbar{width:4px;}
+::-webkit-scrollbar-track{background:transparent;}
+::-webkit-scrollbar-thumb{background:var(--bg4);border-radius:2px;}
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.fade-in{animation:fadeIn 0.5s ease both;}
+</style>
+</head>
+<body>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="hero-tag"><span class="dot"></span> Documento interno · InvertirCL v3</div>
+  <h1>Roadmap <span class="verde">InvertirCL</span></h1>
+  <div class="hero-sub">56 features priorizadas con análisis completo y división de trabajo. Lista definitiva — cubre todo lo necesario para un producto funcional, robusto y listo para usuarios reales. Seba + Joaquín, trabajando en paralelo sin pisarse.</div>
+  <div class="hero-meta">
+    <div class="meta-item"><span>📅</span><strong>Abril 2026</strong></div>
+    <div class="meta-item"><span>👥</span><strong>Joaquín + Seba · Magíster UAI</strong></div>
+    <div class="meta-item"><span>🎯</span><strong>56 features · 9 sprints</strong></div>
+    <div class="meta-item"><span>🇨🇱</span><strong>Mercado chileno · IPSA · USD/CLP</strong></div>
+  </div>
+</div>
+
+<!-- PROGRESO GLOBAL -->
+<div class="progress-global fade-in">
+  <div class="prog-header">
+    <div class="prog-title">Progreso del proyecto</div>
+    <div class="prog-pct" id="pctEl">0%</div>
+  </div>
+  <div class="prog-bar"><div class="prog-fill" id="progFill" style="width:0%"></div></div>
+  <div class="prog-sub">
+    <div class="prog-item"><div class="prog-dot" style="background:var(--verde)"></div><span id="cntDone">0 completados</span></div>
+    <div class="prog-item"><div class="prog-dot" style="background:var(--amarillo)"></div><span id="cntPending">0 pendientes</span></div>
+    <div class="prog-item"><div class="prog-dot" style="background:var(--azul)"></div><span>48 total</span></div>
+  </div>
+</div>
+
+<!-- DIVISIÓN -->
+<div class="division fade-in">
+  <div class="div-grid">
+    <div class="div-card seba">
+      <div class="div-rol">🔵 Seba + Claude</div>
+      <h3>Infraestructura, datos y motor cuantitativo</h3>
+      <p>market.js, APIs reales, fixes de auditoría, integración Python→frontend (discipline, antitilt), backtest engine JS, Monte Carlo, walk-forward, HRP/Markowitz JS, order imbalance, diario de trading, factsheets PDF, NLP de impacto.</p>
+    </div>
+    <div class="div-card joaq">
+      <div class="div-rol">🟢 Joaquín + Claude</div>
+      <h3>Features nuevos, UI y contenido educativo</h3>
+      <p>market.js ✓, APIs reales ✓, indicadores ✓, matching engine ✓, fixes auditoría ✓ — blindaje legal, páginas nuevas (BlackSwan, Replay, ShadowTrader), Markowitz UI, HRP UI, quant-copilot IA, heatmap liquidez, iceberg orders, ranking disciplina, onboarding, perfil usuario, módulos educativos, Supabase, deploy.</p>
+    </div>
+  </div>
+</div>
+
+<!-- SYNC -->
+<div class="sync fade-in" style="margin-top:12px;">
+  <div class="sync-grid">
+    <div class="sync-card">
+      <div class="sync-n">01</div>
+      <div class="sync-t">Archivos separados siempre</div>
+      <div class="sync-d">Si Seba toca un archivo ese día, Joaquín no lo abre. market.js y los módulos de integración son territorio de Seba. Páginas nuevas son de Joaquín.</div>
+    </div>
+    <div class="sync-card">
+      <div class="sync-n">02</div>
+      <div class="sync-t">Push a GitHub al terminar cada tarea</div>
+      <div class="sync-d">Commit descriptivo: "feat: conectar discipline.py al simulador" o "fix: sidebar dashboard". El otro hace pull antes de empezar. Nunca trabajar sobre código desactualizado.</div>
+    </div>
+    <div class="sync-card">
+      <div class="sync-n">03</div>
+      <div class="sync-t">market.js es la base de todo</div>
+      <div class="sync-d">Todos los HTML importan market.js pero solo Seba lo edita. Cuando Joaquín necesite datos reales en una página nueva, los llama desde ahí directamente.</div>
+    </div>
+  </div>
+</div>
+
+<!-- STATS -->
+<div class="stats-row fade-in">
+  <div class="stat-card"><div class="stat-num" style="color:var(--verde)">5</div><div class="stat-label">Completados ✓</div></div>
+  <div class="stat-card"><div class="stat-num" style="color:var(--rojo)">3</div><div class="stat-label">Críticos</div></div>
+  <div class="stat-card"><div class="stat-num" style="color:var(--amarillo)">8</div><div class="stat-label">Alta prioridad</div></div>
+  <div class="stat-card"><div class="stat-num" style="color:var(--verde)">18</div><div class="stat-label">Media prioridad</div></div>
+  <div class="stat-card"><div class="stat-num" style="color:var(--azul)">10</div><div class="stat-label">Largo plazo</div></div>
+  <div class="stat-card"><div class="stat-num" style="color:var(--purpura)">4</div><div class="stat-label">Con ingresos</div></div>
+</div>
+
+<!-- LEYENDA -->
+<div class="legend">
+  <span class="legend-sep">Prioridad:</span>
+  <span class="badge p0">🔴 Crítico</span>
+  <span class="badge p1">🟡 Alta</span>
+  <span class="badge p2">🟢 Media</span>
+  <span class="badge p3">🔵 Largo plazo</span>
+  <span class="badge p4">🟣 Con ingresos</span>
+  <span class="legend-sep" style="margin-left:12px">Origen:</span>
+  <span class="badge oj">Joaquín — propuso la tarea</span>
+  <span class="badge os">Seba — propuso la tarea</span>
+  
+  <span class="badge sim">SIM</span>
+  <span class="badge nuevo">NUEVO</span>
+  <span class="badge hecho">✓ HECHO</span>
+  <span class="legend-sep" style="margin-left:12px">Asignado:</span>
+  <span class="badge asig-s">🔵 Seba</span>
+  <span class="badge asig-j">🟢 Joaquín</span>
+  <span class="badge asig-ambos">🟠 Ambos</span>
+</div>
+
+
+<!-- ══════════════════════════════════════════════ -->
+<!-- SPRINT 0 — LEGAL -->
+<!-- ══════════════════════════════════════════════ -->
+<div class="section fade-in">
+  <div class="section-tag">Sprint 0 · Inmediato · ~2 horas</div>
+  <div class="section-title">🛡️ Blindaje Legal</div>
+  <div class="sprint">
+    <div class="sprint-header">
+      <div class="sprint-title">Fase 0 — Legal (3 items)</div>
+      <div class="sprint-meta"><span class="badge p0">🔴 Crítico</span><span>Todo Joaquín</span></div>
+    </div>
+
+    <div class="item asig-joaq">
+      <div class="item-num">01</div>
+      <div class="item-body">
+        <div class="item-header"><span class="item-name">Disclaimer de No-Asesoría Financiera</span><span class="badge p0">🔴 Crítico</span><span class="badge oj">Joaquín</span><span class="badge asig-j">🟢 Joaquín</span></div>
+        <div class="item-desc">Footer en landing.html, dashboard.html y simulator.html. Sin esto la CMF puede interpretar la plataforma como asesoría regulada.</div>
+      </div>
+      <div class="item-check" onclick="toggle(this)"></div>
+    </div>
+
+    <div class="item asig-joaq">
+      <div class="item-num">02</div>
+      <div class="item-body">
+        <div class="item-header"><span class="item-name">Términos y Condiciones de Uso (ToS)</span><span class="badge p0">🔴 Crítico</span><span class="badge oj">Joaquín</span><span class="badge asig-j">🟢 Joaquín</span></div>
+        <div class="item-desc">Página ToS.html. El usuario es el único responsable de sus decisiones en el mercado real. Los datos simulados no garantizan retornos.</div>
+      </div>
+      <div class="item-check" onclick="toggle(this)"></div>
+    </div>
+
+    <div class="item asig-joaq">
+      <div class="item-num">03</div>
+      <div class="item-body">
+        <div class="item-header"><span class="item-name">Política de Privacidad (Ley 19.628 Chile)</span><span class="badge p0">🔴 Crítico</span><span class="badge oj">Joaquín</span><span class="badge asig-j">🟢 Joaquín</span></div>
+        <div class="item-desc">Se capturan emails desde la landing — eso ya obliga bajo la Ley 19.628. Declarar qué datos se recopilan, cómo se protegen y por cuánto tiempo.</div>
+      </div>
+      <div class="item-check" onclick="toggle(this)"></div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ══════════════════════════════════════════════ -->
+<!-- SPRINT 0B — FIXES AUDITORÍA -->
+<!-- ══════════════════════════════════════════════ -->
+<div class="section fade-in">
+  <div class="section-tag">Sprint 0B · Inmediato · Paralelo al legal</div>
+  <div class="section-title">🔧 Fixes de Auditoría</div>
+  <div class="sprint">
+    <div class="sprint-header">
+      <div class="sprint-title">Bugs detectados en código existente (5 items)</div>
+      <div class="sprint-meta"><span class="badge p0">🔴 Crítico</span><span>Todo Seba — paralelo al legal</span></div>
+    </div>
+
+    <div class="item asig-joaq done-item">
+      <div class="item-num">F1</div>
+      <div class="item-body">
+        <div class="item-header"><span class="item-name">market.js — versión browser de market.py</span><span class="badge hecho">✓ HECHO</span><span class="badge oj">Joaquín</span><span class="badge asig-j">🟢 Joaquín</span></div>
+        <div class="item-desc">Creado y testeado. 17/17 tests pasando. APIs reales conectadas: DolarApi, mindicador.cl, Yahoo Finance. Indicadores técnicos, MatchingEngine y Performance incluidos.</div>
+        <div class="item-note done">✓ Completado hoy — APP/JS/market.js</div>
+      </div>
+      <div class="item-check done" onclick="toggle(this)"></div>
+    </div>
+
+    <div class="item asig-joaq done-item">
+      <div class="item-num">F2</div>
+      <div class="item-body">
+        <div class="item-header"><span class="item-name">Dashboard — topbar sin tnav ni navegación</span><span class="badge hecho">✓ HECHO</span><span class="badge oj">Joaquín</span><span class="badge asig-j">🟢 Joaquín</span></div>
+        <div class="item-desc">Añadidos 5 tnav al dashboard (Dashboard activo, Simulador, Backtest, Riesgo, Aprender). CSS consistente con el resto de páginas.</div>
+        <div class="item-note done">✓ Completado hoy — dashboard.html actualizado</div>
+      </div>
+      <div class="item-check done" onclick="toggle(this)"></div>
+    </div>
+
+    <div class="item asig-joaq done-item">
+      <div class="item-num">F3</div>
+      <div class="item-body">
+        <div class="item-header"><span class="item-name">Dashboard — 7 nav-items del sidebar sin onclick</span><span class="badge hecho">✓ HECHO</span><span class="badge oj">Joaquín</span><span class="badge asig-j">🟢 Joaquín</span></div>
+        <div class="item-desc">IPSA/Divisas/Acciones hacen scroll suave. Gestión Riesgo → risk.html. Aprender → learn.html. Ajustes deshabilitado visualmente con "Próximamente".</div>
+        <div class="item-note done">✓ Completado hoy — dashboard.html actualizado</div>
+      </div>
+      <div class="item-check done" onclick="toggle(this)"></div>
+    </div>
+
+    <div class="item asig-joaq done-item">
+      <div class="item-num">F4</div>
+      <div class="item-body">
+        <div class="item-header"><span class="item-name">test_apis.html roto — market.js ausente</span><span class="badge hecho">✓ HECHO</span><span class="badge oj">Joaquín</span><span class="badge asig-j">🟢 Joaquín</span></div>
+        <div class="item-desc">Reescrito completamente con 17 tests, grid de resultados, barra de progreso y resumen de OK/Error. Path corregido a JS/market.js.</div>
+        <div class="item-note done">✓ Completado hoy — test_apis.html actualizado</div>
+      </div>
+      <div class="item-check done" onclick="toggle(this)"></div>
+    </div>
+
+    <div class="item asig-joaq done-item">
+      <div class="item-num">F5</div>
+      <div class="item-body">
+        <div class="item-header"><span class="item-name">get_accion() usa info.shares en vez de info.volume</span><span class="badge hecho">✓ HECHO</span><span class="badge oj">Joaquín</span><span class="badge asig-j">🟢 Joaquín</span></div>
+        <div class="item-desc">Corregido en market.js directamente. El volumen ahora usa regularMarketVolume (volumen del día) en vez de shares outstanding (valor estático anual).</div>
+        <div class="item-note done">✓ Corregido en market.js — línea ~190</div>
+      </div>
+      <div class="item-check done" onclick="toggle(this)"></div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ══════════════════════════════════════════════ -->
+<!-- SPRINT 1 — DATOS E INFRAESTRUCTURA -->
+<!-- ══════════════════════════════════════════════ -->
+<div class="section fade-in">
+  <div class="section-tag">Sprint 1 · Esta semana · ~1 semana</div>
+  <div class="section-title">📡 Infraestructura de Datos</div>
+  <div class="sprint">
+    <div class="sprint-header">
+      <div class="sprint-title">Fase 1 — Datos y Rigor Estadístico (5 items)</div>
+      <div class="sprint-meta"><span class="badge p1">🟡 Alta</span><span>Seba conecta, Joaquín valida en UI</span></div>
+    </div>
+
+    <div class="item asig-joaq done-item">
+      <div class="item-num">04</div>
+      <div class="item-body">
+        <div class="item-header"><span class="item-name">Eliminar Math.random() — Conectar APIs reales</span><span class="badge hecho">✓ HECHO</span><span class="badge oj">Joaquín</span><span class="badge asig-j">🟢 Joaquín</span></div>
+        <div class="item-desc">market.js implementado con DolarApi, mindicador.cl y Yahoo Finance. Dashboard conectado via cargarDatosReales(). poller.js integrado para acciones en tiempo real.</div>
+        <div class="item-note done">✓ Resuelto con market.js + dashboard.html actualizado</div>
+      </div>
+      <div class="item-check done" onclick="toggle(this)"></div>
+    </div>
+
+    <div class="item asig-joaq done-item">
+      <div class="item-num">05</div>
+      <div class="item-body">
+        <div class="item-header"><span class="item-name">Librería de Indicadores Técnicos en JS</span><span class="badge hecho">✓ HECHO</span><span class="badge oj">Joaquín</span><span class="badge asig-j">🟢 Joaquín</span></div>
+        <div class="item-desc">RSI, EMA, SMA, MACD, Bollinger, ATR, VWAP, Sharpe, Sortino, MaxDrawdown, ProfitFactor, WinRate, Calmar. Precisos al cuarto decimal. Sin librerías externas.</div>
+        <div class="item-note done">✓ En Market.Indicators dentro de market.js</div>
+      </div>
+      <div class="item-check done" onclick="toggle(this)"></div>
+    </div>
+
+    <div class="item asig-joaq done-item">
+      <div class="item-num">06</div>
+      <div class="item-body">
+        <div class="item-header"><span class="item-name">Métricas de Performance en Tiempo Real</span><span class="badge hecho">✓ HECHO</span><span class="badge oj">Joaquín</span><span class="badge asig-j">🟢 Joaquín</span></div>
+        <div class="item-desc">Sharpe, Sortino, Max Drawdown, Profit Factor, Win Rate, Calmar. Calculados sobre historial de trades. En Market.Performance.calcular().</div>
+        <div class="item-note done">✓ En Market.Performance dentro de market.js</div>
+      </div>
+      <div class="item-check done" onclick="toggle(this)"></div>
+    </div>
+
+    <div class="item asig-joaq done-item">
+      <div class="item-num">07</div>
+      <div class="item-body">
+        <div class="item-header"><span class="item-name">Matching Engine con Costos Transaccionales</span><span class="badge hecho">✓ HECHO</span><span class="badge oj">Joaquín</span><span class="badge asig-j">🟢 Joaquín</span></div>
+        <div class="item-desc">Slippage (5bps default), comisión corredor (0.1%), spread bid-ask (0.02%). Órdenes market/limit/stop con slippage extra en stops. En Market.MatchingEngine.</div>
+        <div class="item-note done">✓ En Market.MatchingEngine dentro de market.js</div>
+      </div>
+      <div class="item-check done" onclick="toggle(this)"></div>
+    </div>
+
+    <div class="item asig-seba">
+      <div class="item-num">08</div>
+      <div class="item-body">
+        <div class="item-header"><span class="item-name">Conectar poller.js al dashboard — KPIs en tiempo real</span><span class="badge p1">🟡 Alta</span><span class="badge sim">SIM</span><span class="badge oj">Joaquín</span><span class="badge asig-s">🔵 Seba</span></div>
+        <div class="item-desc">StockPoller ya inicializado en dashboard.html. Falta conectar las actualizaciones de precio a la tabla de acciones y a los KPIs superiores con animación de flash al cambiar.</div>
+        <div class="item-note warn">⚠ Parcialmente hecho — falta animación de flash en KPIs y actualización visual de la tabla</div>
+      </div>
+      <div class="item-check" onclick="toggle(this)"></div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ══════════════════════════════════════════════ -->
+<!-- SPRINT 1B — FIXES NUEVOS DE SEBA -->
+<!-- ══════════════════════════════════════════════ -->
+<div class="section fade-in">
+  <div class="section-tag">Sprint 1B · Esta semana · Nuevas tareas Seba</div>
+  <div class="section-title">🔵 Tareas Nuevas — Seba</div>
+  <div class="sprint">
+    <div class="sprint-header">
+      <div class="sprint-title">Infraestructura pendiente detectada en auditoría (4 items)</div>
+      <div class="sprint-meta"><span class="badge p1">🟡 Alta</span><span class="badge nuevo">NUEVO</span><span class="badge os">Seba</span></div>
+    </div>
+
+    <div class="item asig-seba is-new">
+      <div class="item-num">S1</div>
+      <div class="item-body">
+        <div class="item-header"><span class="item-name">Integrar discipline.py al simulador.html</span><span class="badge p1">🟡 Alta</span><span class="badge nuevo">NUEVO</span><span class="badge os">Seba</span><span class="badge asig-s">🔵 Seba</span></div>
+        <div class="item-desc">Portar la lógica de DisciplineScore de Python a JS e integrarlo al simulador. Panel lateral que muestra el score 0-100 en tiempo real mientras el usuario opera. Si baja de 40 aparece advertencia de Risk Manager. El módulo Python ya existe en PY/discipline.py — hay que traducirlo a JS y conectarlo al historial de trades del simulador.</div>
+        <div class="item-note sim">💡 Depende de que el simulador tenga historial de trades accesible como array JS. Revisar simulator.html antes de empezar.</div>
+      </div>
+      <div class="item-check" onclick="toggle(this)"></div>
+    </div>
+
+    <div class="item asig-seba is-new">
+      <div class="item-num">S2</div>
+      <div class="item-body">
+        <div class="item-header"><span class="item-name">Integrar antitilt.py al simulador.html</span><span class="badge p1">🟡 Alta</span><span class="badge nuevo">NUEVO</span><span class="badge os">Seba</span><span class="badge asig-s">🔵 Seba</span></div>
+        <div class="item-desc">Portar AntiTilt de Python a JS. Detecta 7 patrones de tilt: rachas de pérdidas, escalamiento de posición, overtrading, entrada sin descanso tras pérdida, horario inusual, cambio de estrategia. Si score ≥ 60 bloquea la mesa 60 minutos con un modal. Va junto con S1 en el mismo sprint — mismo archivo, misma sesión.</div>
+      </div>
+      <div class="item-check" onclick="toggle(this)"></div>
+    </div>
+
+    <div class="item asig-seba is-new">
+      <div class="item-num">S3</div>
+      <div class="item-body">
+        <div class="item-header"><span class="item-name">Backtest engine JS — conectar backtest.html a datos reales</span><span class="badge p2">🟢 Media</span><span class="badge nuevo">NUEVO</span><span class="badge os">Seba</span><span class="badge asig-s">🔵 Seba</span></div>
+        <div class="item-desc">Joaquín ya tiene backtest_engine.py con la lógica completa. Hay que traducir el motor a JS y conectarlo a backtest.html con datos históricos reales de Yahoo Finance via Market.getHistorico(). Output: retorno total, WR, PF, max DD, Sharpe, Sortino, distribución mensual. El código Python sirve de guía exacta para el port.</div>
+        <div class="item-note sim">💡 backtest_engine.py ya en PY/ — leer ese archivo primero antes de codear el JS.</div>
+      </div>
+      <div class="item-check" onclick="toggle(this)"></div>
+    </div>
+
+    <div class="item asig-seba is-new">
+      <div class="item-num">S4</div>
+      <div class="item-body">
+        <div class="item-header"><span class="item-name">Monte Carlo JS — simulador de 1.000 variaciones</span><span class="badge p2">🟢 Media</span><span class="badge nuevo">NUEVO</span><span class="badge os">Seba</span><span class="badge asig-s">🔵 Seba</span></div>
+        <div class="item-desc">Portar montecarlo.py a JS. 1.000 iteraciones variando slippage, fill rate y orden de trades. Output: P(ruina > 20%), VaR 95%, abanico de curvas de capital. Integrar como tab o modal dentro de backtest.html — no página nueva, es una extensión del análisis de backtest.</div>
+        <div class="item-note sim">💡 montecarlo.py ya en PY/ — usar como referencia exacta de la lógica de simulación.</div>
+      </div>
+      <div class="item-check" onclick="toggle(this)"></div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ══════════════════════════════════════════════ -->
+<!-- SPRINT 2 — DIFERENCIADORES CORE -->
+<!-- ══════════════════════════════════════════════ -->
+<div class="section fade-in">
+  <div class="section-tag">Sprint 2 · Semana 2-3 · ~2 semanas</div>
+  <div class="section-title">⭐ Diferenciadores Core</div>
+  <div class="sprint">
+    <div class="sprint-header">
+      <div class="sprint-title">Features únicos — divididos por módulo</div>
+      <div class="sprint-meta"><span class="badge p1">🟡 Alta</span><span>Seba integra lógica, Joaquín construye UI nueva</span></div>
+    </div>
+
+    <div class="item asig-seba">
+      <div class="item-num">09</div>
+      <div class="item-body">
+        <div class="item-header"><span class="item-name">Score de Disciplina Institucional ⭐</span><span class="badge p1">🟡 Alta</span><span class="badge oj">Joaquín</span><span class="badge asig-s">🔵 Seba</span></div>
+        <div class="item-desc">Ver tarea S1 — integrar discipline.py al simulador. Score 0-100 en tiempo real. Advertencia de Risk Manager si baja de 40. La lógica ya existe en Python.</div>
+      </div>
+      <div class="item-check" onclick="toggle(this)"></div>
+    </div>
+
+    <div class="item asig-joaq">
+      <div class="item-num">10</div>
+      <div class="item-body">
+        <div class="item-header"><span class="item-name">Black Swan Simulator — Modo Crisis</span><span class="badge p1">🟡 Alta</span><span class="badge oj">Joaquín</span><span class="badge asig-j">🟢 Joaquín</span></div>
+        <div class="item-desc">Página nueva blackswan.html. 5 escenarios: Crisis 2008, COVID 2020, Estallido 2019, Flash Crash 2010, Crisis Rusa 1998. Slippage masivo simulado. La lógica está en PY/blackswan.py — Joaquín construye la UI.</div>
+      </div>
+      <div class="item-check" onclick="toggle(this)"></div>
+    </div>
+
+    <div class="item asig-joaq">
+      <div class="item-num">11</div>
+      <div class="item-body">
+        <div class="item-header"><span class="item-name">Bot Copiloto — Shadow Trader</span><span class="badge p1">🟡 Alta</span><span class="badge oj">Joaquín</span><span class="badge asig-j">🟢 Joaquín</span></div>
+        <div class="item-desc">Bot que opera en paralelo al usuario con disciplina perfecta. Muestra en tiempo real: "El bot ganó $42.000, tú perdiste $18.000". La lógica está en PY/shadowtrader.py — Joaquín construye la UI e integra al simulador.</div>
+      </div>
+      <div class="item-check" onclick="toggle(this)"></div>
+    </div>
+
+    <div class="item asig-seba">
+      <div class="item-num">12</div>
+      <div class="item-body">
+        <div class="item-header"><span class="item-name">Anti-Tilt Comportamental</span><span class="badge p2">🟢 Media</span><span class="badge oj">Joaquín</span><span class="badge asig-s">🔵 Seba</span></div>
+        <div class="item-desc">Ver tarea S2 — integrar antitilt.py al simulador. Bloqueo de mesa 60 minutos si score ≥ 60. Va junto con discipline.py en la misma integración.</div>
+      </div>
+      <div class="item-check" onclick="toggle(this)"></div>
+    </div>
+
+    <div class="item asig-joaq">
+      <div class="item-num">13</div>
+      <div class="item-body">
+        <div class="item-header"><span class="item-name">Replay de Mercado</span><span class="badge p2">🟢 Media</span><span class="badge oj">Joaquín</span><span class="badge asig-j">🟢 Joaquín</span></div>
+        <div class="item-desc">Página nueva replay.html. Cualquier día histórico del IPSA o acciones chilenas reproducido tick a tick (1x, 2x, 5x, 10x). La lógica está en PY/replay.py — Joaquín construye la UI con controles de velocidad y panel de operaciones.</div>
+      </div>
+      <div class="item-check" onclick="toggle(this)"></div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ══════════════════════════════════════════════ -->
+<!-- SPRINT 3 — MOTOR CUANTITATIVO -->
+<!-- ══════════════════════════════════════════════ -->
+<div class="section fade-in">
+  <div class="section-tag">Sprint 3 · Mes 1-2 · ~3 semanas</div>
+  <div class="section-title">🔬 Motor Cuantitativo</div>
+  <div class="sprint">
+    <div class="sprint-header">
+      <div class="sprint-title">Backtest y análisis avanzado (7 items)</div>
+      <div class="sprint-meta"><span class="badge p2">🟢 Media</span><span>~3 semanas</span></div>
+    </div>
+
+    <div class="item asig-seba">
+      <div class="item-num">14</div>
+      <div class="item-body">
+        <div class="item-header"><span class="item-name">Backtest Engine con Datos Históricos Reales</span><span class="badge p2">🟢 Media</span><span class="badge oj">Joaquín</span><span class="badge asig-s">🔵 Seba</span></div>
+        <div class="item-desc">Ver tarea S3 — conectar backtest.html a Yahoo Finance con 5 años de datos. Joaquín ya tiene backtest_engine.py completo. Seba porta a JS.</div>
+      </div>
+      <div class="item-check" onclick="toggle(this)"></div>
+    </div>
+
+    <div class="item asig-joaq">
+      <div class="item-num">15</div>
+      <div class="item-body">
+        <div class="item-header"><span class="item-name">Frontera Eficiente de Markowitz (pedagógico)</span><span class="badge p2">🟢 Media</span><span class="badge oj">Joaquín</span><span class="badge asig-j">🟢 Joaquín</span></div>
+        <div class="item-desc">UI interactiva en markowitz.html. El usuario selecciona activos chilenos y ve la frontera eficiente en tiempo real. Joaquín tiene la lógica Python — construye la visualización JS con álgebra matricial. Se presenta como "paso histórico" antes de mostrar HRP.</div>
+      </div>
+      <div class="item-check" onclick="toggle(this)"></div>
+    </div>
+
+    <div class="item asig-seba">
+      <div class="item-num">16</div>
+      <div class="item-body">
+        <div class="item-header"><span class="item-name">Monte Carlo — 1.000 Variaciones</span><span class="badge p2">🟢 Media</span><span class="badge oj">Joaquín</span><span class="badge asig-s">🔵 Seba</span></div>
+        <div class="item-desc">Ver tarea S4. P(ruina > 20%), VaR 95%, abanico de curvas de capital. Tab dentro de backtest.html. montecarlo.py como referencia.</div>
+      </div>
+      <div class="item-check" onclick="toggle(this)"></div>
+    </div>
+
+    <div class="item asig-seba">
+      <div class="item-num">17</div>
+      <div class="item-body">
+        <div class="item-header"><span class="item-name">Walk-Forward Testing</span><span class="badge p2">🟢 Media</span><span class="badge oj">Joaquín</span><span class="badge asig-s">🔵 Seba</span></div>
+        <div class="item-desc">Ventanas rodantes In-Sample + Out-of-Sample. Si WR out-of-sample se mantiene → estrategia robusta. Si cae → overfitting. walkforward.py ya en PY/ — portar a JS e integrar en backtest.html como tercer tab.</div>
+      </div>
+      <div class="item-check" onclick="toggle(this)"></div>
+    </div>
+
+    <div class="item asig-joaq">
+      <div class="item-num">36</div>
+      <div class="item-body">
+        <div class="item-header"><span class="item-name">HRP — Hierarchical Risk Parity ⭐ Recomendado por el profesor</span><span class="badge p2">🟢 Media</span><span class="badge nuevo">NUEVO</span><span class="badge oj">Joaquín</span><span class="badge asig-j">🟢 Joaquín</span></div>
+        <div class="item-desc">UI interactiva que muestra HRP vs Markowitz lado a lado. hrp.py ya implementado con HRP clásico, HERC, NCO y HRP+CVaR. Joaquín construye la visualización — clustering jerárquico, pesos óptimos, comparativa de performance vs Markowitz. La página muestra la evolución histórica: Markowitz 1952 → HRP 2016.</div>
+        <div class="item-note sim">💡 hrp.py ya en PY/ con fallback manual si riskfolio-lib no está instalado. Leer ese archivo antes de hacer la UI.</div>
+      </div>
+      <div class="item-check" onclick="toggle(this)"></div>
+    </div>
+
+    <div class="item asig-joaq">
+      <div class="item-num">37</div>
+      <div class="item-body">
+        <div class="item-header"><span class="item-name">Markowitz clásico (pedagógico) — referencia histórica</span><span class="badge p2">🟢 Media</span><span class="badge nuevo">NUEVO</span><span class="badge oj">Joaquín</span><span class="badge asig-j">🟢 Joaquín</span></div>
+        <div class="item-desc">Mantener como herramienta educativa: Markowitz 1952 → HRP 2016. Dashboard mostrará ambos con comparativa directa. El usuario aprende por qué Markowitz falla en la práctica (necesita invertir la matriz de covarianza) y por qué HRP lo supera.</div>
+      </div>
+      <div class="item-check" onclick="toggle(this)"></div>
+    </div>
+
+    <div class="item asig-joaq">
+      <div class="item-num">18</div>
+      <div class="item-body">
+        <div class="item-header"><span class="item-name">Quant-Copilot con IA — Idea → Estrategia</span><span class="badge p2">🟢 Media</span><span class="badge oj">Joaquín</span><span class="badge asig-j">🟢 Joaquín</span></div>
+        <div class="item-desc">El usuario escribe en lenguaje natural una estrategia. Claude API la convierte en código del editor de reglas y lanza el backtest. quantcopilot.py ya en PY/ como referencia de la lógica. Requiere Claude API key.</div>
+      </div>
+      <div class="item-check" onclick="toggle(this)"></div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ══════════════════════════════════════════════ -->
+<!-- SPRINT 3B — NUEVAS TAREAS SEBA (CUANT) -->
+<!-- ══════════════════════════════════════════════ -->
+<div class="section fade-in">
+  <div class="section-tag">Sprint 3B · Mes 1-2 · Nuevas tareas detectadas</div>
+  <div class="section-title">🔵 Tareas Cuantitativas Nuevas — Seba</div>
+  <div class="sprint">
+    <div class="sprint-header">
+      <div class="sprint-title">Features cuantitativos no cubiertos (3 items)</div>
+      <div class="sprint-meta"><span class="badge p2">🟢 Media</span><span class="badge nuevo">NUEVO</span><span class="badge os">Seba</span></div>
+    </div>
+
+    <div class="item asig-seba is-new">
+      <div class="item-num">S5</div>
+      <div class="item-body">
+        <div class="item-header"><span class="item-name">Panel de riesgo del portafolio en tiempo real</span><span class="badge p2">🟢 Media</span><span class="badge nuevo">NUEVO</span><span class="badge os">Seba</span><span class="badge asig-s">🔵 Seba</span></div>
+        <div class="item-desc">risk.html ya tiene los 5 indicadores de riesgo pero con datos hardcodeados. Conectarlos a datos reales: calcular beta real del portafolio vs IPSA usando datos históricos de Yahoo Finance, correlación real entre posiciones abiertas, drawdown actual del portafolio simulado. Usa Market.getHistorico() y Market.Indicators.</div>
+      </div>
+      <div class="item-check" onclick="toggle(this)"></div>
+    </div>
+
+    <div class="item asig-seba is-new">
+      <div class="item-num">S6</div>
+      <div class="item-body">
+        <div class="item-header"><span class="item-name">Diario de Trading — detección de patrones JS</span><span class="badge p2">🟢 Media</span><span class="badge nuevo">NUEVO</span><span class="badge os">Seba</span><span class="badge asig-s">🔵 Seba</span></div>
+        <div class="item-desc">Modal en el simulador que aparece antes de cada trade: 2 líneas de "¿por qué entras?". Al cerrar: "¿por qué saliste?". Al final del día: resumen. Analizar frecuencia de palabras clave (FOMO, "feeling", "creo que") vs razones técnicas (RSI, EMA, soporte). Guardar en localStorage mientras no hay Supabase.</div>
+      </div>
+      <div class="item-check" onclick="toggle(this)"></div>
+    </div>
+
+    <div class="item asig-seba is-new">
+      <div class="item-num">S7</div>
+      <div class="item-body">
+        <div class="item-header"><span class="item-name">Order Imbalance — presión compradora JS</span><span class="badge p2">🟢 Media</span><span class="badge nuevo">NUEVO</span><span class="badge sim">SIM</span><span class="badge os">Seba</span><span class="badge asig-s">🔵 Seba</span></div>
+        <div class="item-desc">(BuyVolume - SellVolume) / TotalVolume usando algoritmo Lee-Ready sobre datos de volumen real de Yahoo Finance. Indicador en tiempo real en el simulador que muestra si hay presión compradora o vendedora antes de que se refleje en la vela. Widget visual tipo barra horizontal que oscila entre -100 y +100.</div>
+        <div class="item-note sim">💡 Lee-Ready: si precio > VWAP → tick iniciado por comprador. Si precio &lt; VWAP → por vendedor. Estimación con datos públicos.</div>
+      </div>
+      <div class="item-check" onclick="toggle(this)"></div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ══════════════════════════════════════════════ -->
+<!-- SPRINT 4 — MICROESTRUCTURA -->
+<!-- ══════════════════════════════════════════════ -->
+<div class="section fade-in">
+  <div class="section-tag">Sprint 4 · Mes 2 · Order book simulado</div>
+  <div class="section-title">🔭 Microestructura de Mercado</div>
+  <div class="sprint">
+    <div class="sprint-header">
+      <div class="sprint-title">Order Flow y Microestructura (4 items)</div>
+      <div class="sprint-meta"><span class="badge p3">🔵 Largo plazo</span><span class="badge sim">SIM</span></div>
+    </div>
+
+    <div class="item asig-joaq">
+      <div class="item-num">19</div>
+      <div class="item-body">
+        <div class="item-header"><span class="item-name">Heatmap de Liquidez (Order Book Simulado)</span><span class="badge p3">🔵 Largo plazo</span><span class="badge sim">SIM</span><span class="badge oj">Joaquín</span><span class="badge asig-j">🟢 Joaquín</span></div>
+        <div class="item-desc">Visualizar órdenes de compra/venta simuladas con soportes/resistencias calculados de datos históricos reales. UI tipo heatmap vertical en el simulador.</div>
+        <div class="item-note sim">💡 Niveles S/R de datos históricos reales + distribución de liquidez según volatilidad del activo.</div>
+      </div>
+      <div class="item-check" onclick="toggle(this)"></div>
+    </div>
+
+    <div class="item asig-seba">
+      <div class="item-num">20</div>
+      <div class="item-body">
+        <div class="item-header"><span class="item-name">Order Imbalance — Indicador de Presión Compradora</span><span class="badge p3">🔵 Largo plazo</span><span class="badge sim">SIM</span><span class="badge oj">Joaquín</span><span class="badge asig-s">🔵 Seba</span></div>
+        <div class="item-desc">Ver tarea S7 — versión más completa. Integración en el simulador con historial de imbalance.</div>
+      </div>
+      <div class="item-check" onclick="toggle(this)"></div>
+    </div>
+
+    <div class="item asig-seba">
+      <div class="item-num">21</div>
+      <div class="item-body">
+        <div class="item-header"><span class="item-name">Scanner de Correlaciones Ocultas</span><span class="badge p2">🟢 Media</span><span class="badge oj">Joaquín</span><span class="badge asig-s">🔵 Seba</span></div>
+        <div class="item-desc">"USD/CLP subió 1.2%, Cobre bajó 0.8%, pero COPEC aún no reaccionó — correlación histórica sugiere movimiento en 15 min." Widget en dashboard usando mindicador.cl + Yahoo Finance.</div>
+      </div>
+      <div class="item-check" onclick="toggle(this)"></div>
+    </div>
+
+    <div class="item asig-joaq">
+      <div class="item-num">22</div>
+      <div class="item-body">
+        <div class="item-header"><span class="item-name">Detección de Iceberg Orders (Educativa)</span><span class="badge p3">🔵 Largo plazo</span><span class="badge sim">SIM</span><span class="badge oj">Joaquín</span><span class="badge asig-j">🟢 Joaquín</span></div>
+        <div class="item-desc">Escenarios sintéticos donde el usuario debe detectar un vendedor institucional oculto por el patrón de volumen y precio. Modo educativo con explicación de la señal.</div>
+      </div>
+      <div class="item-check" onclick="toggle(this)"></div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ══════════════════════════════════════════════ -->
+<!-- SPRINT 5 — PSICOLOGÍA Y COMUNIDAD -->
+<!-- ══════════════════════════════════════════════ -->
+<div class="section fade-in">
+  <div class="section-tag">Sprint 5 · Mes 2-3 · Retención y engagement</div>
+  <div class="section-title">🧠 Psicología + Comunidad</div>
+  <div class="sprint">
+    <div class="sprint-header">
+      <div class="sprint-title">Psicología cuantificada y comunidad (4 items)</div>
+      <div class="sprint-meta"><span class="badge p2">🟢 Media</span></div>
+    </div>
+
+    <div class="item asig-seba">
+      <div class="item-num">23</div>
+      <div class="item-body">
+        <div class="item-header"><span class="item-name">Diario de Trading Obligatorio</span><span class="badge p2">🟢 Media</span><span class="badge oj">Joaquín</span><span class="badge asig-s">🔵 Seba</span></div>
+        <div class="item-desc">Ver tarea S6. Modal antes de cada trade. Detección de FOMO vs razones técnicas. localStorage hasta que haya Supabase.</div>
+      </div>
+      <div class="item-check" onclick="toggle(this)"></div>
+    </div>
+
+    <div class="item asig-joaq">
+      <div class="item-num">24</div>
+      <div class="item-body">
+        <div class="item-header"><span class="item-name">Ranking por Score de Disciplina</span><span class="badge p2">🟢 Media</span><span class="badge oj">Joaquín</span><span class="badge asig-j">🟢 Joaquín</span></div>
+        <div class="item-desc">Leaderboard mensual anónimo — gana el mayor Score de Disciplina, no la mayor rentabilidad. Invierte el incentivo habitual. Con Supabase implementable en un día.</div>
+      </div>
+      <div class="item-check" onclick="toggle(this)"></div>
+    </div>
+
+    <div class="item asig-seba">
+      <div class="item-num">25</div>
+      <div class="item-body">
+        <div class="item-header"><span class="item-name">Sentimiento de Mercado con NLP</span><span class="badge p3">🔵 Largo plazo</span><span class="badge sim">SIM</span><span class="badge oj">Joaquín</span><span class="badge asig-s">🔵 Seba</span></div>
+        <div class="item-desc">Scraping de Diario Financiero y El Mercurio + VADER o FinBERT en español. Requiere servidor.</div>
+        <div class="item-note sim">💡 Mientras tanto: Fear & Greed index adaptado para Chile con titulares RSS gratuitos.</div>
+      </div>
+      <div class="item-check" onclick="toggle(this)"></div>
+    </div>
+
+    <div class="item asig-seba">
+      <div class="item-num">26</div>
+      <div class="item-body">
+        <div class="item-header"><span class="item-name">Impacto Histórico de Eventos Macro en IPSA</span><span class="badge p2">🟢 Media</span><span class="badge oj">Joaquín</span><span class="badge asig-s">🔵 Seba</span></div>
+        <div class="item-desc">"Faltan 5 min para el dato de IPC EE.UU. — históricamente el IPSA se mueve 1.2% en la primera hora." Base de datos de eventos macro + impacto histórico calculado de Yahoo Finance.</div>
+      </div>
+      <div class="item-check" onclick="toggle(this)"></div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ══════════════════════════════════════════════ -->
+<!-- SPRINT 5B — NUEVAS TAREAS JOAQUÍN -->
+<!-- ══════════════════════════════════════════════ -->
+<div class="section fade-in">
+  <div class="section-tag">Sprint 5B · Mes 2 · Nuevas tareas detectadas</div>
+  <div class="section-title">🟢 Tareas Nuevas — Joaquín</div>
+  <div class="sprint">
+    <div class="sprint-header">
+      <div class="sprint-title">Features de UI y contenido no cubiertos (4 items)</div>
+      <div class="sprint-meta"><span class="badge p2">🟢 Media</span><span class="badge nuevo">NUEVO</span><span class="badge oj">Joaquín</span></div>
+    </div>
+
+    <div class="item asig-joaq is-new">
+      <div class="item-num">J1</div>
+      <div class="item-body">
+        <div class="item-header"><span class="item-name">Landing page — captura de emails funcional</span><span class="badge p1">🟡 Alta</span><span class="badge nuevo">NUEVO</span><span class="badge oj">Joaquín</span><span class="badge asig-j">🟢 Joaquín</span></div>
+        <div class="item-desc">landing.html existe pero el formulario de captura de emails no está conectado a ningún servicio. Conectar a Mailchimp (gratuito hasta 500 contactos) o Resend.com para guardar los emails de la lista de espera. Es urgente porque ya está mostrándose a posibles usuarios. Sin esto se pierden leads.</div>
+        <div class="item-note warn">⚠ Urgente — si alguien deja su email hoy, se pierde. Mailchimp tiene API gratuita.</div>
+      </div>
+      <div class="item-check" onclick="toggle(this)"></div>
+    </div>
+
+    <div class="item asig-joaq is-new">
+      <div class="item-num">J2</div>
+      <div class="item-body">
+        <div class="item-header"><span class="item-name">Onboarding guiado para usuarios nuevos</span><span class="badge p2">🟢 Media</span><span class="badge nuevo">NUEVO</span><span class="badge oj">Joaquín</span><span class="badge asig-j">🟢 Joaquín</span></div>
+        <div class="item-desc">Tour interactivo de 5 pasos cuando el usuario entra por primera vez: (1) qué es el IPSA, (2) cómo funciona el simulador, (3) qué es el Score de Disciplina, (4) cómo hacer el primer trade, (5) dónde está el módulo de aprendizaje. Tooltip overlay sobre los elementos reales de la UI. Sin librerías externas — JS puro.</div>
+      </div>
+      <div class="item-check" onclick="toggle(this)"></div>
+    </div>
+
+    <div class="item asig-joaq is-new">
+      <div class="item-num">J3</div>
+      <div class="item-body">
+        <div class="item-header"><span class="item-name">Perfil de usuario + configuración de capital simulado</span><span class="badge p2">🟢 Media</span><span class="badge nuevo">NUEVO</span><span class="badge oj">Joaquín</span><span class="badge asig-j">🟢 Joaquín</span></div>
+        <div class="item-desc">Página ajustes.html. El usuario define: capital inicial simulado (default $10M, editable), riesgo máximo por trade (default 2%), estrategia que va a seguir, horario habitual de operación. Estos parámetros alimentan al AntiTilt y DisciplineScore. Sin Supabase: guardar en localStorage.</div>
+      </div>
+      <div class="item-check" onclick="toggle(this)"></div>
+    </div>
+
+    <div class="item asig-joaq is-new">
+      <div class="item-num">J4</div>
+      <div class="item-body">
+        <div class="item-header"><span class="item-name">Modo oscuro / claro — toggle de tema</span><span class="badge p3">🔵 Largo plazo</span><span class="badge nuevo">NUEVO</span><span class="badge oj">Joaquín</span><span class="badge asig-j">🟢 Joaquín</span></div>
+        <div class="item-desc">Actualmente solo existe dark theme. Agregar toggle light/dark con transición suave. El modo claro es importante para usuarios que operan de día en ambientes con mucha luz. Guardar preferencia en localStorage. Afecta solo variables CSS — no requiere reescribir nada.</div>
+      </div>
+      <div class="item-check" onclick="toggle(this)"></div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ══════════════════════════════════════════════ -->
+<!-- SPRINT 6 — INFRAESTRUCTURA CLOUD -->
+<!-- ══════════════════════════════════════════════ -->
+<div class="section fade-in">
+  <div class="section-tag">Sprint 6 · Mes 2 · Para usuarios reales</div>
+  <div class="section-title">☁️ Infraestructura Cloud</div>
+  <div class="sprint">
+    <div class="sprint-header">
+      <div class="sprint-title">Deploy y base de datos (5 items)</div>
+      <div class="sprint-meta"><span class="badge p3">🔵 Largo plazo</span></div>
+    </div>
+
+    <div class="item asig-joaq">
+      <div class="item-num">27</div>
+      <div class="item-body">
+        <div class="item-header"><span class="item-name">Deploy en Vercel + Dominio invertircl.cl</span><span class="badge p3">🔵 Largo plazo</span><span class="badge oj">Joaquín</span><span class="badge asig-j">🟢 Joaquín</span></div>
+        <div class="item-desc">GitHub → Vercel (gratis). Comprar invertircl.cl en NIC Chile (~$10.000 CLP/año). URL: app.invertircl.cl. Menos de 1 hora. Hacer cuando el MVP esté pulido.</div>
+      </div>
+      <div class="item-check" onclick="toggle(this)"></div>
+    </div>
+
+    <div class="item asig-joaq">
+      <div class="item-num">28</div>
+      <div class="item-body">
+        <div class="item-header"><span class="item-name">Supabase — Backend + Auth + Base de Datos</span><span class="badge p3">🔵 Largo plazo</span><span class="badge oj">Joaquín</span><span class="badge asig-j">🟢 Joaquín</span></div>
+        <div class="item-desc">PostgreSQL gratuito 500MB, auth email/Google, API REST automática. Guardar: historial de trades, progreso educativo, portafolio simulado, Score de Disciplina histórico, diario de trading.</div>
+      </div>
+      <div class="item-check" onclick="toggle(this)"></div>
+    </div>
+
+    <div class="item asig-seba">
+      <div class="item-num">29</div>
+      <div class="item-body">
+        <div class="item-header"><span class="item-name">Generador de Factsheets PDF — "Certificado de Trader"</span><span class="badge p3">🔵 Largo plazo</span><span class="badge oj">Joaquín</span><span class="badge asig-s">🔵 Seba</span></div>
+        <div class="item-desc">Reporte PDF profesional: retorno total, Sharpe, WR, max DD, Score de Disciplina, top 5 trades, distribución mensual. Prueba de competencia técnica para entrevistas. Justifica el plan Pro.</div>
+      </div>
+      <div class="item-check" onclick="toggle(this)"></div>
+    </div>
+
+    <div class="item asig-joaq">
+      <div class="item-num">30</div>
+      <div class="item-body">
+        <div class="item-header"><span class="item-name">Modo Examen CMF / Analista Financiero</span><span class="badge p3">🔵 Largo plazo</span><span class="badge oj">Joaquín</span><span class="badge asig-j">🟢 Joaquín</span></div>
+        <div class="item-desc">Escenarios tipo exámenes de certificación CMF. El usuario no solo "aprendió a invertir" sino "puede certificarlo". Diferenciador único para quienes quieren trabajar en asset management o fintech.</div>
+      </div>
+      <div class="item-check" onclick="toggle(this)"></div>
+    </div>
+
+    <div class="item asig-ambos-item is-new">
+      <div class="item-num">S8</div>
+      <div class="item-body">
+        <div class="item-header"><span class="item-name">README profesional del repositorio GitHub</span><span class="badge p2">🟢 Media</span><span class="badge nuevo">NUEVO</span><span class="badge os">Seba</span><span class="badge asig-ambos">🟠 Ambos</span></div>
+        <div class="item-desc">El repositorio en GitHub necesita un README.md profesional que explique el proyecto, la arquitectura, cómo correrlo localmente, stack tecnológico y roadmap resumido. Importante si van a mostrar esto a profesores, inversores o en entrevistas. Seba hace la parte técnica (estructura de archivos, APIs usadas), Joaquín hace la parte de negocio (qué problema resuelve, diferenciadores).</div>
+      </div>
+      <div class="item-check" onclick="toggle(this)"></div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ══════════════════════════════════════════════ -->
+<!-- SPRINT 7 — EDUCACIÓN AVANZADA -->
+<!-- ══════════════════════════════════════════════ -->
+<div class="section fade-in">
+  <div class="section-tag">Sprint 7 · Con presupuesto · Largo plazo</div>
+  <div class="section-title">🎓 Educación Avanzada</div>
+  <div class="sprint">
+    <div class="sprint-header">
+      <div class="sprint-title">Educación y contenido (5 items)</div>
+      <div class="sprint-meta"><span class="badge p4">🟣 Con ingresos</span></div>
+    </div>
+
+    <div class="item asig-joaq">
+      <div class="item-num">31</div>
+      <div class="item-body">
+        <div class="item-header"><span class="item-name">8 Módulos Educativos Restantes</span><span class="badge p2">🟢 Media</span><span class="badge oj">Joaquín</span><span class="badge asig-j">🟢 Joaquín</span></div>
+        <div class="item-desc">UF, Fondos mutuos Chile, RSI y medias móviles, Diversificación, Macroeconomía, ETFs, Psicología del inversor, AFP. Cada uno con puntos clave, glosario y quiz interactivo.</div>
+      </div>
+      <div class="item-check" onclick="toggle(this)"></div>
+    </div>
+
+    <div class="item asig-joaq">
+      <div class="item-num">32</div>
+      <div class="item-body">
+        <div class="item-header"><span class="item-name">Videos Interactivos Contextuales</span><span class="badge p4">🟣 Con ingresos</span><span class="badge oj">Joaquín</span><span class="badge asig-j">🟢 Joaquín</span></div>
+        <div class="item-desc">Videos que se activan según patrones detectados en el gráfico. Sistema detecta HCH → aparece video de 90s explicando la figura. Requiere reconocimiento de patrones en tiempo real.</div>
+      </div>
+      <div class="item-check" onclick="toggle(this)"></div>
+    </div>
+
+    <div class="item asig-seba">
+      <div class="item-num">33</div>
+      <div class="item-body">
+        <div class="item-header"><span class="item-name">Feed de Noticias Financieras Chilenas</span><span class="badge p3">🔵 Largo plazo</span><span class="badge oj">Joaquín</span><span class="badge asig-s">🔵 Seba</span></div>
+        <div class="item-desc">Panel de noticias de Diario Financiero, El Mercurio Inversiones y Bolsa de Santiago. Gratis con feeds RSS. El usuario ve la noticia y cómo afectó el precio en tiempo real.</div>
+      </div>
+      <div class="item-check" onclick="toggle(this)"></div>
+    </div>
+
+    <div class="item asig-seba">
+      <div class="item-num">34</div>
+      <div class="item-body">
+        <div class="item-header"><span class="item-name">Calendario Económico Chileno y Global</span><span class="badge p3">🔵 Largo plazo</span><span class="badge oj">Joaquín</span><span class="badge asig-s">🔵 Seba</span></div>
+        <div class="item-desc">Reuniones Banco Central, IPC, desempleo, datos Fed, earnings IPSA. Cada evento muestra impacto histórico promedio y volatilidad esperada. APIs gratuitas disponibles.</div>
+      </div>
+      <div class="item-check" onclick="toggle(this)"></div>
+    </div>
+
+    <div class="item asig-seba">
+      <div class="item-num">35</div>
+      <div class="item-body">
+        <div class="item-header"><span class="item-name">Feed de Noticias con NLP — Impacto Estimado</span><span class="badge p4">🟣 Con ingresos</span><span class="badge sim">SIM</span><span class="badge oj">Joaquín</span><span class="badge asig-s">🔵 Seba</span></div>
+        <div class="item-desc">"IPC EE.UU. sobre lo esperado → históricamente IPSA cae 0.8% en la primera hora." Requiere NewsAPI (~$50/mes) + FinBERT en español + base de datos de impactos históricos.</div>
+        <div class="item-note sim">💡 Versión gratis: base de datos estática de eventos históricos + impactos promedio. No en tiempo real pero educativamente valioso.</div>
+      </div>
+      <div class="item-check" onclick="toggle(this)"></div>
+    </div>
+  </div>
+</div>
+
+
+
+<!-- ══════════════════════════════════════════════ -->
+<!-- SPRINT X — CALIDAD Y PRODUCCIÓN -->
+<!-- ══════════════════════════════════════════════ -->
+<div class="section fade-in">
+  <div class="section-tag">Sprint X · Transversal · Se hace en paralelo a todo lo demás</div>
+  <div class="section-title">🏗️ Calidad, Robustez y Producción</div>
+
+  <div class="nota-box" style="padding:0;margin-bottom:16px;">
+    <div class="nota azul" style="margin:0;">
+      <b>¿Por qué este sprint?</b> Estas tareas no son features nuevos — son las consecuencias inevitables de las tareas ya propuestas. Sin ellas, el proyecto no funciona correctamente cuando lo vea alguien externo o cuando escale a más de 2 usuarios.
+    </div>
+  </div>
+
+  <div class="sprint">
+    <div class="sprint-header">
+      <div class="sprint-title">Calidad y robustez (8 tareas nuevas)</div>
+      <div class="sprint-meta"><span class="badge p1">🟡 Alta</span><span class="badge nuevo">NUEVO</span><span>Dividido — háganse en paralelo a los sprints principales</span></div>
+    </div>
+
+    <div class="item asig-seba is-new">
+      <div class="item-num">S9</div>
+      <div class="item-body">
+        <div class="item-header"><span class="item-name">Estado persistente del simulador — localStorage</span><span class="badge p1">🟡 Alta</span><span class="badge nuevo">NUEVO</span><span class="badge os">Seba</span><span class="badge asig-s">🔵 Seba</span></div>
+        <div class="item-desc">El simulador pierde todo al cerrar el tab — trades, posiciones abiertas, capital simulado, historial. Antes de Supabase, guardar todo en localStorage con un esquema claro: trades[], openPositions[], capital, journalEntries[]. Es un requisito para que discipline.py y antitilt.py tengan datos reales con qué trabajar entre sesiones.</div>
+        <div class="item-note warn">⚠ Sin esto, discipline y antitilt solo funcionan dentro de una sesión. El usuario pierde su historial cada vez que cierra Chrome.</div>
+      </div>
+      <div class="item-check" onclick="toggle(this)"></div>
+    </div>
+
+    <div class="item asig-seba is-new">
+      <div class="item-num">S10</div>
+      <div class="item-body">
+        <div class="item-header"><span class="item-name">Indicadores de estado de datos — live / fallback / cargando</span><span class="badge p1">🟡 Alta</span><span class="badge nuevo">NUEVO</span><span class="badge os">Seba</span><span class="badge asig-s">🔵 Seba</span></div>
+        <div class="item-desc">Hoy si Yahoo Finance o allorigins.win fallan, el dashboard no actualiza y el usuario no sabe por qué. Implementar 3 estados visuales en cada KPI: 🟢 dato en vivo, 🟡 dato con delay o desde caché, 🔴 fallback hardcoded. Un punto de color pequeño en cada KPI es suficiente. También un banner global si todas las APIs están caídas.</div>
+      </div>
+      <div class="item-check" onclick="toggle(this)"></div>
+    </div>
+
+    <div class="item asig-seba is-new">
+      <div class="item-num">S11</div>
+      <div class="item-body">
+        <div class="item-header"><span class="item-name">Tests automáticos de market.js — suite de regresión</span><span class="badge p2">🟢 Media</span><span class="badge nuevo">NUEVO</span><span class="badge os">Seba</span><span class="badge asig-s">🔵 Seba</span></div>
+        <div class="item-desc">test_apis.html ya prueba las APIs en vivo. Falta una suite de tests unitarios para los cálculos: RSI de una serie conocida debe dar X, MACD de otra serie debe dar Y, MatchingEngine.costos(8420, 100, "buy") debe dar exactamente Z. Si alguien modifica market.js y rompe un cálculo, los tests lo detectan al instante. Sin librería externa — JS puro en un nuevo archivo test_unit.html.</div>
+      </div>
+      <div class="item-check" onclick="toggle(this)"></div>
+    </div>
+
+    <div class="item asig-seba is-new">
+      <div class="item-num">S12</div>
+      <div class="item-body">
+        <div class="item-header"><span class="item-name">Proxy seguro para Claude API — proteger la API key</span><span class="badge p2">🟢 Media</span><span class="badge nuevo">NUEVO</span><span class="badge os">Seba</span><span class="badge asig-s">🔵 Seba</span></div>
+        <div class="item-desc">El ítem 18 (Quant-Copilot) usa Claude API. Si la key va directo en el JS del cliente, cualquiera que abra el inspector del navegador la ve y la roba. Necesitan un proxy mínimo: un Cloudflare Worker gratuito que recibe la petición del frontend, agrega la key en el servidor, y la manda a Anthropic. El frontend nunca ve la key real. Hacer antes de activar el Quant-Copilot.</div>
+        <div class="item-note warn">⚠ Sin esto no pueden publicar el Quant-Copilot. La key expuesta en producción se agota en horas si alguien la encuentra.</div>
+      </div>
+      <div class="item-check" onclick="toggle(this)"></div>
+    </div>
+
+    <div class="item asig-joaq is-new">
+      <div class="item-num">J5</div>
+      <div class="item-body">
+        <div class="item-header"><span class="item-name">Responsividad móvil — todas las páginas</span><span class="badge p1">🟡 Alta</span><span class="badge nuevo">NUEVO</span><span class="badge oj">Joaquín</span><span class="badge asig-j">🟢 Joaquín</span></div>
+        <div class="item-desc">La app está diseñada para desktop. Más del 60% de los usuarios que lleguen desde la landing van a verla primero en el teléfono. Si se ve rota, los pierden antes de que puedan probarla. Implementar breakpoints responsive en todas las páginas: sidebar colapsable en móvil, topbar con menú hamburguesa, tablas con scroll horizontal, KPIs en grid 2x2 en vez de 4x1. Afecta solo CSS — no requiere cambiar lógica.</div>
+      </div>
+      <div class="item-check" onclick="toggle(this)"></div>
+    </div>
+
+    <div class="item asig-joaq is-new">
+      <div class="item-num">J6</div>
+      <div class="item-body">
+        <div class="item-header"><span class="item-name">SEO y meta tags de la landing — Open Graph</span><span class="badge p1">🟡 Alta</span><span class="badge nuevo">NUEVO</span><span class="badge oj">Joaquín</span><span class="badge asig-j">🟢 Joaquín</span></div>
+        <div class="item-desc">Cuando alguien comparte el link de la landing por WhatsApp, LinkedIn o Twitter, aparece sin título, sin imagen y sin descripción — una caja gris vacía. Son 10 líneas de HTML: title, description, og:title, og:description, og:image (captura del dashboard), og:url, twitter:card. La imagen del preview es lo que determina si alguien hace click o no. Urgente antes de cualquier difusión.</div>
+        <div class="item-note warn">⚠ Cero costo técnico, impacto de conversión muy alto. Hacerlo antes de compartir el link con nadie.</div>
+      </div>
+      <div class="item-check" onclick="toggle(this)"></div>
+    </div>
+
+    <div class="item asig-joaq is-new">
+      <div class="item-num">J7</div>
+      <div class="item-body">
+        <div class="item-header"><span class="item-name">Google Analytics / Mixpanel — métricas de uso</span><span class="badge p2">🟢 Media</span><span class="badge nuevo">NUEVO</span><span class="badge oj">Joaquín</span><span class="badge asig-j">🟢 Joaquín</span></div>
+        <div class="item-desc">Sin analytics no saben qué features usa la gente, dónde abandona el onboarding, qué página tiene más retención. Google Analytics 4 es gratis y tarda 15 minutos en configurar — un script en el head de cada página. Eventos clave a trackear: primer trade simulado, módulo educativo completado, backtest ejecutado, sesión de replay iniciada. Estos datos son esenciales para decidir en qué features invertir tiempo.</div>
+      </div>
+      <div class="item-check" onclick="toggle(this)"></div>
+    </div>
+
+    <div class="item asig-ambos-item is-new">
+      <div class="item-num">X1</div>
+      <div class="item-body">
+        <div class="item-header"><span class="item-name">Checklist de QA antes de cada release</span><span class="badge p2">🟢 Media</span><span class="badge nuevo">NUEVO</span><span class="badge asig-ambos">🟠 Ambos</span></div>
+        <div class="item-desc">Un documento simple (QA.md en el repo) con la lista de cosas que verificar antes de hacer push a main: ¿abre dashboard en Chrome sin errores de consola?, ¿test_apis.html pasa los 17 tests?, ¿el simulador ejecuta un trade correctamente?, ¿los links del topbar funcionan en todas las páginas?, ¿se ve aceptable en móvil?. Lo hace quien hizo el cambio — tarda 5 minutos y evita subir cosas rotas.</div>
+      </div>
+      <div class="item-check" onclick="toggle(this)"></div>
+    </div>
+
+  </div>
+</div>
+<!-- NOTAS FINALES -->
+<div class="nota-box fade-in" style="margin-top:32px;padding-bottom:0;">
+  <div class="nota azul">
+    <b>🔵 Seba construye:</b> discipline+antitilt JS, backtest engine JS, Monte Carlo JS, walk-forward JS, riesgo portafolio real, diario trading, order imbalance, impacto macro, factsheets PDF, README técnico, feed NLP.
+  </div>
+  <div class="nota verde">
+    <b>🟢 Joaquín construye:</b> market.js ✓, APIs reales ✓, indicadores ✓, matching engine ✓, fixes auditoría ✓ — blindaje legal, BlackSwan UI, ShadowTrader UI, Replay UI, Markowitz UI, HRP UI, quant-copilot IA, heatmap liquidez, iceberg orders, scanner correlaciones, ranking disciplina, sentimiento NLP UI, landing emails, onboarding, perfil usuario, modo claro/oscuro, módulos educativos, Supabase, deploy, CMF, README negocio.
+  </div>
+  <div class="nota rojo">
+    <b>⚠️ Urgente para Joaquín:</b> La landing.html tiene un formulario de captura de emails que no está conectado a ningún servicio. Si alguien deja su email hoy, se pierde. Conectar a Mailchimp gratis antes de mostrar el proyecto a nadie más.
+  </div>
+</div>
+
+<script>
+function toggle(el) {
+  el.classList.toggle('done');
+  const item = el.closest('.item');
+  item.classList.toggle('done-item', el.classList.contains('done'));
+  updateProgress();
+  saveState();
+}
+
+function updateProgress() {
+  const all   = document.querySelectorAll('.item-check').length;
+  const done  = document.querySelectorAll('.item-check.done').length;
+  const pct   = Math.round(done / all * 100);
+  document.getElementById('progFill').style.width = pct + '%';
+  document.getElementById('pctEl').textContent    = pct + '%';
+  document.getElementById('cntDone').textContent  = done + ' completados';
+  document.getElementById('cntPending').textContent = (all - done) + ' pendientes';
+}
+
+function saveState() {
+  const state = {};
+  document.querySelectorAll('.item-check').forEach((el, i) => {
+    state[i] = el.classList.contains('done');
+  });
+  localStorage.setItem('invertircl_roadmap', JSON.stringify(state));
+}
+
+function loadState() {
+  try {
+    const state = JSON.parse(localStorage.getItem('invertircl_roadmap') || '{}');
+    document.querySelectorAll('.item-check').forEach((el, i) => {
+      if (state[i]) {
+        el.classList.add('done');
+        el.closest('.item').classList.add('done-item');
+      }
+    });
+  } catch(e) {}
+}
+
+// Pre-marcar los completados hardcoded (F1-F5, 04-07)
+window.addEventListener('DOMContentLoaded', () => {
+  loadState();
+  updateProgress();
+});
+</script>
+</body>
+</html>
