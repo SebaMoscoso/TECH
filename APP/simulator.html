@@ -330,6 +330,102 @@ body { font-family: var(--sans); background: var(--bg); color: var(--texto); dis
 /* Animaciones */
 @keyframes fadeIn { from{opacity:0;transform:translateY(6px)} to{opacity:1;transform:translateY(0)} }
 .fade-in { animation:fadeIn 0.3s ease both; }
+
+/* ── ORDER IMBALANCE WIDGET ── */
+.imbalance-block {
+  display:flex; flex-direction:column; gap:4px;
+  margin-left:auto; padding-left:16px;
+  border-left:1px solid var(--linea); min-width:220px;
+}
+.imbalance-header {
+  display:flex; align-items:center; justify-content:space-between;
+}
+.imbalance-title {
+  font-size:0.65rem; color:var(--texto3);
+  text-transform:uppercase; letter-spacing:0.06em;
+  display:flex; align-items:center; gap:5px;
+}
+.imbalance-val {
+  font-family:var(--mono); font-size:0.88rem; font-weight:500;
+  transition:color 0.3s;
+}
+/* Barra horizontal −100 ←→ +100 */
+.imbalance-track {
+  position:relative; height:8px; background:var(--bg3);
+  border-radius:4px; overflow:visible;
+}
+.imbalance-track-inner {
+  position:absolute; inset:0; border-radius:4px; overflow:hidden;
+}
+.imbalance-fill-buy {
+  position:absolute; right:50%; top:0; bottom:0;
+  background:var(--verde); border-radius:4px 0 0 4px;
+  transition:width 0.6s cubic-bezier(0.4,0,0.2,1);
+}
+.imbalance-fill-sell {
+  position:absolute; left:50%; top:0; bottom:0;
+  background:var(--rojo); border-radius:0 4px 4px 0;
+  transition:width 0.6s cubic-bezier(0.4,0,0.2,1);
+}
+/* Tick central */
+.imbalance-track::after {
+  content:''; position:absolute; left:50%; top:-2px; bottom:-2px;
+  width:1px; background:var(--linea2); transform:translateX(-50%);
+}
+.imbalance-labels {
+  display:flex; justify-content:space-between;
+  font-family:var(--mono); font-size:0.6rem; color:var(--texto3);
+}
+.imbalance-signal {
+  font-size:0.68rem; padding:2px 8px; border-radius:4px;
+  text-align:center; font-weight:500; transition:all 0.4s;
+}
+.imbalance-signal.comprador { background:rgba(0,230,118,0.1); color:var(--verde); border:1px solid rgba(0,230,118,0.2); }
+.imbalance-signal.vendedor  { background:rgba(255,61,87,0.1);  color:var(--rojo);  border:1px solid rgba(255,61,87,0.2); }
+.imbalance-signal.neutro    { background:rgba(245,197,24,0.08);color:var(--amarillo);border:1px solid rgba(245,197,24,0.15);}
+
+/* ── HISTORIAL IMBALANCE (tab del panel derecho) ── */
+.imb-history-wrap { padding:12px 14px; }
+.imb-history-title {
+  font-size:0.65rem; text-transform:uppercase; letter-spacing:0.08em;
+  color:var(--texto3); margin-bottom:10px;
+  display:flex; align-items:center; justify-content:space-between;
+}
+.imb-chart-wrap {
+  position:relative; height:100px; background:var(--bg3);
+  border-radius:8px; overflow:hidden; margin-bottom:12px;
+}
+#imbCanvas { width:100%; height:100%; display:block; }
+.imb-zero-line {
+  position:absolute; left:0; right:0; top:50%;
+  border-top:1px dashed rgba(255,255,255,0.1);
+  pointer-events:none;
+}
+.imb-stats-grid {
+  display:grid; grid-template-columns:1fr 1fr 1fr; gap:6px;
+  margin-bottom:10px;
+}
+.imb-stat {
+  background:var(--bg3); border-radius:6px; padding:8px;
+  text-align:center;
+}
+.imb-stat-label { font-size:0.6rem; color:var(--texto3); text-transform:uppercase; letter-spacing:0.05em; }
+.imb-stat-val   { font-family:var(--mono); font-size:0.82rem; margin-top:2px; }
+.imb-log-title  { font-size:0.65rem; text-transform:uppercase; letter-spacing:0.08em; color:var(--texto3); margin-bottom:6px; }
+.imb-log-item {
+  display:flex; align-items:center; gap:8px; padding:5px 0;
+  border-bottom:1px solid rgba(255,255,255,0.03); font-size:0.72rem;
+}
+.imb-log-dot   { width:7px; height:7px; border-radius:50%; flex-shrink:0; }
+.imb-log-time  { font-family:var(--mono); font-size:0.65rem; color:var(--texto3); width:38px; }
+.imb-log-val   { font-family:var(--mono); font-weight:500; width:48px; }
+.imb-log-signal{ color:var(--texto2); flex:1; }
+
+/* Tooltip Lee-Ready */
+.lr-tooltip {
+  display:inline-flex; align-items:center; gap:4px;
+  cursor:help; text-decoration:underline dotted; text-underline-offset:2px;
+}
 </style>
 </head>
 <body>
@@ -341,11 +437,14 @@ body { font-family: var(--sans); background: var(--bg); color: var(--texto); dis
     <div class="tnav" onclick="location.href='dashboard.html'">Dashboard</div>
     <div class="tnav active">Simulador</div>
     <div class="tnav" onclick="location.href='backtest.html'">Backtest</div>
+    <div class="tnav" onclick="location.href='risk.html'">Riesgo</div>
+    <div class="tnav" onclick="location.href='learn.html'">Aprender</div>
+    <div class="tnav" onclick="location.href='heatmap.html'">Liquidez</div>
   </div>
   <div class="top-right">
     <div class="capital-badge">
       <span class="cap-label">Capital</span>
-      <span class="cap-val" id="capDisplay">$10.000.000</span>
+      <span class="cap-val" id="capDisplay">$11.284.500</span>
     </div>
     <div class="capital-badge">
       <span class="cap-label">P&L hoy</span>
@@ -547,8 +646,27 @@ body { font-family: var(--sans); background: var(--bg); color: var(--texto); dis
       <div class="ind-label">ATR(14)</div>
       <div class="ind-val" id="ind-atr">$142</div>
     </div>
-    <div style="margin-left:auto;font-size:0.72rem;color:var(--texto3)">
-      💡 RSI sobre 70 = sobrecomprado · bajo 30 = sobrevendido
+
+    <!-- ── ORDER IMBALANCE WIDGET ── -->
+    <div class="imbalance-block">
+      <div class="imbalance-header">
+        <span class="imbalance-title">
+          <span class="lr-tooltip" title="Lee-Ready: si precio &gt; VWAP → comprador. Si precio &lt; VWAP → vendedor.">⚖️ Order Imbalance</span>
+        </span>
+        <span class="imbalance-val" id="imbVal">+0</span>
+      </div>
+      <div class="imbalance-track">
+        <div class="imbalance-track-inner">
+          <div class="imbalance-fill-buy"  id="imbFillBuy"  style="width:0%"></div>
+          <div class="imbalance-fill-sell" id="imbFillSell" style="width:0%"></div>
+        </div>
+      </div>
+      <div class="imbalance-labels">
+        <span>−100 Vendedor</span>
+        <span>0</span>
+        <span>Comprador +100</span>
+      </div>
+      <div class="imbalance-signal neutro" id="imbSignal">Calculando...</div>
     </div>
   </div>
 </div>
@@ -559,6 +677,7 @@ body { font-family: var(--sans); background: var(--bg); color: var(--texto); dis
     <div class="rtab active" onclick="switchTab('historial')">Historial</div>
     <div class="rtab" onclick="switchTab('posiciones')">Posiciones</div>
     <div class="rtab" onclick="switchTab('estadisticas')">Stats</div>
+    <div class="rtab" onclick="switchTab('imbalance')" title="Order Imbalance — Presión compradora/vendedora">⚖️</div>
   </div>
 
   <div class="right-content" id="rightContent">
@@ -606,8 +725,8 @@ body { font-family: var(--sans); background: var(--bg); color: var(--texto); dis
   <span id="toastMsg">Orden ejecutada correctamente</span>
 </div>
 
-<script src="JS/market.js"></script>
-<script src="JS/poller.js"></script>
+<script src="../js/market.js"></script>
+<script src="../js/poller.js"></script>
 <script>
 // ── DATOS ────────────────────────────────────────────────────
 const acciones = [
@@ -623,69 +742,15 @@ const acciones = [
   { sym:'CENCOSUD',name:'Cencosud',            precio:1780,  ch:+0.6, vol:'33.8M' },
 ];
 
-// ── ESTADO INICIAL (posiciones demo) ─────────────────────────
-const estadoInicial = {
-  posiciones: [
-    { sym:'COPEC', qty:100, entry:8183,  current:8420  },
-    { sym:'SQM-B', qty:50,  entry:38960, current:38200 },
-    { sym:'BCI',   qty:30,  entry:28100, current:28500 },
-  ]
-};
-
 let accionSel = acciones[0];
-let accion    = 'comprar';
-let capital   = 10_000_000; // capital inicial real
-let trades    = [];
-let posiciones = [...estadoInicial.posiciones];
-
-// ── PERSISTENCIA localStorage ─────────────────────────────────
-const STORAGE_KEY     = 'invertircl_simulador';
-const CAPITAL_INICIAL = 10_000_000;
-
-function guardarEstado() {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({
-      capital,
-      trades,
-      posiciones,
-      journal:   window._journal || [],
-      updatedAt: new Date().toISOString(),
-    }));
-  } catch(e) {
-    console.warn('[Simulador] Error guardando estado:', e.message);
-  }
-}
-
-function cargarEstado() {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return false;
-    const s = JSON.parse(raw);
-    if (typeof s.capital !== 'number') return false;
-    capital         = s.capital;
-    trades          = Array.isArray(s.trades)     ? s.trades     : [];
-    posiciones      = Array.isArray(s.posiciones)  ? s.posiciones : [...estadoInicial.posiciones];
-    window._journal = Array.isArray(s.journal)    ? s.journal    : [];
-    console.log(`[Simulador] Sesión restaurada — capital $${capital.toLocaleString('es-CL')} | ${trades.length} trades`);
-    return true;
-  } catch(e) {
-    console.warn('[Simulador] Error cargando estado, iniciando desde cero:', e.message);
-    return false;
-  }
-}
-
-function resetearEstado() {
-  if (!confirm('¿Resetear la cuenta? Volverás a $10.000.000 y perderás todo el historial. Esta acción no se puede deshacer.')) return;
-  localStorage.removeItem(STORAGE_KEY);
-  capital    = CAPITAL_INICIAL;
-  trades     = [];
-  posiciones = [...estadoInicial.posiciones];
-  window._journal = [];
-  document.getElementById('capDisplay').textContent = `$${capital.toLocaleString('es-CL')}`;
-  renderRightPanel('historial');
-  showToast('🔄', 'Cuenta reseteada a $10.000.000');
-  guardarEstado();
-}
+let accion = 'comprar'; // comprar o vender
+let capital = 11284500;
+let trades = [];
+let posiciones = [
+  { sym:'COPEC',  qty:100, entry:8183, current:8420 },
+  { sym:'SQM-B',  qty:50,  entry:38960, current:38200 },
+  { sym:'BCI',    qty:30,  entry:28100, current:28500 },
+];
 
 // ── VELAS ────────────────────────────────────────────────────
 let candleData = [];
@@ -928,7 +993,6 @@ function ejecutarOrden() {
     sym: accionSel.sym, tipo: isCompra?'compra':'venta',
     cant, precio: accionSel.precio, stop, tp, hora,
     pnl: null,
-    timestamp: Date.now(),
   });
 
   // Actualizar capital
@@ -937,10 +1001,6 @@ function ejecutarOrden() {
 
   document.getElementById('capDisplay').textContent = `$${capital.toLocaleString('es-CL')}`;
 
-  // Persistir estado
-  _guardarEstado();
-
-  guardarEstado();
   renderRightPanel('historial');
   showToast(isCompra ? '✅' : '⛔', `${isCompra?'Compra':'Venta'} de ${cant} ${accionSel.sym} ejecutada a $${accionSel.precio.toLocaleString('es-CL')}`);
 }
@@ -955,23 +1015,20 @@ function switchTab(tab) {
 function renderRightPanel(tab) {
   const el = document.getElementById('rightContent');
   if (tab === 'historial') {
-    // Mostrar trades reales + demos solo si no hay trades reales aún
-    const allTrades = trades;
-    if (allTrades.length === 0) {
-      el.innerHTML = `<div style="padding:32px 16px;text-align:center;color:var(--texto3);font-size:0.82rem">
-        <div style="font-size:1.8rem;margin-bottom:12px">📋</div>
-        <div style="color:var(--texto2)">Sin trades todavía</div>
-        <div style="margin-top:6px;font-size:0.72rem">Ejecuta tu primera orden para verla aquí.</div>
-      </div>`;
-      return;
-    }
+    const allTrades = [
+      ...trades,
+      { sym:'SQM-B', tipo:'compra', cant:50,  precio:38960, hora:'09:32', pnl:-38000 },
+      { sym:'COPEC', tipo:'compra', cant:100, precio:8183,  hora:'09:35', pnl:+23700 },
+      { sym:'BCI',   tipo:'compra', cant:30,  precio:28100, hora:'10:12', pnl:+12000 },
+      { sym:'ENTEL', tipo:'venta',  cant:200, precio:4180,  hora:'11:04', pnl:+8400  },
+      { sym:'CMPC',  tipo:'compra', cant:500, precio:1920,  hora:'11:47', pnl:-11000 },
+    ];
     el.innerHTML = allTrades.map(t => {
       const isPos = t.pnl === null ? null : t.pnl >= 0;
-      const esDemo = t.demo === true;
-      return `<div class="trade-item" style="${esDemo ? 'opacity:0.45' : ''}">
+      return `<div class="trade-item">
         <div class="trade-type ${t.tipo}">${t.tipo==='compra'?'BUY':'SELL'}</div>
         <div class="trade-info">
-          <div class="trade-sym">${t.sym}${esDemo ? ' <span style="font-size:0.6rem;color:var(--texto3)">demo</span>' : ''}</div>
+          <div class="trade-sym">${t.sym}</div>
           <div class="trade-detail">${t.cant} acc. · $${t.precio.toLocaleString('es-CL')}</div>
         </div>
         <div class="trade-pnl">
@@ -982,15 +1039,6 @@ function renderRightPanel(tab) {
         </div>
       </div>`;
     }).join('');
-
-    // Botón resetear solo si hay trades reales
-    if (trades.length > 0) {
-      el.innerHTML += `<div style="padding:12px 16px;border-top:1px solid var(--linea);margin-top:8px">
-        <button onclick="resetearSimulador()" style="background:transparent;border:1px solid rgba(255,61,87,0.3);color:var(--rojo);padding:6px 14px;border-radius:6px;cursor:pointer;font-size:0.72rem;width:100%">
-          🔄 Reiniciar simulador
-        </button>
-      </div>`;
-    }
   } else if (tab === 'posiciones') {
     el.innerHTML = posiciones.map(p => {
       const pnl  = (p.current - p.entry) * p.qty;
@@ -1009,42 +1057,15 @@ function renderRightPanel(tab) {
       </div>`;
     }).join('');
   } else {
-    // Calcular estadísticas reales desde el historial de trades
-    const cerrados  = trades.filter(t => t.pnl !== null && t.pnl !== undefined);
-    const ganados   = cerrados.filter(t => t.pnl > 0);
-    const perdidos  = cerrados.filter(t => t.pnl < 0);
-    const pnlTotal  = cerrados.reduce((a, t) => a + t.pnl, 0);
-    const pnlAbier  = posiciones.reduce((a, p) => a + (p.current - p.entry) * p.qty, 0);
-    const avgWin    = ganados.length  ? ganados.reduce((a,t)=>a+t.pnl,0)/ganados.length : 0;
-    const avgLoss   = perdidos.length ? perdidos.reduce((a,t)=>a+t.pnl,0)/perdidos.length : 0;
-    const pf        = perdidos.length && avgLoss !== 0 ? Math.abs(avgWin * ganados.length / (avgLoss * perdidos.length)) : null;
-    const mejorTrade = cerrados.length ? cerrados.reduce((a,b)=>a.pnl>b.pnl?a:b, cerrados[0]) : null;
-    const peorTrade  = cerrados.length ? cerrados.reduce((a,b)=>a.pnl<b.pnl?a:b, cerrados[0]) : null;
-    const wr = cerrados.length ? (ganados.length / cerrados.length * 100).toFixed(1) : '—';
-    const fmtCLP = n => (n>=0?'+':'') + '$' + Math.abs(Math.round(n)).toLocaleString('es-CL');
-
-    const statsRows = [
-      ['Trades totales',   cerrados.length || '0'],
-      ['Ganados',          ganados.length  ? `${ganados.length} (${wr}%)`  : '0'],
-      ['Perdidos',         perdidos.length ? `${perdidos.length}`           : '0'],
-      ['P&L realizado',    cerrados.length ? fmtCLP(pnlTotal)              : '$0'],
-      ['P&L no realizado', fmtCLP(pnlAbier)],
-      ['Mejor trade',      mejorTrade ? `${fmtCLP(mejorTrade.pnl)} ${mejorTrade.sym}` : '—'],
-      ['Peor trade',       peorTrade  ? `${fmtCLP(peorTrade.pnl)} ${peorTrade.sym}`  : '—'],
-      ['Avg ganancia',     ganados.length  ? fmtCLP(avgWin)  : '—'],
-      ['Avg pérdida',      perdidos.length ? fmtCLP(avgLoss) : '—'],
-      ['Profit factor',    pf ? pf.toFixed(2) + 'x' : '—'],
-      ['Capital actual',   '$' + capital.toLocaleString('es-CL')],
-      ['Retorno total',    fmtCLP(capital - CAPITAL_INICIAL)],
-    ];
-
     el.innerHTML = `
       <div style="padding:16px">
-        <div style="font-size:0.78rem;color:var(--texto2);margin-bottom:14px;display:flex;justify-content:space-between;align-items:center">
-          <span>Estadísticas reales</span>
-          <span style="font-size:0.68rem;color:var(--texto3);cursor:pointer" onclick="resetearEstado()">↺ Resetear cuenta</span>
-        </div>
-        ${statsRows.map(([l,v]) => `
+        <div style="font-size:0.78rem;color:var(--texto2);margin-bottom:14px">Últimos 30 días</div>
+        ${[
+          ['Trades totales','23'],['Ganados','15 (65.2%)'],['Perdidos','8 (34.8%)'],
+          ['P&L realizado','+$284.500'],['P&L no realizado','+$45.700'],
+          ['Mejor trade','+$84.000 ENTEL'],['Peor trade','−$38.000 SQM'],
+          ['Avg win','$42.300'],['Avg loss','−$21.100'],['Profit factor','2.0x'],
+        ].map(([l,v]) => `
           <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--linea);font-size:0.82rem">
             <span style="color:var(--texto2)">${l}</span>
             <span style="font-family:var(--mono)">${v}</span>
@@ -1125,9 +1146,8 @@ function animarPrecio() {
     const precios = StockPoller.getAllPrices();
     posiciones.forEach(p => {
       const sym = p.sym.includes('.') ? p.sym : p.sym + '.SN';
-      if (precios[sym]?.price) p.current = parseFloat(precios[sym].price.toFixed(2));
+      if (precios[sym]?.price) p.current = precios[sym].price;
     });
-    _guardarEstado();
     renderRightPanel('posiciones');
   }, 5000);
 }
@@ -1149,9 +1169,6 @@ document.querySelectorAll('.cc-btn').forEach(btn => {
 });
 
 // ── INIT ─────────────────────────────────────────────────────
-// Cargar estado persistido antes de renderizar
-const estadoRestaurado = cargarEstado();
-
 seleccionarAccion(0);
 genCandles();
 drawCandles();
@@ -1161,30 +1178,328 @@ reloj();
 setInterval(reloj, 1000);
 animarPrecio();
 
-// Mostrar capital real desde localStorage
-document.getElementById('capDisplay').textContent = `$${capital.toLocaleString('es-CL')}`;
-
-// Defaults inputs
+// Defaults
 document.getElementById('stopInput').value = Math.round(accionSel.precio * 0.975);
 document.getElementById('tpInput').value   = Math.round(accionSel.precio * 1.05);
 actualizarOrden();
 
-// Banner de sesión restaurada
-if (estadoRestaurado && trades.length > 0) {
-  showToast('💾', `Sesión restaurada — ${trades.length} trades · $${capital.toLocaleString('es-CL')}`);
-}
+// ══════════════════════════════════════════════════════════════
+// ÍTEM 20 — ORDER IMBALANCE (Lee-Ready) + HISTORIAL
+// ══════════════════════════════════════════════════════════════
 
-// Guardar estado periódicamente como respaldo (cada 60s)
-setInterval(guardarEstado, 60_000);
+const Imbalance = (() => {
 
-// Mostrar capital guardado al cargar
-document.getElementById('capDisplay').textContent = `$${capital.toLocaleString('es-CL')}`;
+  // ── ESTADO ────────────────────────────────────────────────
+  // Historial de (timestamp, imbalance, vwapPrice, precio)
+  const MAX_HISTORY = 120;   // últimos 120 ticks (~4 minutos a 2s/tick)
+  let history = [];          // [{ts, imb, precio, vwap, signal}]
+  let vwapAccum = 0;         // Σ(precio × volumen)
+  let volAccum  = 0;         // Σ(volumen) — acumulado intraday
+  let buyVol    = 0;         // volumen iniciado por comprador (Lee-Ready)
+  let sellVol   = 0;         // volumen iniciado por vendedor
+  let lastPrice = 0;
 
-// Banner si hay sesión guardada
-if (_estadoGuardado && trades.length > 0) {
-  const fecha = new Date(_estadoGuardado.timestamp).toLocaleDateString('es-CL');
-  showToast('💾', `Sesión restaurada — ${trades.length} trade${trades.length>1?'s':''} · última actividad ${fecha}`);
-}
+  // ── LEE-READY: clasificar tick ─────────────────────────────
+  // Regla: si precio > VWAP → tick de comprador; si < VWAP → vendedor
+  // Si precio = VWAP → usar dirección del último movimiento (tick test)
+  function clasificarTick(precio, volumen, vwap) {
+    if (precio > vwap) return 'buy';
+    if (precio < vwap) return 'sell';
+    // Empate (incluye primer tick donde precio === VWAP)
+    // Si no hay precio anterior, asumir neutro → buy (sesgo mínimo)
+    if (lastPrice === 0) return 'buy';
+    return precio >= lastPrice ? 'buy' : 'sell';
+  }
+
+  // ── CALCULAR VWAP ─────────────────────────────────────────
+  // VWAP = Σ(precio × vol) / Σ(vol)
+  function actualizarVWAP(precio, volumen) {
+    vwapAccum += precio * volumen;
+    volAccum  += volumen;
+    return volAccum > 0 ? vwapAccum / volAccum : precio;
+  }
+
+  // ── CALCULAR IMBALANCE ────────────────────────────────────
+  // Imbalance = (BuyVol - SellVol) / TotalVol × 100  → [-100, +100]
+  function calcImbalance() {
+    const total = buyVol + sellVol;
+    if (total === 0) return 0;
+    return Math.round((buyVol - sellVol) / total * 100);
+  }
+
+  // ── SEÑAL EDUCATIVA ───────────────────────────────────────
+  function getSignal(imb) {
+    if (imb >=  50) return { txt: '🟢 Presión compradora fuerte',  css: 'comprador' };
+    if (imb >=  20) return { txt: '🟢 Leve presión compradora',    css: 'comprador' };
+    if (imb <= -50) return { txt: '🔴 Presión vendedora fuerte',   css: 'vendedor'  };
+    if (imb <= -20) return { txt: '🔴 Leve presión vendedora',     css: 'vendedor'  };
+    return             { txt: '🟡 Mercado equilibrado',            css: 'neutro'    };
+  }
+
+  // ── ACTUALIZAR WIDGET VISUAL ──────────────────────────────
+  function renderWidget(imb) {
+    const valEl    = document.getElementById('imbVal');
+    const buyEl    = document.getElementById('imbFillBuy');
+    const sellEl   = document.getElementById('imbFillSell');
+    const signalEl = document.getElementById('imbSignal');
+    if (!valEl) return;
+
+    // Valor numérico con signo
+    const sign = imb >= 0 ? '+' : '';
+    valEl.textContent = sign + imb;
+    valEl.style.color = imb >= 20 ? 'var(--verde)' : imb <= -20 ? 'var(--rojo)' : 'var(--amarillo)';
+
+    // Barra: la mitad es el cero, cada lado crece hasta 50% (representa 100)
+    const absPct = Math.min(Math.abs(imb) / 2, 50); // max 50% del ancho
+    if (imb >= 0) {
+      buyEl.style.width  = absPct + '%';
+      sellEl.style.width = '0%';
+    } else {
+      buyEl.style.width  = '0%';
+      sellEl.style.width = absPct + '%';
+    }
+
+    // Señal
+    const sig = getSignal(imb);
+    signalEl.textContent = sig.txt;
+    signalEl.className   = 'imbalance-signal ' + sig.css;
+  }
+
+  // ── RENDER CANVAS HISTORIAL ───────────────────────────────
+  function renderCanvas() {
+    const canvas = document.getElementById('imbCanvas');
+    if (!canvas || history.length < 2) return;
+    const ctx = canvas.getContext('2d');
+    // Usar dimensiones fijas del contenedor (panel derecho = 280px - padding 28px = 252px)
+    const W = 252;
+    const H = 100;
+    canvas.width  = W;
+    canvas.height = H;
+    canvas.style.width  = '100%';
+    canvas.style.height = '100%';
+
+    ctx.clearRect(0, 0, W, H);
+
+    // Fondo
+    ctx.fillStyle = '#131a22';
+    ctx.fillRect(0, 0, W, H);
+
+    // Grid horizontal (0, ±50)
+    [[H/2,'rgba(255,255,255,0.1)'], [H/4,'rgba(0,230,118,0.06)'], [H*3/4,'rgba(255,61,87,0.06)']].forEach(([y, color]) => {
+      ctx.strokeStyle = color;
+      ctx.lineWidth   = 1;
+      ctx.setLineDash([3, 3]);
+      ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
+    });
+    ctx.setLineDash([]);
+
+    // Línea de historial
+    const n  = history.length;
+    const xStep = W / (n - 1);
+
+    // Área rellena
+    ctx.beginPath();
+    history.forEach((p, i) => {
+      const x = i * xStep;
+      const y = H/2 - (p.imb / 100) * (H/2 - 4);
+      i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+    });
+    // Cerrar al eje cero
+    ctx.lineTo((n-1)*xStep, H/2);
+    ctx.lineTo(0, H/2);
+    ctx.closePath();
+
+    // Gradiente dinámico según valor actual
+    const lastImb = history[n-1].imb;
+    const grad = ctx.createLinearGradient(0, 0, 0, H);
+    if (lastImb >= 0) {
+      grad.addColorStop(0,   'rgba(0,230,118,0.35)');
+      grad.addColorStop(0.5, 'rgba(0,230,118,0.05)');
+      grad.addColorStop(1,   'rgba(0,230,118,0)');
+    } else {
+      grad.addColorStop(0,   'rgba(255,61,87,0)');
+      grad.addColorStop(0.5, 'rgba(255,61,87,0.05)');
+      grad.addColorStop(1,   'rgba(255,61,87,0.35)');
+    }
+    ctx.fillStyle = grad;
+    ctx.fill();
+
+    // Línea principal
+    ctx.beginPath();
+    history.forEach((p, i) => {
+      const x = i * xStep;
+      const y = H/2 - (p.imb / 100) * (H/2 - 4);
+      i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+    });
+    ctx.strokeStyle = lastImb >= 0 ? 'rgba(0,230,118,0.8)' : 'rgba(255,61,87,0.8)';
+    ctx.lineWidth   = 1.5;
+    ctx.stroke();
+
+    // Punto actual
+    const lastX = (n-1) * xStep;
+    const lastY = H/2 - (lastImb / 100) * (H/2 - 4);
+    ctx.beginPath();
+    ctx.arc(lastX, lastY, 3, 0, Math.PI*2);
+    ctx.fillStyle = lastImb >= 0 ? 'var(--verde)' : 'var(--rojo)';
+    ctx.fill();
+  }
+
+  // ── RENDER TAB COMPLETO ───────────────────────────────────
+  function renderTab() {
+    const el = document.getElementById('rightContent');
+    if (!el) return;
+
+    const imb     = calcImbalance();
+    const sig     = getSignal(imb);
+    const avgBuy  = history.length > 0 ? Math.round(history.filter(h=>h.imb>0).reduce((s,h)=>s+h.imb,0) / Math.max(1,history.filter(h=>h.imb>0).length)) : 0;
+    const avgSell = history.length > 0 ? Math.round(Math.abs(history.filter(h=>h.imb<0).reduce((s,h)=>s+h.imb,0) / Math.max(1,history.filter(h=>h.imb<0).length))) : 0;
+    const pctBuy  = volAccum > 0 ? Math.round(buyVol/volAccum*100) : 50;
+
+    // Últimos 15 ticks para el log
+    const recent = history.slice(-15).reverse();
+
+    el.innerHTML = `
+      <div class="imb-history-wrap">
+        <div class="imb-history-title">
+          <span>⚖️ Order Imbalance — <span class="lr-tooltip" title="Lee-Ready: precio &gt; VWAP = comprador; precio &lt; VWAP = vendedor">Lee-Ready</span></span>
+          <span style="font-family:var(--mono);font-size:0.75rem;color:${imb>=0?'var(--verde)':'var(--rojo)'}">${imb>=0?'+':''}${imb}</span>
+        </div>
+
+        <!-- Canvas historial -->
+        <div class="imb-chart-wrap">
+          <canvas id="imbCanvas"></canvas>
+          <div class="imb-zero-line"></div>
+        </div>
+
+        <!-- Stats -->
+        <div class="imb-stats-grid">
+          <div class="imb-stat">
+            <div class="imb-stat-label">Buy Vol %</div>
+            <div class="imb-stat-val" style="color:var(--verde)">${pctBuy}%</div>
+          </div>
+          <div class="imb-stat">
+            <div class="imb-stat-label">Avg Buy</div>
+            <div class="imb-stat-val" style="color:var(--verde)">+${avgBuy}</div>
+          </div>
+          <div class="imb-stat">
+            <div class="imb-stat-label">Avg Sell</div>
+            <div class="imb-stat-val" style="color:var(--rojo)">−${avgSell}</div>
+          </div>
+        </div>
+
+        <!-- VWAP info -->
+        <div style="background:rgba(74,158,255,0.05);border:1px solid rgba(74,158,255,0.12);border-radius:6px;padding:8px 10px;margin-bottom:10px;font-size:0.72rem;color:var(--texto2);">
+          <span style="color:var(--azul);font-weight:500;">VWAP:</span>
+          <span style="font-family:var(--mono);color:var(--texto)">$${volAccum>0?Math.round(vwapAccum/volAccum).toLocaleString('es-CL'):'—'}</span>
+          <span style="margin:0 8px;color:var(--linea2)">·</span>
+          <span style="color:var(--azul);font-weight:500;">Señal:</span>
+          <span style="color:${imb>=20?'var(--verde)':imb<=-20?'var(--rojo)':'var(--amarillo)'}">${sig.txt}</span>
+        </div>
+
+        <!-- Log de ticks recientes -->
+        <div class="imb-log-title">Últimos ticks clasificados</div>
+        ${recent.map(h => {
+          const isB = h.imb >= 0;
+          return `<div class="imb-log-item">
+            <div class="imb-log-dot" style="background:${isB?'var(--verde)':'var(--rojo)'}"></div>
+            <div class="imb-log-time">${h.hora}</div>
+            <div class="imb-log-val" style="color:${isB?'var(--verde)':'var(--rojo)'}">${isB?'+':''}${h.imb}</div>
+            <div class="imb-log-signal">${isB?'🟢 Comprador':'🔴 Vendedor'} · $${h.precio.toLocaleString('es-CL')}</div>
+          </div>`;
+        }).join('')}
+
+        <!-- Nota educativa -->
+        <div style="margin-top:10px;background:rgba(74,158,255,0.04);border-left:2px solid rgba(74,158,255,0.3);padding:8px 10px;font-size:0.7rem;color:var(--texto2);line-height:1.6;border-radius:0 6px 6px 0;">
+          💡 <b style="color:var(--azul)">Lee-Ready:</b> Si el precio opera sobre el VWAP, el mercado clasifica ese tick como iniciado por un <b style="color:var(--verde)">comprador</b>. Bajo el VWAP → <b style="color:var(--rojo)">vendedor</b>. El imbalance acumula esta presión para anticipar movimientos antes de que aparezcan en la vela.
+        </div>
+      </div>
+    `;
+
+    // Renderizar canvas después de insertar el DOM
+    setTimeout(() => renderCanvas(), 10);
+  }
+
+  // ── TICK PÚBLICO: llamado por el poller ───────────────────
+  function procesarTick(precio, volumen) {
+    if (!precio || !volumen) return;
+
+    // 1. Actualizar VWAP
+    const vwap = actualizarVWAP(precio, volumen);
+
+    // 2. Clasificar tick con Lee-Ready
+    const tipo = clasificarTick(precio, volumen, vwap);
+    if (tipo === 'buy')  buyVol  += volumen;
+    else                  sellVol += volumen;
+
+    // 3. Calcular imbalance
+    const imb = calcImbalance();
+
+    // 4. Guardar en historial
+    const now = new Date();
+    const hora = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')}`;
+    history.push({ ts: Date.now(), imb, precio, vwap, hora, tipo });
+    if (history.length > MAX_HISTORY) history.shift();
+
+    lastPrice = precio;
+
+    // 5. Actualizar widget siempre
+    renderWidget(imb);
+
+    // 6. Si el tab está activo, re-renderizar
+    const activeTab = document.querySelector('.rtab.active');
+    if (activeTab && activeTab.textContent.includes('⚖️')) {
+      renderTab();
+    }
+  }
+
+  // ── RESET al cambiar de acción ────────────────────────────
+  function reset() {
+    history  = [];
+    vwapAccum = 0; volAccum = 0;
+    buyVol   = 0;  sellVol  = 0;
+    lastPrice = 0;
+    renderWidget(0);
+  }
+
+  return { procesarTick, renderTab, reset, getHistory: () => history };
+})();
+
+// ── INTEGRACIÓN AL RENDERIZADOR DEL PANEL DERECHO ────────────
+const _renderRightPanelOrig = renderRightPanel;
+renderRightPanel = function(tab) {
+  if (tab === 'imbalance') {
+    Imbalance.renderTab();
+    return;
+  }
+  _renderRightPanelOrig(tab);
+};
+
+// ── INTEGRACIÓN AL POLLER ─────────────────────────────────────
+// animarPrecio() ya corrió en el INIT — suscribimos directamente aquí.
+(function iniciarImbalancePoller() {
+  function suscribirImbalance() {
+    const sym = accionSel.sym.includes('.') ? accionSel.sym : accionSel.sym + '.SN';
+    StockPoller.subscribe(sym, (data) => {
+      if (!data || !data.price) return;
+      // Volumen estimado por tick: volumen_diario / ticks_por_día
+      // Día bursátil Chile: ~6.5h = 23.400s / 2s tick = ~11.700 ticks
+      const volEstimado = data.volume ? Math.round(data.volume / 11700) : 1000;
+      Imbalance.procesarTick(data.price, volEstimado);
+    });
+  }
+
+  suscribirImbalance();
+
+  // Parchamos seleccionarAccion para reset + re-suscripción al cambiar activo.
+  // En este punto seleccionarAccion ya fue redefinida por animarPrecio(),
+  // así que hacemos el wrap sobre la versión final.
+  const _selFinal = window.seleccionarAccion;
+  window.seleccionarAccion = function(idx) {
+    Imbalance.reset();
+    _selFinal(idx);
+    suscribirImbalance();
+  };
+})();
 </script>
 
 <!-- ── FOOTER DISCLAIMER LEGAL ── -->

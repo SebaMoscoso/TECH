@@ -1,0 +1,1246 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>InvertirCL — Aprende a invertir en Chile</title>
+
+<!-- SEO (J6) -->
+<meta name="description" content="Simulador de inversión con datos reales del mercado chileno. IPSA, USD/CLP, acciones y más — sin arriesgar un peso. Gratis para siempre.">
+<meta name="keywords" content="invertir chile, simulador bolsa chile, IPSA, trading chile, aprender invertir, acciones chilenas">
+<meta name="author" content="InvertirCL">
+
+<!-- Open Graph (WhatsApp, LinkedIn, Twitter) -->
+<meta property="og:title" content="InvertirCL — Aprende a invertir en Chile">
+<meta property="og:description" content="Simulador de trading con datos reales del IPSA y acciones chilenas. Practica sin arriesgar plata real.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://invertircl.cl">
+<meta property="og:image" content="https://invertircl.cl/og-image.png">
+<meta property="og:locale" content="es_CL">
+<meta property="og:site_name" content="InvertirCL">
+
+<!-- Twitter Card -->
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="InvertirCL — Aprende a invertir en Chile">
+<meta name="twitter:description" content="Simulador de trading con datos reales del IPSA. Sin riesgo, 100% chileno.">
+<meta name="twitter:image" content="https://invertircl.cl/og-image.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --verde: #00e676;
+    --verde-dim: #00c853;
+    --rojo: #ff1744;
+    --bg: #080c10;
+    --bg2: #0d1117;
+    --bg3: #131920;
+    --linea: rgba(255,255,255,0.07);
+    --texto: #e8edf2;
+    --texto2: #7a8a99;
+    --acento: #00e676;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--texto);
+    overflow-x: hidden;
+    line-height: 1.6;
+  }
+
+  /* ── RUIDO DE FONDO ── */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 0;
+    opacity: 0.4;
+  }
+
+  /* ── NAV ── */
+  nav {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    z-index: 100;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 48px;
+    background: rgba(8,12,16,0.85);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--linea);
+  }
+
+  .nav-logo {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: 1.2rem;
+    letter-spacing: -0.02em;
+    color: var(--verde);
+  }
+
+  .nav-logo span { color: var(--texto); }
+
+  .nav-cta {
+    background: var(--verde);
+    color: #000;
+    font-weight: 500;
+    font-size: 0.85rem;
+    padding: 9px 20px;
+    border-radius: 6px;
+    text-decoration: none;
+    transition: opacity 0.2s;
+    letter-spacing: 0.01em;
+  }
+
+  .nav-cta:hover { opacity: 0.85; }
+
+  /* ── HERO ── */
+  .hero {
+    position: relative;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 120px 48px 80px;
+    overflow: hidden;
+  }
+
+  /* Grid de fondo tipo terminal */
+  .hero::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(0,230,118,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,230,118,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+  }
+
+  /* Glow verde */
+  .hero-glow {
+    position: absolute;
+    top: -20%;
+    right: -10%;
+    width: 600px;
+    height: 600px;
+    background: radial-gradient(circle, rgba(0,230,118,0.08) 0%, transparent 70%);
+    pointer-events: none;
+  }
+
+  .hero-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(0,230,118,0.08);
+    border: 1px solid rgba(0,230,118,0.2);
+    border-radius: 100px;
+    padding: 6px 14px;
+    font-size: 0.78rem;
+    color: var(--verde);
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    margin-bottom: 28px;
+    width: fit-content;
+    animation: fadeUp 0.6s ease both;
+  }
+
+  .tag-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--verde);
+    animation: pulse 2s infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+  }
+
+  .hero h1 {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: clamp(2.8rem, 6vw, 5.5rem);
+    line-height: 1.05;
+    letter-spacing: -0.03em;
+    max-width: 800px;
+    animation: fadeUp 0.6s 0.1s ease both;
+  }
+
+  .hero h1 .verde { color: var(--verde); }
+  .hero h1 .outline {
+    -webkit-text-stroke: 1.5px rgba(255,255,255,0.4);
+    color: transparent;
+  }
+
+  .hero-sub {
+    margin-top: 24px;
+    font-size: 1.1rem;
+    color: var(--texto2);
+    max-width: 520px;
+    font-weight: 300;
+    line-height: 1.7;
+    animation: fadeUp 0.6s 0.2s ease both;
+  }
+
+  /* ── TICKER EN VIVO ── */
+  .ticker-wrap {
+    margin-top: 48px;
+    animation: fadeUp 0.6s 0.3s ease both;
+  }
+
+  .ticker-label {
+    font-size: 0.72rem;
+    color: var(--texto2);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-bottom: 12px;
+  }
+
+  .ticker-row {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  .ticker-card {
+    background: var(--bg3);
+    border: 1px solid var(--linea);
+    border-radius: 8px;
+    padding: 12px 18px;
+    min-width: 130px;
+  }
+
+  .ticker-card .sym {
+    font-size: 0.72rem;
+    color: var(--texto2);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  .ticker-card .price {
+    font-family: 'Syne', sans-serif;
+    font-size: 1.1rem;
+    font-weight: 700;
+    margin-top: 2px;
+  }
+
+  .ticker-card .change {
+    font-size: 0.75rem;
+    margin-top: 2px;
+  }
+
+  .pos { color: var(--verde); }
+  .neg { color: var(--rojo); }
+
+  /* ── FORM ── */
+  .hero-form {
+    margin-top: 44px;
+    display: flex;
+    gap: 10px;
+    max-width: 480px;
+    animation: fadeUp 0.6s 0.4s ease both;
+  }
+
+  .hero-form input {
+    flex: 1;
+    background: var(--bg3);
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 8px;
+    padding: 14px 18px;
+    color: var(--texto);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.95rem;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  .hero-form input:focus {
+    border-color: var(--verde);
+  }
+
+  .hero-form input::placeholder { color: var(--texto2); }
+
+  .hero-form button {
+    background: var(--verde);
+    color: #000;
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 600;
+    font-size: 0.9rem;
+    padding: 14px 24px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.2s;
+  }
+
+  .hero-form button:hover {
+    background: #fff;
+    transform: translateY(-1px);
+  }
+
+  .hero-social-proof {
+    margin-top: 14px;
+    font-size: 0.8rem;
+    color: var(--texto2);
+    animation: fadeUp 0.6s 0.5s ease both;
+  }
+
+  .hero-social-proof strong { color: var(--verde); }
+
+  /* ── SECCIÓN: EL PROBLEMA ── */
+  .section {
+    position: relative;
+    padding: 100px 48px;
+  }
+
+  .section-label {
+    font-size: 0.75rem;
+    color: var(--verde);
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    margin-bottom: 16px;
+  }
+
+  .section h2 {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: clamp(1.8rem, 3.5vw, 3rem);
+    letter-spacing: -0.02em;
+    line-height: 1.15;
+    max-width: 640px;
+  }
+
+  /* ── PROBLEMA/SOLUCIÓN ── */
+  .prob-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+    margin-top: 56px;
+  }
+
+  @media (max-width: 700px) {
+    .prob-grid { grid-template-columns: 1fr; }
+  }
+
+  .prob-card {
+    background: var(--bg2);
+    border: 1px solid var(--linea);
+    border-radius: 12px;
+    padding: 32px;
+  }
+
+  .prob-card.bad { border-top: 3px solid rgba(255,23,68,0.5); }
+  .prob-card.good { border-top: 3px solid rgba(0,230,118,0.5); }
+
+  .prob-card-label {
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .prob-card.bad .prob-card-label { color: var(--rojo); }
+  .prob-card.good .prob-card-label { color: var(--verde); }
+
+  .prob-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    margin-bottom: 16px;
+    font-size: 0.95rem;
+    color: var(--texto2);
+    line-height: 1.5;
+  }
+
+  .prob-icon {
+    font-size: 1rem;
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+
+  /* ── SIMULADOR PREVIEW ── */
+  .simulator-section {
+    padding: 80px 48px;
+    background: var(--bg2);
+    border-top: 1px solid var(--linea);
+    border-bottom: 1px solid var(--linea);
+  }
+
+  .sim-layout {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 64px;
+    align-items: center;
+    max-width: 1100px;
+    margin: 0 auto;
+  }
+
+  @media (max-width: 800px) {
+    .sim-layout { grid-template-columns: 1fr; }
+  }
+
+  .sim-text .section-label { margin-bottom: 12px; }
+
+  .sim-text h2 {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: clamp(1.8rem, 3vw, 2.6rem);
+    letter-spacing: -0.02em;
+    line-height: 1.15;
+    margin-bottom: 20px;
+  }
+
+  .sim-text p {
+    color: var(--texto2);
+    font-weight: 300;
+    line-height: 1.7;
+    margin-bottom: 16px;
+  }
+
+  .sim-features {
+    margin-top: 28px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .sim-feat {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 0.9rem;
+  }
+
+  .sim-feat-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--verde);
+    flex-shrink: 0;
+  }
+
+  /* Terminal falsa */
+  .sim-terminal {
+    background: #0a0f14;
+    border: 1px solid rgba(0,230,118,0.15);
+    border-radius: 12px;
+    overflow: hidden;
+    font-family: 'Courier New', monospace;
+    font-size: 0.8rem;
+  }
+
+  .term-header {
+    background: var(--bg3);
+    padding: 12px 16px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    border-bottom: 1px solid var(--linea);
+  }
+
+  .term-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+  }
+
+  .term-body {
+    padding: 24px;
+    line-height: 2;
+  }
+
+  .term-line { display: flex; gap: 12px; }
+  .term-prompt { color: var(--verde); }
+  .term-cmd { color: #90caf9; }
+  .term-out { color: var(--texto2); }
+  .term-val.pos { color: var(--verde); }
+  .term-val.neg { color: var(--rojo); }
+  .term-sep { border-top: 1px solid var(--linea); margin: 12px 0; }
+
+  .term-portfolio {
+    background: rgba(0,230,118,0.05);
+    border: 1px solid rgba(0,230,118,0.1);
+    border-radius: 6px;
+    padding: 12px;
+    margin-top: 8px;
+  }
+
+  .port-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 4px 0;
+    color: var(--texto2);
+  }
+
+  .port-row .sym { color: var(--texto); font-weight: 500; }
+  .cursor {
+    display: inline-block;
+    width: 8px;
+    height: 14px;
+    background: var(--verde);
+    animation: blink 1s infinite;
+    vertical-align: middle;
+    margin-left: 4px;
+  }
+
+  @keyframes blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0; }
+  }
+
+  /* ── FEATURES GRID ── */
+  .features-section { padding: 100px 48px; }
+
+  .features-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+    margin-top: 56px;
+  }
+
+  @media (max-width: 900px) {
+    .features-grid { grid-template-columns: 1fr 1fr; }
+  }
+
+  @media (max-width: 600px) {
+    .features-grid { grid-template-columns: 1fr; }
+  }
+
+  .feat-card {
+    background: var(--bg2);
+    border: 1px solid var(--linea);
+    border-radius: 12px;
+    padding: 28px;
+    transition: border-color 0.2s, transform 0.2s;
+  }
+
+  .feat-card:hover {
+    border-color: rgba(0,230,118,0.3);
+    transform: translateY(-2px);
+  }
+
+  .feat-icon {
+    font-size: 1.6rem;
+    margin-bottom: 16px;
+    display: block;
+  }
+
+  .feat-card h3 {
+    font-family: 'Syne', sans-serif;
+    font-size: 1rem;
+    font-weight: 700;
+    margin-bottom: 8px;
+    letter-spacing: -0.01em;
+  }
+
+  .feat-card p {
+    font-size: 0.88rem;
+    color: var(--texto2);
+    line-height: 1.6;
+    font-weight: 300;
+  }
+
+  .feat-badge {
+    display: inline-block;
+    font-size: 0.65rem;
+    background: rgba(0,230,118,0.1);
+    color: var(--verde);
+    border: 1px solid rgba(0,230,118,0.2);
+    border-radius: 4px;
+    padding: 2px 8px;
+    margin-top: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+
+  /* ── PRICING ── */
+  .pricing-section {
+    padding: 100px 48px;
+    background: var(--bg2);
+    border-top: 1px solid var(--linea);
+  }
+
+  .pricing-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+    max-width: 800px;
+    margin: 56px auto 0;
+  }
+
+  @media (max-width: 640px) {
+    .pricing-grid { grid-template-columns: 1fr; }
+  }
+
+  .price-card {
+    background: var(--bg);
+    border: 1px solid var(--linea);
+    border-radius: 16px;
+    padding: 36px;
+  }
+
+  .price-card.destacado {
+    border-color: var(--verde);
+    background: rgba(0,230,118,0.04);
+    position: relative;
+  }
+
+  .price-popular {
+    position: absolute;
+    top: -12px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--verde);
+    color: #000;
+    font-size: 0.7rem;
+    font-weight: 700;
+    padding: 4px 14px;
+    border-radius: 100px;
+    white-space: nowrap;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  .price-plan {
+    font-size: 0.8rem;
+    color: var(--texto2);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-bottom: 16px;
+  }
+
+  .price-amount {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: 2.5rem;
+    letter-spacing: -0.03em;
+    line-height: 1;
+  }
+
+  .price-period {
+    font-size: 0.85rem;
+    color: var(--texto2);
+    font-weight: 300;
+    margin-left: 4px;
+  }
+
+  .price-desc {
+    font-size: 0.85rem;
+    color: var(--texto2);
+    margin: 12px 0 24px;
+    font-weight: 300;
+  }
+
+  .price-items {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 28px;
+  }
+
+  .price-items li {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    font-size: 0.88rem;
+    color: var(--texto2);
+  }
+
+  .price-items li .check { color: var(--verde); flex-shrink: 0; }
+  .price-items li .x { color: var(--rojo); flex-shrink: 0; }
+
+  .price-btn {
+    display: block;
+    text-align: center;
+    padding: 13px;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 0.9rem;
+    text-decoration: none;
+    transition: all 0.2s;
+    cursor: pointer;
+  }
+
+  .price-btn.outline {
+    border: 1px solid var(--linea);
+    color: var(--texto);
+  }
+
+  .price-btn.outline:hover { border-color: var(--verde); color: var(--verde); }
+
+  .price-btn.solid {
+    background: var(--verde);
+    color: #000;
+    border: none;
+  }
+
+  .price-btn.solid:hover { background: #fff; transform: translateY(-1px); }
+
+  /* ── CTA FINAL ── */
+  .cta-section {
+    padding: 120px 48px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .cta-glow {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 600px;
+    height: 300px;
+    background: radial-gradient(ellipse, rgba(0,230,118,0.06) 0%, transparent 70%);
+    pointer-events: none;
+  }
+
+  .cta-section h2 {
+    font-family: 'Syne', sans-serif;
+    font-size: clamp(2rem, 4vw, 3.5rem);
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    max-width: 600px;
+    margin: 0 auto 16px;
+    line-height: 1.1;
+  }
+
+  .cta-section p {
+    color: var(--texto2);
+    font-weight: 300;
+    margin-bottom: 40px;
+  }
+
+  .cta-form {
+    display: flex;
+    gap: 10px;
+    max-width: 440px;
+    margin: 0 auto;
+    justify-content: center;
+  }
+
+  .cta-form input {
+    flex: 1;
+    background: var(--bg2);
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 8px;
+    padding: 14px 18px;
+    color: var(--texto);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.95rem;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  .cta-form input:focus { border-color: var(--verde); }
+  .cta-form input::placeholder { color: var(--texto2); }
+
+  .cta-form button {
+    background: var(--verde);
+    color: #000;
+    font-weight: 600;
+    font-size: 0.9rem;
+    padding: 14px 22px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.2s;
+    font-family: 'DM Sans', sans-serif;
+  }
+
+  .cta-form button:hover { background: #fff; transform: translateY(-1px); }
+
+  /* ── FOOTER ── */
+  footer {
+    border-top: 1px solid var(--linea);
+    padding: 32px 48px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.82rem;
+    color: var(--texto2);
+  }
+
+  .footer-logo {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: 1rem;
+    color: var(--verde);
+  }
+
+  .footer-logo span { color: var(--texto2); }
+
+  /* ── MODAL GRACIAS ── */
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.8);
+    backdrop-filter: blur(8px);
+    z-index: 1000;
+    display: none;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .modal-overlay.active { display: flex; }
+
+  .modal {
+    background: var(--bg2);
+    border: 1px solid var(--verde);
+    border-radius: 16px;
+    padding: 48px;
+    max-width: 440px;
+    width: 90%;
+    text-align: center;
+    animation: popIn 0.3s ease;
+  }
+
+  @keyframes popIn {
+    from { transform: scale(0.9); opacity: 0; }
+    to   { transform: scale(1); opacity: 1; }
+  }
+
+  .modal-icon { font-size: 3rem; margin-bottom: 16px; }
+
+  .modal h3 {
+    font-family: 'Syne', sans-serif;
+    font-size: 1.5rem;
+    font-weight: 800;
+    margin-bottom: 12px;
+  }
+
+  .modal p {
+    color: var(--texto2);
+    font-weight: 300;
+    line-height: 1.7;
+    margin-bottom: 28px;
+  }
+
+  .modal-close {
+    background: var(--verde);
+    color: #000;
+    font-weight: 600;
+    font-size: 0.9rem;
+    padding: 12px 32px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-family: 'DM Sans', sans-serif;
+    transition: opacity 0.2s;
+  }
+
+  .modal-close:hover { opacity: 0.85; }
+
+  /* ── ANIMACIONES ── */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .reveal {
+    opacity: 0;
+    transform: translateY(24px);
+    transition: opacity 0.6s ease, transform 0.6s ease;
+  }
+
+  .reveal.visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  /* ── RESPONSIVE ── */
+  @media (max-width: 600px) {
+    nav { padding: 16px 20px; }
+    .hero, .section, .simulator-section,
+    .features-section, .pricing-section, .cta-section { padding-left: 20px; padding-right: 20px; }
+    .hero-form { flex-direction: column; }
+    .cta-form { flex-direction: column; }
+    footer { flex-direction: column; gap: 12px; text-align: center; }
+  }
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <div class="nav-logo">Invertir<span>CL</span></div>
+  <a href="#registro" class="nav-cta">Acceso anticipado</a>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-glow"></div>
+  <div class="hero-tag">
+    <span class="tag-dot"></span>
+    Próximamente en Chile
+  </div>
+  <h1>
+    Aprende a invertir<br>
+    <span class="verde">operando de verdad.</span>
+  </h1>
+  <p class="hero-sub">
+    Simulador de inversión con datos reales del mercado chileno.
+    IPSA, USD/CLP, acciones y más — sin arriesgar un peso.
+  </p>
+
+  <!-- Ticker en vivo (simulado) -->
+  <div class="ticker-wrap">
+    <div class="ticker-label">Mercado chileno — datos en tiempo real</div>
+    <div class="ticker-row" id="tickerRow">
+      <div class="ticker-card">
+        <div class="sym">USD/CLP</div>
+        <div class="price" id="usdclp">$927.40</div>
+        <div class="change pos" id="usdclp-ch">▲ +1.23%</div>
+      </div>
+      <div class="ticker-card">
+        <div class="sym">IPSA</div>
+        <div class="price" id="ipsa">7,284.5</div>
+        <div class="change neg" id="ipsa-ch">▼ −0.41%</div>
+      </div>
+      <div class="ticker-card">
+        <div class="sym">UF</div>
+        <div class="price">$38,741</div>
+        <div class="change pos">▲ +0.08%</div>
+      </div>
+      <div class="ticker-card">
+        <div class="sym">BTC/CLP</div>
+        <div class="price" id="btcclp">$64.8M</div>
+        <div class="change pos" id="btcclp-ch">▲ +3.91%</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Formulario -->
+  <div class="hero-form" id="registro">
+    <input type="email" id="heroEmail" placeholder="tu@email.com">
+    <button onclick="registrar('heroEmail')">Quiero acceso →</button>
+  </div>
+  <p class="hero-social-proof">
+    <strong>Gratis para siempre</strong> en el plan básico · Sin tarjeta de crédito
+  </p>
+</section>
+
+<!-- EL PROBLEMA -->
+<section class="section">
+  <div class="reveal">
+    <div class="section-label">El problema</div>
+    <h2>Todos quieren invertir.<br>Nadie sabe cómo empezar.</h2>
+  </div>
+
+  <div class="prob-grid reveal">
+    <div class="prob-card bad">
+      <div class="prob-card-label">✕ &nbsp;Sin la plataforma</div>
+      <div class="prob-item"><span class="prob-icon">—</span><span>Los cursos son videos aburridos que no enseñan a operar de verdad</span></div>
+      <div class="prob-item"><span class="prob-icon">—</span><span>TradingView y eToro están en inglés y orientados al mercado gringo</span></div>
+      <div class="prob-item"><span class="prob-icon">—</span><span>Para practicar tienes que arriesgar plata real desde el día uno</span></div>
+      <div class="prob-item"><span class="prob-icon">—</span><span>Nadie te explica qué es la UF, el IPSA o cómo funciona la Bolsa de Santiago</span></div>
+      <div class="prob-item"><span class="prob-icon">—</span><span>Gestionas el riesgo a ojo, sin métricas ni herramientas</span></div>
+    </div>
+    <div class="prob-card good">
+      <div class="prob-card-label">✓ &nbsp;Con InvertirCL</div>
+      <div class="prob-item"><span class="prob-icon pos">✓</span><span>Operas en simulación con datos reales del mercado chileno</span></div>
+      <div class="prob-item"><span class="prob-icon pos">✓</span><span>Apriendes mientras el bot te explica cada decisión en español</span></div>
+      <div class="prob-item"><span class="prob-icon pos">✓</span><span>Pruebas tus estrategias en datos históricos antes de arriesgar nada</span></div>
+      <div class="prob-item"><span class="prob-icon pos">✓</span><span>Contexto 100% chileno: UF, AFP, acciones del IPSA, fondos mutuos</span></div>
+      <div class="prob-item"><span class="prob-icon pos">✓</span><span>Gestión de riesgo automática que te enseña cuánto arriesgar</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- SIMULADOR -->
+<section class="simulator-section">
+  <div class="sim-layout">
+    <div class="sim-text reveal">
+      <div class="section-label">Función principal</div>
+      <h2>Opera en simulación.<br>Aprende con cada trade.</h2>
+      <p>Recibes $10.000.000 CLP virtuales para invertir en el mercado chileno real. Sin riesgo, con la presión del mercado de verdad.</p>
+      <p>Cada operación viene con una explicación: por qué entrar, dónde poner el stop loss, cuánto arriesgar. Aprendes haciendo, no memorizando.</p>
+      <div class="sim-features">
+        <div class="sim-feat"><span class="sim-feat-dot"></span><span>Datos de precios en tiempo real — IPSA, acciones, USD/CLP</span></div>
+        <div class="sim-feat"><span class="sim-feat-dot"></span><span>Historial completo de tus operaciones y métricas</span></div>
+        <div class="sim-feat"><span class="sim-feat-dot"></span><span>Ranking contra otros usuarios — compite y aprende</span></div>
+        <div class="sim-feat"><span class="sim-feat-dot"></span><span>Alertas de precio y señales educativas</span></div>
+      </div>
+    </div>
+
+    <div class="sim-terminal reveal">
+      <div class="term-header">
+        <div class="term-dot" style="background:#ff5f57"></div>
+        <div class="term-dot" style="background:#febc2e"></div>
+        <div class="term-dot" style="background:#28c840"></div>
+        <span style="margin-left:8px;font-size:0.72rem;color:#7a8a99">simulador · cuenta demo</span>
+      </div>
+      <div class="term-body">
+        <div class="term-line">
+          <span class="term-prompt">$</span>
+          <span class="term-cmd">portfolio.resumen()</span>
+        </div>
+        <div class="term-sep"></div>
+        <div class="term-portfolio">
+          <div class="port-row"><span class="sym">Capital inicial</span><span>$10.000.000</span></div>
+          <div class="port-row"><span class="sym">Valor actual</span><span class="term-val pos">$11.284.500</span></div>
+          <div class="port-row"><span class="sym">Rentabilidad</span><span class="term-val pos">+12.84%</span></div>
+          <div class="port-row"><span class="sym">Operaciones</span><span>23 trades</span></div>
+          <div class="port-row"><span class="sym">Win rate</span><span class="term-val pos">65.2%</span></div>
+        </div>
+        <div class="term-sep"></div>
+        <div class="term-line">
+          <span class="term-prompt">$</span>
+          <span class="term-cmd">mercado.comprar("COPEC", lotes=100)</span>
+        </div>
+        <div class="term-line" style="margin-top:4px">
+          <span class="term-out">✓ Orden ejecutada @ $8.420 CLP</span>
+        </div>
+        <div class="term-line" style="margin-top:4px">
+          <span class="term-out">→ Stop loss automático: $8.170</span>
+        </div>
+        <div class="term-line" style="margin-top:4px">
+          <span class="term-out">→ Riesgo: $25.000 (0.22% portafolio)</span>
+        </div>
+        <div class="term-line" style="margin-top:8px">
+          <span class="term-prompt">$</span>
+          <span class="cursor"></span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FEATURES -->
+<section class="features-section">
+  <div class="reveal" style="text-align:center;max-width:600px;margin:0 auto">
+    <div class="section-label">Todo incluido</div>
+    <h2>Una plataforma completa<br>para el inversor chileno</h2>
+  </div>
+
+  <div class="features-grid">
+    <div class="feat-card reveal">
+      <span class="feat-icon">📊</span>
+      <h3>Dashboard de mercado</h3>
+      <p>Todos los indicadores chilenos en un lugar. IPSA, USD/CLP, UF, acciones, commodities y más. Actualización en tiempo real.</p>
+      <span class="feat-badge">MVP</span>
+    </div>
+    <div class="feat-card reveal">
+      <span class="feat-icon">🎮</span>
+      <h3>Simulador de trading</h3>
+      <p>Opera con $10M virtuales en el mercado real. Sin riesgo, con la experiencia completa de invertir en Chile.</p>
+      <span class="feat-badge">MVP</span>
+    </div>
+    <div class="feat-card reveal">
+      <span class="feat-icon">🔬</span>
+      <h3>Backtest de estrategias</h3>
+      <p>¿Habría funcionado tu estrategia en los últimos 5 años? Pruébala contra datos históricos del IPSA y acciones chilenas.</p>
+      <span class="feat-badge">MVP</span>
+    </div>
+    <div class="feat-card reveal">
+      <span class="feat-icon">🛡️</span>
+      <h3>Gestión activa del riesgo</h3>
+      <p>Stop loss automático, sizing de posición, métricas de drawdown. Aprende a proteger tu capital desde el principio.</p>
+      <span class="feat-badge">Pro</span>
+    </div>
+    <div class="feat-card reveal">
+      <span class="feat-icon">🤖</span>
+      <h3>Bot educativo</h3>
+      <p>Un bot opera en modo demo y te explica en tiempo real cada decisión que toma. Aprende leyendo su razonamiento.</p>
+      <span class="feat-badge">Pro</span>
+    </div>
+    <div class="feat-card reveal">
+      <span class="feat-icon">🎓</span>
+      <h3>Contenido educativo</h3>
+      <p>Videos cortos y viñetas integradas en contexto. "¿Qué es el stop loss?" aparece justo cuando lo necesitas, no antes.</p>
+      <span class="feat-badge">MVP</span>
+    </div>
+  </div>
+</section>
+
+<!-- PRICING -->
+<section class="pricing-section">
+  <div class="reveal" style="text-align:center">
+    <div class="section-label">Precio</div>
+    <h2>Empieza gratis.<br>Crece cuando quieras.</h2>
+  </div>
+
+  <div class="pricing-grid reveal">
+    <div class="price-card">
+      <div class="price-plan">Gratis</div>
+      <div class="price-amount">$0<span class="price-period">/ siempre</span></div>
+      <div class="price-desc">Para empezar a aprender sin compromisos.</div>
+      <ul class="price-items">
+        <li><span class="check">✓</span> Dashboard de mercado básico</li>
+        <li><span class="check">✓</span> Simulador (capital limitado)</li>
+        <li><span class="check">✓</span> 1 backtest al mes</li>
+        <li><span class="check">✓</span> Videos educativos básicos</li>
+        <li><span class="x">✗</span> <span style="opacity:0.5">Datos en tiempo real</span></li>
+        <li><span class="x">✗</span> <span style="opacity:0.5">Bot educativo</span></li>
+      </ul>
+      <a href="#cta" class="price-btn outline">Empezar gratis</a>
+    </div>
+
+    <div class="price-card destacado">
+      <div class="price-popular">Más popular</div>
+      <div class="price-plan">Pro</div>
+      <div class="price-amount">$9.990<span class="price-period">/ mes</span></div>
+      <div class="price-desc">Para inversores que van en serio.</div>
+      <ul class="price-items">
+        <li><span class="check">✓</span> Todo lo del plan gratis</li>
+        <li><span class="check">✓</span> Datos en tiempo real</li>
+        <li><span class="check">✓</span> Simulador completo ($10M)</li>
+        <li><span class="check">✓</span> Backtests ilimitados</li>
+        <li><span class="check">✓</span> Bot educativo activo</li>
+        <li><span class="check">✓</span> Gestión de riesgo avanzada</li>
+      </ul>
+      <a href="#cta" class="price-btn solid">Acceso anticipado</a>
+    </div>
+  </div>
+</section>
+
+<!-- CTA FINAL -->
+<section class="cta-section" id="cta">
+  <div class="cta-glow"></div>
+  <h2 class="reveal">El mercado no espera.<br><span style="color:var(--verde)">Tú tampoco deberías.</span></h2>
+  <p class="reveal">Regístrate hoy y sé de los primeros en acceder cuando lancemos.</p>
+  <div class="cta-form reveal">
+    <input type="email" id="ctaEmail" placeholder="tu@email.com">
+    <button onclick="registrar('ctaEmail')">Reservar lugar →</button>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-logo">Invertir<span>CL</span></div>
+  <div>Hecho en Chile 🇨🇱 · Próximamente</div>
+  <div><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="52313d3c263331263d123b3c243720263b20313e7c313d3f">[email&#160;protected]</a></div>
+</footer>
+
+<!-- MODAL -->
+<div class="modal-overlay" id="modal">
+  <div class="modal">
+    <div class="modal-icon">🎉</div>
+    <h3>¡Ya estás en lista!</h3>
+    <p>Te avisaremos cuando abramos el acceso anticipado. Eres parte de los primeros inversores en conocer InvertirCL.</p>
+    <button class="modal-close" onclick="cerrarModal()">Perfecto, gracias</button>
+  </div>
+</div>
+
+<script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
+// Ticker animado
+function animarTicker() {
+  const pares = [
+    { id: 'usdclp', idch: 'usdclp-ch', base: 927.40, sym: '$', dec: 2 },
+    { id: 'ipsa', idch: 'ipsa-ch', base: 7284.5, sym: '', dec: 1 },
+    { id: 'btcclp', idch: 'btcclp-ch', base: 64.8, sym: '$', dec: 1, suf: 'M' },
+  ];
+
+  setInterval(() => {
+    pares.forEach(p => {
+      const chg = (Math.random() - 0.48) * 0.3;
+      const newVal = p.base + chg;
+      const pct = (chg / p.base * 100).toFixed(2);
+      const isPos = chg >= 0;
+
+      const priceEl = document.getElementById(p.id);
+      const chgEl   = document.getElementById(p.idch);
+      if (!priceEl || !chgEl) return;
+
+      const display = p.suf
+        ? `${p.sym}${newVal.toFixed(p.dec)}${p.suf}`
+        : `${p.sym}${newVal.toLocaleString('es-CL', {minimumFractionDigits: p.dec, maximumFractionDigits: p.dec})}`;
+
+      priceEl.textContent = display;
+      chgEl.textContent   = `${isPos ? '▲' : '▼'} ${isPos ? '+' : ''}${pct}%`;
+      chgEl.className     = `change ${isPos ? 'pos' : 'neg'}`;
+    });
+  }, 2000);
+}
+
+// ── REGISTRO — Formspree (J1 del roadmap) ────────────────────
+// Endpoint: https://formspree.io/f/xlgooplz
+// Gratis hasta 50 emails/mes. Ver leads en formspree.io/dashboard
+async function registrar(inputId) {
+  const inputEl = document.getElementById(inputId);
+  const btnEl   = inputEl?.nextElementSibling;
+  const email   = inputEl?.value.trim();
+
+  // Validación básica
+  if (!email || !email.includes('@') || !email.includes('.')) {
+    inputEl.style.borderColor = 'rgba(255,23,68,0.6)';
+    inputEl.placeholder = 'Ingresa un email válido';
+    setTimeout(() => {
+      inputEl.style.borderColor = '';
+      inputEl.placeholder = 'tu@email.com';
+    }, 1800);
+    return;
+  }
+
+  // Estado de carga
+  const textoOriginal = btnEl?.textContent;
+  if (btnEl) { btnEl.textContent = 'Enviando...'; btnEl.disabled = true; }
+  inputEl.disabled = true;
+
+  try {
+    const res = await fetch('https://formspree.io/f/xlgooplz', {
+      method:  'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept':       'application/json',
+      },
+      body: JSON.stringify({
+        email,
+        fuente:   inputId === 'heroEmail' ? 'hero' : 'cta',
+        producto: 'InvertirCL',
+        fecha:    new Date().toISOString(),
+      }),
+    });
+
+    if (res.ok) {
+      // Éxito — mostrar modal y limpiar
+      inputEl.value = '';
+      document.getElementById('modal').classList.add('active');
+      // Guardar también en localStorage como backup
+      const leads = JSON.parse(localStorage.getItem('invertircl_leads') || '[]');
+      leads.push({ email, ts: Date.now(), fuente: inputId });
+      localStorage.setItem('invertircl_leads', JSON.stringify(leads));
+    } else {
+      // Error del servidor
+      const data = await res.json();
+      throw new Error(data?.errors?.[0]?.message || 'Error al enviar');
+    }
+  } catch (err) {
+    console.error('[InvertirCL] Error registro:', err);
+    inputEl.style.borderColor = 'rgba(255,23,68,0.6)';
+    inputEl.placeholder = 'Error — intenta de nuevo';
+    setTimeout(() => {
+      inputEl.style.borderColor = '';
+      inputEl.placeholder = 'tu@email.com';
+    }, 2500);
+  } finally {
+    // Restaurar botón
+    if (btnEl) { btnEl.textContent = textoOriginal; btnEl.disabled = false; }
+    inputEl.disabled = false;
+  }
+}
+
+function cerrarModal() {
+  document.getElementById('modal').classList.remove('active');
+}
+
+// Scroll reveal
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach(e => {
+    if (e.isIntersecting) {
+      e.target.c

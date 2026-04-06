@@ -1,0 +1,947 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>InvertirCL — Detección de Iceberg Orders</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:#07090d; --bg2:#0d1117; --bg3:#131a22; --bg4:#1a222c;
+  --verde:#00e676; --rojo:#ff3d57; --azul:#4a9eff; --amarillo:#f5c518;
+  --purpura:#9b59b6; --naranja:#ff6b35; --cyan:#00bcd4;
+  --linea:rgba(255,255,255,0.06); --linea2:rgba(255,255,255,0.1);
+  --texto:#e2e8f0; --texto2:#8a9bb0; --texto3:#4a5568;
+  --mono:'DM Mono',monospace; --sans:'DM Sans',sans-serif; --display:'Syne',sans-serif;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html,body{height:100%;overflow:hidden;}
+body{font-family:var(--sans);background:var(--bg);color:var(--texto);display:flex;flex-direction:column;}
+
+/* ── TOPBAR ── */
+.topbar{height:52px;background:var(--bg2);border-bottom:1px solid var(--linea);display:flex;align-items:center;padding:0 20px;gap:14px;flex-shrink:0;z-index:10;}
+.logo{font-family:var(--display);font-weight:800;font-size:1rem;color:var(--verde);letter-spacing:-0.02em;text-decoration:none;}
+.logo span{color:var(--texto2);font-weight:400;}
+.tnav-wrap{display:flex;gap:2px;margin-left:8px;}
+.tnav{padding:6px 13px;border-radius:6px;font-size:0.78rem;color:var(--texto2);cursor:pointer;transition:all 0.15s;text-decoration:none;white-space:nowrap;}
+.tnav:hover{background:var(--bg3);color:var(--texto);}
+.tnav.active{background:rgba(74,158,255,0.1);color:var(--azul);}
+.topbar-right{margin-left:auto;display:flex;align-items:center;gap:10px;}
+.nivel-badge{font-size:0.65rem;padding:3px 10px;border-radius:100px;background:rgba(74,158,255,0.1);color:var(--azul);border:1px solid rgba(74,158,255,0.2);letter-spacing:0.06em;text-transform:uppercase;}
+
+/* ── LAYOUT ── */
+.layout{display:flex;flex:1;overflow:hidden;}
+
+/* ── SIDEBAR IZQUIERDO — Escenarios ── */
+.sidebar{width:280px;background:var(--bg2);border-right:1px solid var(--linea);display:flex;flex-direction:column;flex-shrink:0;overflow-y:auto;}
+.sidebar-header{padding:16px 18px;border-bottom:1px solid var(--linea);}
+.sidebar-title{font-family:var(--display);font-size:0.88rem;font-weight:700;margin-bottom:3px;}
+.sidebar-sub{font-size:0.7rem;color:var(--texto2);line-height:1.5;}
+
+/* Progreso global */
+.progress-wrap{padding:14px 18px;border-bottom:1px solid var(--linea);}
+.prog-label{display:flex;justify-content:space-between;font-size:0.68rem;color:var(--texto3);margin-bottom:6px;text-transform:uppercase;letter-spacing:0.06em;}
+.prog-track{height:5px;background:var(--bg3);border-radius:3px;overflow:hidden;}
+.prog-fill{height:100%;background:linear-gradient(90deg,var(--azul),var(--verde));border-radius:3px;transition:width 0.6s ease;}
+.prog-stats{display:flex;gap:12px;margin-top:8px;}
+.prog-stat{font-size:0.7rem;color:var(--texto2);display:flex;align-items:center;gap:4px;}
+.prog-dot{width:6px;height:6px;border-radius:50%;}
+
+/* Cards de escenario */
+.escenario-card{padding:13px 18px;border-bottom:1px solid var(--linea);cursor:pointer;transition:all 0.15s;position:relative;}
+.escenario-card:hover{background:rgba(255,255,255,0.02);}
+.escenario-card.active{background:rgba(74,158,255,0.04);}
+.escenario-card::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:transparent;transition:background 0.2s;border-radius:0 2px 2px 0;}
+.escenario-card.active::before{background:var(--azul);}
+.escenario-card.completado::before{background:var(--verde);}
+.esc-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:5px;}
+.esc-num{font-family:var(--mono);font-size:0.65rem;color:var(--texto3);}
+.esc-estado{font-size:0.6rem;padding:2px 6px;border-radius:3px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;}
+.esc-estado.pendiente{background:rgba(74,158,255,0.08);color:var(--azul);border:1px solid rgba(74,158,255,0.15);}
+.esc-estado.completado{background:rgba(0,230,118,0.1);color:var(--verde);border:1px solid rgba(0,230,118,0.2);}
+.esc-estado.activo{background:rgba(245,197,24,0.1);color:var(--amarillo);border:1px solid rgba(245,197,24,0.2);}
+.esc-nombre{font-family:var(--display);font-size:0.85rem;font-weight:700;margin-bottom:3px;}
+.escenario-card.active .esc-nombre{color:var(--azul);}
+.escenario-card.completado .esc-nombre{color:var(--verde);}
+.esc-desc{font-size:0.7rem;color:var(--texto2);line-height:1.45;}
+.esc-dif{display:flex;align-items:center;gap:5px;margin-top:6px;}
+.dif-dot{width:6px;height:6px;border-radius:50%;}
+.dif-label{font-size:0.62rem;color:var(--texto3);}
+
+/* ── PANEL CENTRAL ── */
+.center{flex:1;display:flex;flex-direction:column;overflow:hidden;}
+
+/* Header del escenario activo */
+.esc-header{padding:14px 20px;border-bottom:1px solid var(--linea);background:var(--bg2);flex-shrink:0;display:flex;align-items:center;justify-content:space-between;}
+.esc-header-left{display:flex;align-items:center;gap:12px;}
+.esc-header-title{font-family:var(--display);font-size:1rem;font-weight:800;}
+.esc-header-meta{font-size:0.72rem;color:var(--texto2);}
+.esc-header-right{display:flex;align-items:center;gap:10px;}
+.timer-wrap{display:flex;align-items:center;gap:6px;background:var(--bg3);border:1px solid var(--linea);border-radius:7px;padding:5px 12px;}
+.timer-label{font-size:0.65rem;color:var(--texto3);}
+.timer-val{font-family:var(--mono);font-size:0.85rem;color:var(--amarillo);}
+.btn-pista{background:rgba(74,158,255,0.1);border:1px solid rgba(74,158,255,0.2);color:var(--azul);border-radius:6px;padding:6px 12px;font-size:0.75rem;cursor:pointer;font-family:var(--sans);transition:all 0.15s;}
+.btn-pista:hover{background:rgba(74,158,255,0.18);}
+
+/* Área del gráfico + controles */
+.chart-zone{flex:1;display:grid;grid-template-columns:1fr 320px;overflow:hidden;}
+
+/* Canvas velas */
+.candle-wrap{position:relative;overflow:hidden;background:var(--bg);padding:12px 16px 8px;}
+#candleChart{width:100%;height:100%;display:block;}
+
+/* Etiquetas flotantes sobre el gráfico */
+.chart-label{
+  position:absolute;font-family:var(--mono);font-size:0.62rem;
+  padding:2px 6px;border-radius:3px;pointer-events:none;
+  white-space:nowrap;
+}
+
+/* Panel derecho — Análisis */
+.analysis-panel{background:var(--bg2);border-left:1px solid var(--linea);display:flex;flex-direction:column;overflow-y:auto;}
+
+/* Controles de detección */
+.detection-section{padding:14px 16px;border-bottom:1px solid var(--linea);}
+.det-title{font-size:0.68rem;text-transform:uppercase;letter-spacing:0.08em;color:var(--texto3);margin-bottom:10px;}
+
+.detector-btn{
+  width:100%;padding:10px 14px;border-radius:8px;border:1px solid var(--linea2);
+  background:var(--bg3);color:var(--texto2);font-family:var(--sans);font-size:0.8rem;
+  cursor:pointer;transition:all 0.2s;text-align:left;margin-bottom:6px;
+  display:flex;align-items:center;gap:8px;
+}
+.detector-btn:hover{border-color:var(--azul);color:var(--texto);}
+.detector-btn.selected{background:rgba(74,158,255,0.08);border-color:rgba(74,158,255,0.35);color:var(--azul);}
+.detector-btn.correcto{background:rgba(0,230,118,0.08);border-color:rgba(0,230,118,0.35);color:var(--verde);}
+.detector-btn.incorrecto{background:rgba(255,61,87,0.06);border-color:rgba(255,61,87,0.2);color:var(--rojo);opacity:0.6;}
+.detector-icon{font-size:1rem;flex-shrink:0;}
+.detector-text{flex:1;}
+.detector-name{font-weight:500;font-size:0.8rem;}
+.detector-desc{font-size:0.68rem;color:var(--texto2);margin-top:1px;}
+.detector-btn.selected .detector-desc,.detector-btn.correcto .detector-desc{color:inherit;opacity:0.8;}
+
+.btn-confirmar{
+  width:100%;padding:11px;border-radius:8px;border:none;
+  background:var(--azul);color:#fff;font-family:var(--display);font-size:0.85rem;
+  font-weight:700;cursor:pointer;margin-top:8px;transition:all 0.2s;
+}
+.btn-confirmar:hover{background:#3d8fe0;box-shadow:0 4px 16px rgba(74,158,255,0.3);}
+.btn-confirmar:disabled{background:var(--bg3);color:var(--texto3);cursor:not-allowed;box-shadow:none;}
+
+/* Métricas sospechosas */
+.metrics-section{padding:14px 16px;border-bottom:1px solid var(--linea);}
+.metric-item{display:flex;align-items:center;justify-content:space-between;padding:7px 0;border-bottom:1px solid rgba(255,255,255,0.03);}
+.metric-item:last-child{border-bottom:none;}
+.metric-label{font-size:0.74rem;color:var(--texto2);}
+.metric-val{font-family:var(--mono);font-size:0.78rem;}
+.metric-alert{font-size:0.6rem;padding:1px 6px;border-radius:3px;margin-left:6px;}
+.metric-alert.warn{background:rgba(245,197,24,0.1);color:var(--amarillo);}
+.metric-alert.danger{background:rgba(255,61,87,0.1);color:var(--rojo);}
+
+/* Resultado / Feedback */
+.resultado-panel{padding:16px;display:none;}
+.resultado-panel.visible{display:block;}
+.resultado-card{border-radius:10px;padding:16px;}
+.resultado-card.correcto{background:rgba(0,230,118,0.05);border:1px solid rgba(0,230,118,0.2);}
+.resultado-card.incorrecto{background:rgba(255,61,87,0.04);border:1px solid rgba(255,61,87,0.15);}
+.resultado-header{display:flex;align-items:center;gap:8px;margin-bottom:10px;}
+.resultado-icon{font-size:1.4rem;}
+.resultado-titulo{font-family:var(--display);font-size:0.95rem;font-weight:700;}
+.resultado-card.correcto .resultado-titulo{color:var(--verde);}
+.resultado-card.incorrecto .resultado-titulo{color:var(--rojo);}
+.resultado-body{font-size:0.78rem;color:var(--texto2);line-height:1.65;}
+.resultado-body strong{color:var(--texto);font-weight:500;}
+.resultado-puntos{
+  display:flex;align-items:center;gap:8px;margin-top:12px;
+  padding:8px 12px;border-radius:7px;background:var(--bg3);
+  font-size:0.78rem;
+}
+.puntos-val{font-family:var(--display);font-size:1.1rem;font-weight:800;color:var(--amarillo);}
+.btn-siguiente{
+  width:100%;padding:10px;border-radius:8px;border:none;
+  background:var(--bg3);border:1px solid var(--linea2);
+  color:var(--texto);font-family:var(--sans);font-size:0.82rem;
+  cursor:pointer;margin-top:10px;transition:all 0.15s;
+}
+.btn-siguiente:hover{background:var(--bg4);border-color:var(--verde);color:var(--verde);}
+
+/* Panel educativo inferior */
+.edu-section{padding:14px 16px;}
+.edu-title{font-size:0.68rem;text-transform:uppercase;letter-spacing:0.08em;color:var(--texto3);margin-bottom:8px;}
+.edu-tip{background:rgba(74,158,255,0.04);border-left:2px solid rgba(74,158,255,0.3);border-radius:0 6px 6px 0;padding:9px 11px;font-size:0.73rem;color:var(--texto2);line-height:1.6;margin-bottom:8px;}
+.edu-tip b{color:var(--azul);}
+
+/* ── PISTA OVERLAY ── */
+.pista-overlay{
+  position:fixed;inset:0;background:rgba(0,0,0,0.7);backdrop-filter:blur(6px);
+  z-index:200;display:none;align-items:center;justify-content:center;
+}
+.pista-overlay.visible{display:flex;}
+.pista-modal{
+  background:var(--bg2);border:1px solid rgba(74,158,255,0.3);
+  border-radius:14px;padding:28px;max-width:440px;width:90%;
+  animation:popIn 0.2s ease;
+}
+@keyframes popIn{from{transform:scale(0.93);opacity:0}to{transform:scale(1);opacity:1}}
+.pista-header{display:flex;align-items:center;gap:10px;margin-bottom:14px;}
+.pista-icon{font-size:1.4rem;}
+.pista-titulo{font-family:var(--display);font-size:1rem;font-weight:700;color:var(--azul);}
+.pista-body{font-size:0.82rem;color:var(--texto2);line-height:1.7;margin-bottom:16px;}
+.pista-body strong{color:var(--texto);}
+.pista-body .highlight{color:var(--amarillo);font-family:var(--mono);}
+.btn-cerrar-pista{
+  width:100%;padding:10px;border-radius:8px;border:none;
+  background:rgba(74,158,255,0.1);border:1px solid rgba(74,158,255,0.2);
+  color:var(--azul);font-family:var(--sans);font-size:0.82rem;cursor:pointer;
+}
+
+/* ── COMPLETADO OVERLAY ── */
+.completado-overlay{
+  position:fixed;inset:0;background:rgba(0,0,0,0.8);backdrop-filter:blur(8px);
+  z-index:300;display:none;align-items:center;justify-content:center;
+}
+.completado-overlay.visible{display:flex;}
+.completado-modal{
+  background:var(--bg2);border:1px solid rgba(0,230,118,0.3);
+  border-radius:16px;padding:36px;max-width:420px;width:90%;text-align:center;
+  animation:popIn 0.3s ease;
+}
+.completado-emoji{font-size:3rem;margin-bottom:12px;}
+.completado-titulo{font-family:var(--display);font-size:1.5rem;font-weight:800;color:var(--verde);margin-bottom:8px;}
+.completado-sub{font-size:0.85rem;color:var(--texto2);line-height:1.6;margin-bottom:20px;}
+.completado-stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:24px;}
+.comp-stat{background:var(--bg3);border-radius:8px;padding:12px;}
+.comp-stat-val{font-family:var(--display);font-size:1.4rem;font-weight:800;color:var(--amarillo);}
+.comp-stat-label{font-size:0.65rem;color:var(--texto2);text-transform:uppercase;letter-spacing:0.06em;margin-top:2px;}
+.btn-volver{
+  width:100%;padding:13px;border-radius:10px;border:none;
+  background:var(--verde);color:#000;font-family:var(--display);
+  font-size:0.92rem;font-weight:700;cursor:pointer;transition:all 0.2s;
+}
+.btn-volver:hover{background:#fff;}
+
+/* Scrollbar */
+::-webkit-scrollbar{width:4px;}
+::-webkit-scrollbar-track{background:transparent;}
+::-webkit-scrollbar-thumb{background:var(--bg4);border-radius:2px;}
+
+/* Utils */
+.pos{color:var(--verde);}
+.neg{color:var(--rojo);}
+</style>
+</head>
+<body>
+
+<!-- TOPBAR -->
+<div class="topbar">
+  <a href="dashboard.html" class="logo">Invertir<span>CL</span></a>
+  <nav class="tnav-wrap">
+    <a href="dashboard.html" class="tnav">Dashboard</a>
+    <a href="simulator.html" class="tnav">Simulador</a>
+    <a href="backtest.html" class="tnav">Backtest</a>
+    <a href="risk.html" class="tnav">Riesgo</a>
+    <a href="learn.html" class="tnav">Aprender</a>
+    <a href="heatmap.html" class="tnav">Liquidez</a>
+    <a href="iceberg.html" class="tnav active">Iceberg</a>
+  </nav>
+  <div class="topbar-right">
+    <span class="nivel-badge">🧊 Modo Educativo</span>
+  </div>
+</div>
+
+<div class="layout">
+
+  <!-- ══ SIDEBAR — Lista de escenarios ══ -->
+  <div class="sidebar">
+    <div class="sidebar-header">
+      <div class="sidebar-title">🧊 Iceberg Orders</div>
+      <div class="sidebar-sub">Detecta vendedores institucionales ocultos analizando el patrón de volumen y precio en tiempo real.</div>
+    </div>
+
+    <div class="progress-wrap">
+      <div class="prog-label">
+        <span>Progreso</span>
+        <span id="progPct">0 / 5</span>
+      </div>
+      <div class="prog-track"><div class="prog-fill" id="progFill" style="width:0%"></div></div>
+      <div class="prog-stats">
+        <div class="prog-stat"><div class="prog-dot" style="background:var(--verde)"></div><span id="cntOk">0 correctos</span></div>
+        <div class="prog-stat"><div class="prog-dot" style="background:var(--rojo)"></div><span id="cntFail">0 fallidos</span></div>
+        <div class="prog-stat"><div class="prog-dot" style="background:var(--amarillo)"></div><span id="cntPts">0 pts</span></div>
+      </div>
+    </div>
+
+    <!-- Cards de escenario -->
+    <div id="scenarioList"></div>
+  </div>
+
+  <!-- ══ PANEL CENTRAL ══ -->
+  <div class="center">
+
+    <div class="esc-header">
+      <div class="esc-header-left">
+        <div>
+          <div class="esc-header-title" id="escTitulo">Escenario 1</div>
+          <div class="esc-header-meta" id="escMeta">COPEC · Ruido o institución</div>
+        </div>
+      </div>
+      <div class="esc-header-right">
+        <div class="timer-wrap">
+          <span class="timer-label">⏱</span>
+          <span class="timer-val" id="timerEl">2:00</span>
+        </div>
+        <button class="btn-pista" onclick="mostrarPista()">💡 Pista (−5 pts)</button>
+      </div>
+    </div>
+
+    <div class="chart-zone">
+      <!-- Canvas velas + volumen -->
+      <div class="candle-wrap" id="candleWrap">
+        <canvas id="candleChart"></canvas>
+      </div>
+
+      <!-- Panel de análisis -->
+      <div class="analysis-panel">
+
+        <!-- Métricas sospechosas -->
+        <div class="metrics-section">
+          <div class="det-title">Métricas de sospecha</div>
+          <div class="metric-item">
+            <span class="metric-label">Precio</span>
+            <span class="metric-val" id="mPrecio">$8.420</span>
+          </div>
+          <div class="metric-item">
+            <span class="metric-label">Vol. tick actual</span>
+            <span class="metric-val" id="mVolTick">—<span class="metric-alert warn" id="mVolAlert" style="display:none">↑ Anómalo</span></span>
+          </div>
+          <div class="metric-item">
+            <span class="metric-label">Vol. promedio tick</span>
+            <span class="metric-val" id="mVolProm">—</span>
+          </div>
+          <div class="metric-item">
+            <span class="metric-label">Ratio vol/prom</span>
+            <span class="metric-val" id="mRatio">—<span class="metric-alert danger" id="mRatioAlert" style="display:none">⚠ Iceberg?</span></span>
+          </div>
+          <div class="metric-item">
+            <span class="metric-label">Δ Precio en vol alto</span>
+            <span class="metric-val" id="mDeltaPrecio">—</span>
+          </div>
+          <div class="metric-item">
+            <span class="metric-label">Absorción de demanda</span>
+            <span class="metric-val" id="mAbsorcion">—</span>
+          </div>
+        </div>
+
+        <!-- Opciones de detección -->
+        <div class="detection-section">
+          <div class="det-title">¿Qué estás viendo?</div>
+          <div id="opcionesList"></div>
+          <button class="btn-confirmar" id="btnConfirmar" onclick="confirmarRespuesta()" disabled>
+            Confirmar detección →
+          </button>
+        </div>
+
+        <!-- Resultado -->
+        <div class="resultado-panel" id="resultadoPanel"></div>
+
+        <!-- Tip educativo -->
+        <div class="edu-section">
+          <div class="edu-title">Señales de iceberg</div>
+          <div class="edu-tip">
+            <b>Volumen anómalo sin movimiento de precio</b> es la señal clave. Un vendedor institucional coloca órdenes pequeñas repetidas para disimular una posición grande. El precio no baja porque los compradores absorben — pero cuando se agota la demanda, el precio colapsa.
+          </div>
+          <div class="edu-tip">
+            <b>Ratio Vol/Promedio &gt; 3×</b> en una vela sin movimiento de precio es una alerta fuerte. Compare siempre el volumen del tick con el promedio de los últimos 10.
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- PISTA OVERLAY -->
+<div class="pista-overlay" id="pistaOverlay">
+  <div class="pista-modal">
+    <div class="pista-header">
+      <span class="pista-icon">💡</span>
+      <span class="pista-titulo">Pista del escenario</span>
+    </div>
+    <div class="pista-body" id="pistaCuerpo"></div>
+    <button class="btn-cerrar-pista" onclick="cerrarPista()">Entendido — cerrar pista</button>
+  </div>
+</div>
+
+<!-- COMPLETADO OVERLAY -->
+<div class="completado-overlay" id="completadoOverlay">
+  <div class="completado-modal">
+    <div class="completado-emoji">🧊</div>
+    <div class="completado-titulo">¡Módulo completado!</div>
+    <div class="completado-sub">Ahora puedes identificar órdenes iceberg institucionales en el mercado chileno. Esta habilidad tarda años en desarrollarse — tú la aprendiste en minutos.</div>
+    <div class="completado-stats">
+      <div class="comp-stat">
+        <div class="comp-stat-val" id="finalPts">—</div>
+        <div class="comp-stat-label">Puntos</div>
+      </div>
+      <div class="comp-stat">
+        <div class="comp-stat-val" id="finalOk">—</div>
+        <div class="comp-stat-label">Correctos</div>
+      </div>
+      <div class="comp-stat">
+        <div class="comp-stat-val" id="finalTime">—</div>
+        <div class="comp-stat-label">Tiempo</div>
+      </div>
+    </div>
+    <button class="btn-volver" onclick="location.href='learn.html'">← Volver a módulos</button>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════════════════════════
+// ESCENARIOS — 5 casos educativos con patrón de iceberg
+// Cada uno tiene: velas, volumen, respuesta correcta, pista, explicación
+// ══════════════════════════════════════════════════════════════
+
+const ESCENARIOS = [
+  {
+    id: 1,
+    titulo: 'Escenario 1 — Ruido o institución',
+    meta: 'COPEC · 1 minuto · Dificultad: Básico',
+    accion: 'COPEC', precio: 8420, dificultad: 'basico',
+    color: '#e8a838',
+    // Patrón: volumen alto en 3 velas consecutivas sin bajada de precio → ICEBERG vendedor
+    patron: 'iceberg_vendedor',
+    volumenMultiplier: [1,1.2,0.9,1.1,4.2,3.8,4.5,1.1,0.8,1.0,0.9,1.2], // ×vol promedio
+    precioDrift:       [0,0.3,-0.1,0.2,-0.05,0.03,-0.08,0.1,0.2,0.15,0.1,0.3], // % por vela
+    pista: 'Observa las velas 5, 6 y 7 — el volumen explota (×4) pero el precio <strong>casi no se mueve</strong>. ¿Por qué un volumen tan alto no produce movimiento? Alguien está absorbiendo las compras con ventas ocultas.',
+    opciones: [
+      { id:'a', icon:'📊', nombre:'Ruido de mercado normal',        desc:'Variación aleatoria sin patrón reconocible.' },
+      { id:'b', icon:'🧊', nombre:'Iceberg vendedor institucional', desc:'Vendedor oculto frena el alza con órdenes fragmentadas.', correcto:true },
+      { id:'c', icon:'📈', nombre:'Acumulación institucional',      desc:'Comprador grande construyendo posición.' },
+      { id:'d', icon:'⚡', nombre:'Flash crash técnico',            desc:'Error de sistema o liquidación forzada.' },
+    ],
+    explicacion: 'Las velas 5–7 muestran volumen 4× el promedio pero el precio apenas cae −0.1%. Esto es la señal clásica de un <strong>iceberg vendedor</strong>: un institucional coloca órdenes de venta pequeñas repetidas ("recargas") que absorben toda la demanda compradora. El precio no colapsa porque los compradores están activos — pero cuando se agoten, la caída será abrupta.',
+    puntos: 100,
+  },
+  {
+    id: 2,
+    titulo: 'Escenario 2 — La trampa alcista',
+    meta: 'SQM-B · 1 minuto · Dificultad: Intermedio',
+    accion: 'SQM-B', precio: 38200, dificultad: 'intermedio',
+    color: '#4a9eff',
+    patron: 'iceberg_comprador',
+    volumenMultiplier: [0.9,1.1,1.0,0.8,3.5,4.1,3.9,4.2,1.2,0.9,1.0,1.1],
+    precioDrift:       [0,-0.2,0.1,-0.1,0.04,0.07,0.03,0.05,-0.1,0.2,0.1,0.3],
+    pista: 'El volumen se triplica en 4 velas consecutivas pero el precio <strong>no sube</strong>. Si fuera acumulación pura, el precio debería presionar al alza. Aquí la demanda está siendo satisfecha — hay un vendedor oculto enorme.',
+    opciones: [
+      { id:'a', icon:'📊', nombre:'Distribución institucional',     desc:'Institución vendiendo posición acumulada gradualmente.' },
+      { id:'b', icon:'📈', nombre:'Acumulación de largo plazo',     desc:'Comprador paciente construyendo posición.' },
+      { id:'c', icon:'🧊', nombre:'Iceberg comprador absorbiendo',  desc:'Comprador oculto sostiene el precio con compras fragmentadas.', correcto:true },
+      { id:'d', icon:'🔄', nombre:'Arbitraje entre mercados',       desc:'Operaciones automáticas de arbitraje.' },
+    ],
+    explicacion: 'El volumen 4× en 4 velas sin movimiento de precio al alza indica un <strong>iceberg comprador</strong>: una institución está comprando masivamente pero fragmentando las órdenes para no mover el precio y no revelar su intención. Cuando termine de acumular, el precio subirá bruscamente.',
+    puntos: 150,
+  },
+  {
+    id: 3,
+    titulo: 'Escenario 3 — El rebote falso',
+    meta: 'BCI · 2 minutos · Dificultad: Intermedio',
+    accion: 'BCI', precio: 28500, dificultad: 'intermedio',
+    color: '#00e676',
+    patron: 'ruido',  // ESTE NO es iceberg — trampa educativa
+    volumenMultiplier: [1.0,1.3,2.1,1.8,1.5,1.2,0.9,0.8,1.1,1.0,1.2,1.4],
+    precioDrift:       [0,0.5,1.2,0.8,0.3,-0.2,-0.5,-0.8,-0.3,0.2,0.4,0.6],
+    pista: 'El volumen sube en las velas 2–4 pero también <strong>sube el precio</strong>. Esto es diferente al iceberg — cuando hay iceberg, el precio NO se mueve pese al volumen. Aquí el volumen y precio se mueven juntos.',
+    opciones: [
+      { id:'a', icon:'📊', nombre:'Rebote técnico normal',           desc:'Compradores respondiendo a soporte técnico.', correcto:true },
+      { id:'b', icon:'🧊', nombre:'Iceberg comprador',               desc:'Institución acumulando con órdenes ocultas.' },
+      { id:'c', icon:'⚡', nombre:'Short squeeze',                   desc:'Vendedores en corto forzados a recomprar.' },
+      { id:'d', icon:'🎯', nombre:'Manipulación de mercado',         desc:'Operación coordinada para mover el precio artificialmente.' },
+    ],
+    explicacion: '<strong>Este NO era un iceberg.</strong> El precio se movió en línea con el volumen — subió cuando el volumen subió. En un iceberg genuino, el volumen anómalo ocurre <em>sin</em> movimiento de precio porque las órdenes ocultas absorben toda la presión. Aquí fue un rebote técnico normal desde soporte.',
+    puntos: 200,
+  },
+  {
+    id: 4,
+    titulo: 'Escenario 4 — La distribución',
+    meta: 'FALABELLA · 2 minutos · Dificultad: Avanzado',
+    accion: 'FALABELLA', precio: 2840, dificultad: 'avanzado',
+    color: '#9b59b6',
+    patron: 'iceberg_vendedor',
+    volumenMultiplier: [1.0,0.9,1.1,1.0,5.2,4.8,5.5,4.9,5.1,1.2,1.0,0.8],
+    precioDrift:       [0,0.2,0.1,0.3,-0.02,0.01,-0.03,0.02,-0.01,-0.5,-1.2,-2.1],
+    pista: 'Las velas 5–9 tienen volumen 5× el promedio sin movimiento de precio. <strong>Luego</strong>, en las velas 10–12, el precio colapsa. Esto es el patrón completo de distribución iceberg: absorción → colapso.',
+    opciones: [
+      { id:'a', icon:'📊', nombre:'Ventas por pánico minorista',     desc:'Pequeños inversores vendiendo simultáneamente.' },
+      { id:'b', icon:'📉', nombre:'Iceberg vendedor + distribución', desc:'Institución distribuyendo posición oculta antes del colapso.', correcto:true },
+      { id:'c', icon:'🔄', nombre:'Reequilibrio de índice',          desc:'Fondo indexado ajustando ponderaciones.' },
+      { id:'d', icon:'📈', nombre:'Acumulación en zona de soporte',  desc:'Compradores institucionales a precios bajos.' },
+    ],
+    explicacion: 'El patrón completo de un iceberg vendedor: <strong>fase de absorción</strong> (velas 5–9, volumen 5× sin movimiento de precio) seguida de <strong>colapso</strong> (velas 10–12, caída −2.1%) cuando se agota la demanda. La institución vendió silenciosamente durante 5 velas antes de que el mercado "entendiera" que la oferta era masiva.',
+    puntos: 250,
+  },
+  {
+    id: 5,
+    titulo: 'Escenario 5 — El maestro',
+    meta: 'ENTEL · 3 minutos · Dificultad: Experto',
+    accion: 'ENTEL', precio: 4210, dificultad: 'experto',
+    color: '#ff6b35',
+    patron: 'iceberg_comprador',
+    volumenMultiplier: [1.0,1.2,0.8,1.1,0.9,1.0,6.1,5.8,6.4,5.9,6.2,1.3],
+    precioDrift:       [0,-0.3,-0.5,-0.2,-0.4,-0.3,0.02,-0.01,0.03,-0.02,0.01,2.8],
+    pista: 'Las 6 primeras velas bajan gradualmente con volumen normal. Luego, en velas 7–11, el volumen explota 6× pero el precio <strong>para de caer</strong>. En la vela 12, sube +2.8%. ¿Qué pasó en las velas 7–11?',
+    opciones: [
+      { id:'a', icon:'📊', nombre:'Capitulación de vendedores',      desc:'Vendedores agotados después de la bajada.' },
+      { id:'b', icon:'🧊', nombre:'Iceberg comprador en soporte',    desc:'Institución absorbiendo toda la oferta antes del rebote.', correcto:true },
+      { id:'c', icon:'⚡', nombre:'Evento externo positivo',         desc:'Noticia favorable que llegó al mercado.' },
+      { id:'d', icon:'🎯', nombre:'Stop loss masivo de cortos',      desc:'Short squeeze técnico.' },
+    ],
+    explicacion: 'Patrón de <strong>iceberg comprador en soporte</strong>: la acción baja gradualmente (velas 1–6) y en el nivel de soporte aparece un comprador institucional que fragmenta órdenes masivas (volumen 6×) sin mover el precio al alza — absorbe toda la oferta silenciosamente. Cuando termina (vela 12), el precio rebota +2.8% en un solo tick porque ya no queda oferta.',
+    puntos: 300,
+  },
+];
+
+// ══════════════════════════════════════════════════════════════
+// ESTADO DEL JUEGO
+// ══════════════════════════════════════════════════════════════
+
+let estadoJuego = {
+  escenarioActual: 0,
+  respuestas:      [],  // {correcto, puntos, tiempo}
+  puntosTotales:   0,
+  correctos:       0,
+  fallidos:        0,
+  tiempoInicio:    null,
+  timerSecs:       120,
+  timerInterval:   null,
+  pistasUsadas:    new Set(),
+  respondido:      false,
+  respuestaSeleccionada: null,
+};
+
+// ══════════════════════════════════════════════════════════════
+// CANVAS — GENERACIÓN Y DIBUJO DE VELAS
+// ══════════════════════════════════════════════════════════════
+
+function generarVelas(escenario) {
+  const n = escenario.volumenMultiplier.length;
+  const volBase = 500000;
+  let precio = escenario.precio;
+  const velas = [];
+
+  for (let i = 0; i < n; i++) {
+    const drift = escenario.precioDrift[i] / 100;
+    const ruido = (Math.random() - 0.5) * 0.004;
+    const o = precio;
+    const c = o * (1 + drift + ruido);
+    const rango = Math.abs(c - o);
+    const h = Math.max(o, c) + rango * (0.2 + Math.random() * 0.3);
+    const l = Math.min(o, c) - rango * (0.2 + Math.random() * 0.3);
+    const vol = Math.round(volBase * escenario.volumenMultiplier[i] * (0.85 + Math.random() * 0.3));
+    velas.push({ o, c, h, l, vol, isPos: c >= o });
+    precio = c;
+  }
+  return velas;
+}
+
+function dibujarVelas(velas, escenario) {
+  const canvas = document.getElementById('candleChart');
+  const wrap   = document.getElementById('candleWrap');
+  if (!canvas || !wrap) return;
+
+  const W = wrap.clientWidth  || 600;
+  const H = wrap.clientHeight || 380;
+  canvas.width  = W;
+  canvas.height = H;
+
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, W, H);
+  ctx.fillStyle = '#07090d';
+  ctx.fillRect(0, 0, W, H);
+
+  const n       = velas.length;
+  const VOL_H   = Math.round(H * 0.22);  // 22% inferior para volumen
+  const CHART_H = H - VOL_H - 10;
+  const PAD_L   = 48;
+  const PAD_R   = 16;
+  const candleW = (W - PAD_L - PAD_R) / n;
+  const bodyW   = Math.max(4, candleW * 0.55);
+
+  // Rangos
+  const prices = velas.flatMap(v => [v.h, v.l]);
+  const minP   = Math.min(...prices);
+  const maxP   = Math.max(...prices);
+  const rangeP = maxP - minP || 1;
+  const maxVol = Math.max(...velas.map(v => v.vol));
+  const volProm = velas.reduce((s, v) => s + v.vol, 0) / n;
+
+  const toY  = v  => 8 + (1 - (v - minP) / rangeP) * (CHART_H - 16);
+  const toVH = v  => VOL_H * (v / maxVol);
+  const toX  = i  => PAD_L + i * candleW + candleW / 2;
+
+  // ── GRID ──
+  ctx.strokeStyle = 'rgba(255,255,255,0.04)';
+  ctx.lineWidth   = 1;
+  for (let i = 1; i <= 4; i++) {
+    const y = 8 + (CHART_H - 16) * i / 4;
+    ctx.beginPath(); ctx.moveTo(PAD_L, y); ctx.lineTo(W - PAD_R, y); ctx.stroke();
+    // Label precio
+    const p = maxP - (maxP - minP) * i / 4;
+    ctx.fillStyle   = 'rgba(255,255,255,0.2)';
+    ctx.font        = '9px "DM Mono"';
+    ctx.textAlign   = 'right';
+    ctx.fillText('$' + Math.round(p).toLocaleString('es-CL'), PAD_L - 4, y + 3);
+  }
+
+  // ── SEPARADOR VOLUMEN ──
+  ctx.strokeStyle = 'rgba(255,255,255,0.06)';
+  ctx.setLineDash([3, 3]);
+  ctx.beginPath();
+  ctx.moveTo(PAD_L, CHART_H + 6);
+  ctx.lineTo(W - PAD_R, CHART_H + 6);
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Label VWAP (línea media educativa)
+  const vwap = velas.reduce((s, v) => s + (v.o + v.c) / 2, 0) / n;
+  const vyWap = toY(vwap);
+  ctx.strokeStyle = 'rgba(74,158,255,0.35)';
+  ctx.lineWidth   = 1;
+  ctx.setLineDash([5, 5]);
+  ctx.beginPath(); ctx.moveTo(PAD_L, vyWap); ctx.lineTo(W - PAD_R, vyWap); ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.fillStyle = 'rgba(74,158,255,0.7)';
+  ctx.font = '8px "DM Mono"';
+  ctx.textAlign = 'left';
+  ctx.fillText('VWAP', W - PAD_R - 38, vyWap - 3);
+
+  // ── VELAS ──
+  velas.forEach((v, i) => {
+    const x   = toX(i);
+    const bx  = x - bodyW / 2;
+    const isPos = v.isPos;
+    const color = isPos ? '#00e676' : '#ff3d57';
+
+    // Detección de vela anómala (vol > 2.5× promedio)
+    const isAnomala = v.vol > volProm * 2.5;
+
+    // Mecha
+    ctx.strokeStyle = color;
+    ctx.lineWidth   = 1;
+    ctx.globalAlpha = isPos ? 0.7 : 0.8;
+    ctx.beginPath();
+    ctx.moveTo(x, toY(v.h));
+    ctx.lineTo(x, toY(v.l));
+    ctx.stroke();
+
+    // Cuerpo
+    const bodyY = toY(Math.max(v.o, v.c));
+    const bodyH = Math.max(2, Math.abs(toY(v.o) - toY(v.c)));
+    ctx.fillStyle   = color;
+    ctx.globalAlpha = isPos ? 0.8 : 0.85;
+    ctx.fillRect(bx, bodyY, bodyW, bodyH);
+
+    // Halo en velas anómalas
+    if (isAnomala) {
+      ctx.fillStyle   = color;
+      ctx.globalAlpha = 0.08;
+      ctx.fillRect(bx - 3, bodyY - 2, bodyW + 6, bodyH + 4);
+      ctx.globalAlpha = 1;
+      // Marquita de alerta
+      ctx.fillStyle = 'rgba(245,197,24,0.9)';
+      ctx.font = '9px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('⚠', x, toY(v.h) - 5);
+    }
+
+    ctx.globalAlpha = 1;
+
+    // ── BARRA DE VOLUMEN ──
+    const volH = toVH(v.vol);
+    const volY = H - volH;
+    ctx.fillStyle   = isAnomala
+      ? (isPos ? 'rgba(0,230,118,0.5)' : 'rgba(255,61,87,0.5)')
+      : (isPos ? 'rgba(0,230,118,0.18)' : 'rgba(255,61,87,0.18)');
+    ctx.fillRect(bx, volY, bodyW, volH);
+
+    // Línea de volumen promedio
+    if (i === 0) {
+      ctx.strokeStyle = 'rgba(245,197,24,0.4)';
+      ctx.lineWidth   = 1;
+      ctx.setLineDash([3, 3]);
+      const promY = H - toVH(volProm);
+      ctx.beginPath(); ctx.moveTo(PAD_L, promY); ctx.lineTo(W - PAD_R, promY); ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.fillStyle = 'rgba(245,197,24,0.6)';
+      ctx.font = '8px "DM Mono"';
+      ctx.textAlign = 'left';
+      ctx.fillText('Vol prom', PAD_L + 2, promY - 3);
+    }
+
+    // Labels eje X (número de vela)
+    ctx.fillStyle = 'rgba(255,255,255,0.2)';
+    ctx.font      = '8px "DM Mono"';
+    ctx.textAlign = 'center';
+    ctx.fillText(i + 1, x, H - 2);
+  });
+
+  // Actualizar métricas con la vela más anómala
+  const vAnomala = [...velas].sort((a, b) => b.vol - a.vol)[0];
+  const ratio    = (vAnomala.vol / volProm).toFixed(1);
+  const deltaPrecio = ((vAnomala.c - vAnomala.o) / vAnomala.o * 100).toFixed(2);
+  const absorcion   = Math.abs(vAnomala.c - vAnomala.o) / (vAnomala.h - vAnomala.l) < 0.2
+    ? '🔴 Alta (cuerpo pequeño)'
+    : '🟡 Moderada';
+
+  document.getElementById('mPrecio').textContent     = '$' + Math.round(escenario.precio).toLocaleString('es-CL');
+  document.getElementById('mVolTick').innerHTML      = vAnomala.vol.toLocaleString('es-CL') +
+    `<span class="metric-alert warn" style="display:${vAnomala.vol > volProm * 2?'inline':'none'}">↑ Anómalo</span>`;
+  document.getElementById('mVolProm').textContent    = Math.round(volProm).toLocaleString('es-CL');
+  document.getElementById('mRatio').innerHTML        = ratio + '×' +
+    `<span class="metric-alert danger" style="display:${parseFloat(ratio) > 2.5?'inline':'none'}">⚠ Iceberg?</span>`;
+  document.getElementById('mDeltaPrecio').textContent = (parseFloat(deltaPrecio) >= 0 ? '+' : '') + deltaPrecio + '%';
+  document.getElementById('mDeltaPrecio').className  = 'metric-val ' + (parseFloat(deltaPrecio) >= 0 ? 'pos' : 'neg');
+  document.getElementById('mAbsorcion').textContent  = absorcion;
+}
+
+// ══════════════════════════════════════════════════════════════
+// RENDER ESCENARIO
+// ══════════════════════════════════════════════════════════════
+
+function cargarEscenario(idx) {
+  const esc = ESCENARIOS[idx];
+  estadoJuego.escenarioActual   = idx;
+  estadoJuego.respondido        = false;
+  estadoJuego.respuestaSeleccionada = null;
+
+  // Header
+  document.getElementById('escTitulo').textContent = esc.titulo;
+  document.getElementById('escMeta').textContent   = esc.meta;
+
+  // Opciones
+  const lista = document.getElementById('opcionesList');
+  lista.innerHTML = esc.opciones.map(op => `
+    <button class="detector-btn" id="opt-${op.id}" onclick="seleccionarOpcion('${op.id}')">
+      <span class="detector-icon">${op.icon}</span>
+      <div class="detector-text">
+        <div class="detector-name">${op.nombre}</div>
+        <div class="detector-desc">${op.desc}</div>
+      </div>
+    </button>
+  `).join('');
+
+  // Resultado oculto
+  document.getElementById('resultadoPanel').className = 'resultado-panel';
+
+  // Botón confirmar
+  document.getElementById('btnConfirmar').disabled = true;
+
+  // Dibujar gráfico
+  setTimeout(() => {
+    const velas = generarVelas(esc);
+    dibujarVelas(velas, esc);
+  }, 50);
+
+  // Timer
+  iniciarTimer(esc);
+
+  // Highlight sidebar
+  document.querySelectorAll('.escenario-card').forEach((el, i) => {
+    el.classList.toggle('active', i === idx);
+  });
+}
+
+// ══════════════════════════════════════════════════════════════
+// SELECCIÓN Y CONFIRMACIÓN
+// ══════════════════════════════════════════════════════════════
+
+function seleccionarOpcion(id) {
+  if (estadoJuego.respondido) return;
+  estadoJuego.respuestaSeleccionada = id;
+  document.querySelectorAll('.detector-btn').forEach(b => b.classList.remove('selected'));
+  document.getElementById('opt-' + id)?.classList.add('selected');
+  document.getElementById('btnConfirmar').disabled = false;
+}
+
+function confirmarRespuesta() {
+  if (estadoJuego.respondido) return;
+  const esc     = ESCENARIOS[estadoJuego.escenarioActual];
+  const selId   = estadoJuego.respuestaSeleccionada;
+  if (!selId) return;
+
+  estadoJuego.respondido = true;
+  detenerTimer();
+
+  const opSeleccionada = esc.opciones.find(o => o.id === selId);
+  const esCorrecto     = !!opSeleccionada?.correcto;
+  const tiempoUsado    = esc.timerSecs - estadoJuego.timerSecs;
+  const pistaPenalty   = estadoJuego.pistasUsadas.has(esc.id) ? 5 : 0;
+  const puntos         = esCorrecto ? Math.max(10, esc.puntos - pistaPenalty) : 0;
+
+  if (esCorrecto) { estadoJuego.correctos++; } else { estadoJuego.fallidos++; }
+  estadoJuego.puntosTotales += puntos;
+
+  // Colorear opciones
+  esc.opciones.forEach(op => {
+    const btn = document.getElementById('opt-' + op.id);
+    if (!btn) return;
+    if (op.correcto)        btn.classList.add('correcto');
+    else if (op.id === selId) btn.classList.add('incorrecto');
+  });
+
+  // Mostrar resultado
+  const panel = document.getElementById('resultadoPanel');
+  panel.className = 'resultado-panel visible';
+  panel.innerHTML = `
+    <div class="resultado-card ${esCorrecto ? 'correcto' : 'incorrecto'}">
+      <div class="resultado-header">
+        <span class="resultado-icon">${esCorrecto ? '✅' : '❌'}</span>
+        <span class="resultado-titulo">${esCorrecto ? '¡Correcto!' : 'No exactamente'}</span>
+      </div>
+      <div class="resultado-body">${esc.explicacion}</div>
+      <div class="resultado-puntos">
+        <span class="puntos-val">+${puntos}</span>
+        <span style="font-size:0.75rem;color:var(--texto2)">puntos${pistaPenalty ? ' (−5 por pista)' : ''}</span>
+      </div>
+      ${estadoJuego.escenarioActual < ESCENARIOS.length - 1
+        ? `<button class="btn-siguiente" onclick="siguienteEscenario()">Siguiente escenario →</button>`
+        : `<button class="btn-siguiente" onclick="mostrarCompletado()" style="border-color:var(--verde);color:var(--verde)">Ver resultados finales 🏆</button>`
+      }
+    </div>
+  `;
+
+  // Marcar en sidebar
+  const cards = document.querySelectorAll('.escenario-card');
+  if (cards[estadoJuego.escenarioActual]) {
+    cards[estadoJuego.escenarioActual].classList.add('completado');
+    cards[estadoJuego.escenarioActual].classList.remove('active');
+    const estadoEl = cards[estadoJuego.escenarioActual].querySelector('.esc-estado');
+    if (estadoEl) {
+      estadoEl.textContent  = esCorrecto ? '✓ Correcto' : '✗ Fallido';
+      estadoEl.className    = 'esc-estado completado';
+    }
+  }
+
+  actualizarProgreso();
+}
+
+function siguienteEscenario() {
+  const next = estadoJuego.escenarioActual + 1;
+  if (next < ESCENARIOS.length) cargarEscenario(next);
+}
+
+// ══════════════════════════════════════════════════════════════
+// TIMER
+// ══════════════════════════════════════════════════════════════
+
+function iniciarTimer(esc) {
+  detenerTimer();
+  const limites = { basico:120, intermedio:120, avanzado:120, experto:180 };
+  estadoJuego.timerSecs = limites[esc.dificultad] || 120;
+  esc.timerSecs = estadoJuego.timerSecs;
+  renderTimer();
+  estadoJuego.timerInterval = setInterval(() => {
+    if (estadoJuego.respondido) { detenerTimer(); return; }
+    estadoJuego.timerSecs--;
+    esc.timerSecs = estadoJuego.timerSecs;
+    renderTimer();
+    if (estadoJuego.timerSecs <= 0) {
+      detenerTimer();
+      if (!estadoJuego.respondido) confirmarRespuesta();
+    }
+  }, 1000);
+}
+
+function detenerTimer() {
+  if (estadoJuego.timerInterval) clearInterval(estadoJuego.timerInterval);
+}
+
+function renderTimer() {
+  const el = document.getElementById('timerEl');
+  if (!el) return;
+  const m = Math.floor(estadoJuego.timerSecs / 60);
+  const s = estadoJuego.timerSecs % 60;
+  el.textContent = `${m}:${String(s).padStart(2,'0')}`;
+  el.style.color = estadoJuego.timerSecs < 30 ? 'var(--rojo)' : 'var(--amarillo)';
+}
+
+// ══════════════════════════════════════════════════════════════
+// PISTA
+// ══════════════════════════════════════════════════════════════
+
+function mostrarPista() {
+  const esc = ESCENARIOS[estadoJuego.escenarioActual];
+  estadoJuego.pistasUsadas.add(esc.id);
+  document.getElementById('pistaCuerpo').innerHTML = esc.pista;
+  document.getElementById('pistaOverlay').classList.add('visible');
+}
+
+function cerrarPista() {
+  document.getElementById('pistaOverlay').classList.remove('visible');
+}
+
+// ══════════════════════════════════════════════════════════════
+// PROGRESO
+// ══════════════════════════════════════════════════════════════
+
+function actualizarProgreso() {
+  const total     = ESCENARIOS.length;
+  const respondidos = estadoJuego.correctos + estadoJuego.fallidos;
+  const pct       = respondidos / total * 100;
+  document.getElementById('progFill').style.width  = pct + '%';
+  document.getElementById('progPct').textContent   = `${respondidos} / ${total}`;
+  document.getElementById('cntOk').textContent     = `${estadoJuego.correctos} correctos`;
+  document.getElementById('cntFail').textContent   = `${estadoJuego.fallidos} fallidos`;
+  document.getElementById('cntPts').textContent    = `${estadoJuego.puntosTotales} pts`;
+}
+
+// ══════════════════════════════════════════════════════════════
+// COMPLETADO
+// ══════════════════════════════════════════════════════════════
+
+function mostrarCompletado() {
+  const tiempoTotal = ESCENARIOS.reduce((s, e) => s + (e.timerSecs || 0), 0);
+  const minT = Math.floor(tiempoTotal / 60);
+  document.getElementById('finalPts').textContent  = estadoJuego.puntosTotales;
+  document.getElementById('finalOk').textContent   = `${estadoJuego.correctos}/${ESCENARIOS.length}`;
+  document.getElementById('finalTime').textContent = minT + 'min';
+  document.getElementById('completadoOverlay').classList.add('visible');
+}
+
+// ══════════════════════════════════════════════════════════════
+// INIT
+// ══════════════════════════════════════════════════════════════
+
+// Renderizar sidebar
+const difColores = { basico:'#00e676', intermedio:'#f5c518', avanzado:'#ff6b35', experto:'#ff3d57' };
+document.getElementById('scenarioList').innerHTML = ESCENARIOS.map((esc, i) => `
+  <div class="escenario-card ${i===0?'active':''}" onclick="cargarEscenario(${i})">
+    <div class="esc-top">
+      <span class="esc-num">0${esc.id}</span>
+      <span class="esc-estado ${i===0?'activo':'pendiente'}">${i===0?'En curso':'Pendiente'}</span>
+    </div>
+    <div class="esc-nombre">${esc.accion} — ${esc.titulo.split('—')[1].trim()}</div>
+    <div class="esc-desc">${esc.meta.split('·')[2].trim()}</div>
+    <div class="esc-dif">
+      <div class="dif-dot" style="background:${difColores[esc.dificultad]}"></div>
+      <span class="dif-label">${esc.dificultad.charAt(0).toUpperCase()+esc.dificultad.slice(1)} · ${esc.puntos} pts</span>
+    </div>
+  </div>
+`).join('');
+
+// Resize canvas al cambiar tamaño
+window.addEventListener('resize', () => {
+  const esc = ESCENARIOS[estadoJuego.escenarioActual];
+  const velas = generarVelas(esc);
+  dibujarVelas(velas, esc);
+});
+
+// Cargar primer escenario
+window.addEventListener('DOMContentLoaded', () => {
+  cargarEscenario(0);
+  actualizarProgreso();
+});
+</script>
+</body>
+</html>
