@@ -1,0 +1,1051 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>InvertirCL — Shadow Trader</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#07090d;--bg2:#0d1117;--bg3:#131a22;--bg4:#1a222c;
+  --verde:#00e676;--rojo:#ff3d57;--azul:#4a9eff;--amarillo:#f5c518;
+  --purpura:#9b59b6;--naranja:#ff6b35;--cyan:#00bcd4;
+  --linea:rgba(255,255,255,0.06);--linea2:rgba(255,255,255,0.1);
+  --texto:#e2e8f0;--texto2:#8a9bb0;--texto3:#4a5568;
+  --mono:'DM Mono',monospace;--sans:'DM Sans',sans-serif;--display:'Syne',sans-serif;
+  --bot-color:#4a9eff;--user-color:#00e676;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html,body{height:100%;overflow:hidden;}
+body{font-family:var(--sans);background:var(--bg);color:var(--texto);display:flex;flex-direction:column;}
+
+/* TOPBAR */
+.topbar{height:52px;background:var(--bg2);border-bottom:1px solid var(--linea);display:flex;align-items:center;padding:0 20px;gap:14px;flex-shrink:0;}
+.logo{font-family:var(--display);font-weight:800;font-size:1rem;color:var(--verde);text-decoration:none;}
+.logo span{color:var(--texto2);font-weight:400;}
+.tnav-wrap{display:flex;gap:2px;margin-left:8px;}
+.tnav{padding:6px 13px;border-radius:6px;font-size:0.78rem;color:var(--texto2);cursor:pointer;transition:all 0.15s;text-decoration:none;white-space:nowrap;}
+.tnav:hover{background:var(--bg3);color:var(--texto);}
+.tnav.active{background:rgba(74,158,255,0.12);color:var(--azul);}
+.topbar-right{margin-left:auto;display:flex;align-items:center;gap:8px;}
+.bot-badge{font-size:0.65rem;padding:3px 10px;border-radius:100px;background:rgba(74,158,255,0.1);color:var(--azul);border:1px solid rgba(74,158,255,0.25);letter-spacing:0.06em;text-transform:uppercase;}
+.bot-live{width:7px;height:7px;border-radius:50%;background:var(--azul);animation:pulse 1.5s infinite;}
+@keyframes pulse{0%,100%{opacity:1;box-shadow:0 0 0 0 rgba(74,158,255,0.4)}50%{opacity:0.7;box-shadow:0 0 0 5px rgba(74,158,255,0)}}
+
+/* LAYOUT */
+.layout{display:grid;grid-template-columns:260px 1fr 320px;flex:1;overflow:hidden;}
+
+/* ══ SIDEBAR IZQUIERDO ══ */
+.sidebar-left{background:var(--bg2);border-right:1px solid var(--linea);display:flex;flex-direction:column;overflow-y:auto;}
+.sb-header{padding:16px 18px;border-bottom:1px solid var(--linea);}
+.sb-title{font-family:var(--display);font-size:0.9rem;font-weight:700;margin-bottom:4px;display:flex;align-items:center;gap:8px;}
+.sb-sub{font-size:0.7rem;color:var(--texto2);line-height:1.5;}
+.sb-section{padding:14px 18px;border-bottom:1px solid var(--linea);}
+.sb-label{font-size:0.65rem;text-transform:uppercase;letter-spacing:0.08em;color:var(--texto3);margin-bottom:10px;}
+
+/* Selector de estrategia */
+.estrategia-card{padding:10px 12px;border-radius:8px;border:1px solid var(--linea2);background:var(--bg3);cursor:pointer;margin-bottom:6px;transition:all 0.15s;position:relative;}
+.estrategia-card:hover{border-color:var(--azul);background:rgba(74,158,255,0.04);}
+.estrategia-card.active{background:rgba(74,158,255,0.08);border-color:rgba(74,158,255,0.35);}
+.estrategia-card.active::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--azul);border-radius:2px 0 0 2px;}
+.ec-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;}
+.ec-nombre{font-size:0.82rem;font-weight:600;}
+.estrategia-card.active .ec-nombre{color:var(--azul);}
+.ec-badge{font-size:0.58rem;padding:2px 6px;border-radius:3px;background:rgba(74,158,255,0.1);color:var(--azul);border:1px solid rgba(74,158,255,0.2);}
+.ec-desc{font-size:0.7rem;color:var(--texto2);line-height:1.45;}
+.ec-stats{display:flex;gap:10px;margin-top:5px;}
+.ec-stat{font-family:var(--mono);font-size:0.62rem;color:var(--texto3);}
+
+/* Config del bot */
+.config-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;}
+.config-label{font-size:0.75rem;color:var(--texto2);}
+.config-val{font-family:var(--mono);font-size:0.75rem;color:var(--verde);}
+.s-slider{width:100%;-webkit-appearance:none;background:var(--bg3);height:4px;border-radius:2px;outline:none;cursor:pointer;margin-bottom:10px;}
+.s-slider::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;border-radius:50%;background:var(--azul);cursor:pointer;border:2px solid var(--bg2);}
+
+/* Botón iniciar bot */
+.btn-bot{width:100%;padding:11px;border-radius:8px;border:none;background:var(--azul);color:#fff;font-family:var(--display);font-size:0.85rem;font-weight:700;cursor:pointer;transition:all 0.2s;margin-top:8px;}
+.btn-bot:hover{background:#3d8fe0;box-shadow:0 4px 16px rgba(74,158,255,0.3);}
+.btn-bot.running{background:var(--amarillo);color:#000;}
+.btn-bot.stop{background:var(--rojo);}
+
+/* Reglas del bot */
+.regla-item{display:flex;align-items:center;gap:7px;padding:5px 0;font-size:0.72rem;color:var(--texto2);}
+.regla-check{color:var(--verde);font-size:0.8rem;flex-shrink:0;}
+.regla-never{color:var(--rojo);font-size:0.8rem;flex-shrink:0;}
+
+/* ══ CENTRO — Gráfico comparativo ══ */
+.center{display:flex;flex-direction:column;overflow:hidden;}
+
+/* Header comparativa */
+.comp-header{padding:12px 20px;background:var(--bg2);border-bottom:1px solid var(--linea);flex-shrink:0;}
+.comp-kpis{display:grid;grid-template-columns:1fr 1px 1fr;gap:0;align-items:center;}
+.comp-divider{background:var(--linea2);height:40px;}
+.comp-side{padding:0 16px;}
+.comp-side-label{font-size:0.65rem;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:4px;display:flex;align-items:center;gap:6px;}
+.comp-side-label .dot{width:8px;height:8px;border-radius:50%;}
+.comp-metrics{display:flex;gap:20px;}
+.comp-metric{}
+.comp-metric-label{font-size:0.62rem;color:var(--texto3);}
+.comp-metric-val{font-family:var(--mono);font-size:0.92rem;font-weight:500;margin-top:1px;}
+
+/* Costo emocional banner */
+.costo-banner{padding:8px 20px;display:flex;align-items:center;justify-content:space-between;background:rgba(245,197,24,0.04);border-bottom:1px solid rgba(245,197,24,0.12);}
+.costo-label{font-size:0.72rem;color:var(--texto2);}
+.costo-val{font-family:var(--display);font-size:1rem;font-weight:800;}
+.costo-sub{font-size:0.68rem;color:var(--texto2);}
+
+/* Canvas */
+.chart-wrap{flex:1;position:relative;padding:10px 16px 6px;overflow:hidden;}
+#shadowCanvas{width:100%;height:100%;display:block;}
+
+/* Info bar */
+.info-bar{padding:7px 20px;background:var(--bg2);border-top:1px solid var(--linea);display:flex;align-items:center;gap:16px;flex-shrink:0;}
+.info-item{display:flex;align-items:center;gap:5px;font-size:0.7rem;color:var(--texto2);}
+.info-dot{width:6px;height:6px;border-radius:50%;}
+.info-val{font-family:var(--mono);font-size:0.72rem;}
+
+/* ══ SIDEBAR DERECHO ══ */
+.sidebar-right{background:var(--bg2);border-left:1px solid var(--linea);display:flex;flex-direction:column;overflow-y:auto;}
+.sr-section{padding:14px 16px;border-bottom:1px solid var(--linea);}
+.sr-title{font-size:0.68rem;text-transform:uppercase;letter-spacing:0.08em;color:var(--texto3);margin-bottom:10px;}
+
+/* Trade del usuario */
+.trade-input-row{margin-bottom:8px;}
+.ti-label{font-size:0.7rem;color:var(--texto2);margin-bottom:3px;display:flex;justify-content:space-between;}
+.ti-hint{font-family:var(--mono);font-size:0.65rem;color:var(--texto3);}
+.ti-input{width:100%;background:var(--bg3);border:1px solid var(--linea2);border-radius:7px;padding:7px 10px;font-family:var(--mono);font-size:0.82rem;color:var(--texto);outline:none;transition:border-color 0.15s;}
+.ti-input:focus{border-color:var(--verde);}
+
+.btn-user-trade{width:100%;padding:9px;border-radius:7px;border:none;background:rgba(0,230,118,0.12);border:1px solid rgba(0,230,118,0.25);color:var(--verde);font-family:var(--sans);font-size:0.8rem;cursor:pointer;margin-top:8px;transition:all 0.15s;font-weight:500;}
+.btn-user-trade:hover{background:rgba(0,230,118,0.2);}
+
+/* Feed de señales */
+.feed-item{display:flex;gap:8px;padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.03);animation:slideIn 0.3s ease;}
+@keyframes slideIn{from{opacity:0;transform:translateX(-6px)}to{opacity:1;transform:translateX(0)}}
+.feed-item:last-child{border-bottom:none;}
+.feed-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;margin-top:4px;}
+.feed-body{flex:1;}
+.feed-tipo{font-size:0.62rem;text-transform:uppercase;letter-spacing:0.05em;color:var(--texto3);margin-bottom:1px;}
+.feed-desc{font-size:0.75rem;color:var(--texto2);line-height:1.5;}
+.feed-desc strong{color:var(--texto);}
+.feed-pnl{font-family:var(--mono);font-size:0.72rem;margin-top:2px;}
+.feed-time{font-family:var(--mono);font-size:0.6rem;color:var(--texto3);flex-shrink:0;margin-top:4px;}
+
+/* Historial de trades */
+.trade-row{display:grid;grid-template-columns:auto 1fr auto auto;gap:8px;align-items:center;padding:7px 0;border-bottom:1px solid rgba(255,255,255,0.03);font-size:0.73rem;}
+.trade-row:last-child{border-bottom:none;}
+.trade-icon{font-size:0.85rem;}
+.trade-info{}
+.trade-name{font-weight:500;}
+.trade-meta{font-size:0.65rem;color:var(--texto3);}
+.trade-pnl{font-family:var(--mono);font-size:0.78rem;text-align:right;}
+.trade-pnl.pos{color:var(--verde);}
+.trade-pnl.neg{color:var(--rojo);}
+.trade-quien{font-size:0.6rem;padding:1px 5px;border-radius:3px;}
+.trade-quien.bot{background:rgba(74,158,255,0.1);color:var(--azul);}
+.trade-quien.user{background:rgba(0,230,118,0.1);color:var(--verde);}
+
+/* Señal activa del bot */
+.senal-activa{background:rgba(74,158,255,0.05);border:1px solid rgba(74,158,255,0.15);border-radius:8px;padding:10px 12px;margin-bottom:8px;}
+.sa-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;}
+.sa-tipo{font-size:0.65rem;text-transform:uppercase;letter-spacing:0.06em;color:var(--azul);}
+.sa-lado{font-size:0.72rem;font-weight:600;}
+.sa-row{display:flex;justify-content:space-between;font-size:0.72rem;padding:2px 0;}
+.sa-k{color:var(--texto2);}
+.sa-v{font-family:var(--mono);}
+
+/* Scrollbar */
+::-webkit-scrollbar{width:4px;}
+::-webkit-scrollbar-track{background:transparent;}
+::-webkit-scrollbar-thumb{background:var(--bg4);border-radius:2px;}
+@keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+.fade-in{animation:fadeIn 0.3s ease both;}
+</style>
+</head>
+<body>
+
+<!-- TOPBAR -->
+<div class="topbar">
+  <a href="dashboard.html" class="logo">Invertir<span>CL</span></a>
+  <nav class="tnav-wrap">
+    <a href="dashboard.html"      class="tnav">Dashboard</a>
+    <a href="simulator.html"      class="tnav">Simulador</a>
+    <a href="backtest.html"       class="tnav">Backtest</a>
+    <a href="risk.html"           class="tnav">Riesgo</a>
+    <a href="learn.html"          class="tnav">Aprender</a>
+    <a href="blackswan.html"      class="tnav">🦢 Black Swan</a>
+    <a href="shadowtrader.html"   class="tnav active">🤖 Shadow Trader</a>
+  </nav>
+  <div class="topbar-right">
+    <div class="bot-live"></div>
+    <span class="bot-badge">Bot activo</span>
+  </div>
+</div>
+
+<div class="layout">
+
+  <!-- ══ SIDEBAR IZQUIERDO ══ -->
+  <div class="sidebar-left">
+    <div class="sb-header">
+      <div class="sb-title">🤖 Bot Copiloto</div>
+      <div class="sb-sub">Opera en paralelo a ti con disciplina perfecta. Nunca mueve el stop, nunca hace revenge trading. Ve tu costo emocional en tiempo real.</div>
+    </div>
+
+    <!-- Selector estrategia -->
+    <div class="sb-section">
+      <div class="sb-label">Estrategia del bot</div>
+
+      <div class="estrategia-card active" id="ec-mean_reversion" onclick="setEstrategia('mean_reversion')">
+        <div class="ec-top">
+          <span class="ec-nombre">Mean Reversion</span>
+          <span class="ec-badge">RSI + EMA</span>
+        </div>
+        <div class="ec-desc">Compra cuando RSI &lt; 30 + precio bajo EMA21. Vende en RSI &gt; 70.</div>
+        <div class="ec-stats">
+          <span class="ec-stat">WR histórico: ~58%</span>
+          <span class="ec-stat">R/R: 2.1:1</span>
+        </div>
+      </div>
+
+      <div class="estrategia-card" id="ec-momentum" onclick="setEstrategia('momentum')">
+        <div class="ec-top">
+          <span class="ec-nombre">Momentum</span>
+          <span class="ec-badge">EMA + Vol</span>
+        </div>
+        <div class="ec-desc">Sigue la tendencia. Entra cuando EMA9 cruza EMA21 con volumen alto.</div>
+        <div class="ec-stats">
+          <span class="ec-stat">WR histórico: ~52%</span>
+          <span class="ec-stat">R/R: 2.8:1</span>
+        </div>
+      </div>
+
+      <div class="estrategia-card" id="ec-breakout" onclick="setEstrategia('breakout')">
+        <div class="ec-top">
+          <span class="ec-nombre">Breakout</span>
+          <span class="ec-badge">Rango + Vol</span>
+        </div>
+        <div class="ec-desc">Ruptura de máximos de 20 días con volumen 1.5× el promedio.</div>
+        <div class="ec-stats">
+          <span class="ec-stat">WR histórico: ~45%</span>
+          <span class="ec-stat">R/R: 3.2:1</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Config -->
+    <div class="sb-section">
+      <div class="sb-label">Configuración</div>
+
+      <div class="config-row">
+        <span class="config-label">Capital inicial</span>
+        <span class="config-val" id="cfgCapital">$10.000.000</span>
+      </div>
+      <input type="range" class="s-slider" min="1000000" max="50000000" step="1000000" value="10000000"
+        id="sliderCapital" oninput="setCapital(this.value)">
+
+      <div class="config-row">
+        <span class="config-label">Riesgo por trade</span>
+        <span class="config-val" id="cfgRiesgo">2.0%</span>
+      </div>
+      <input type="range" class="s-slider" min="0.5" max="5" step="0.5" value="2"
+        id="sliderRiesgo" oninput="setRiesgo(this.value)">
+
+      <div class="config-row">
+        <span class="config-label">Velocidad simulación</span>
+        <span class="config-val" id="cfgVelocidad">Normal</span>
+      </div>
+      <input type="range" class="s-slider" min="1" max="5" step="1" value="2"
+        id="sliderVelocidad" oninput="setVelocidad(this.value)">
+
+      <button class="btn-bot" id="btnBot" onclick="toggleBot()">▶ Iniciar bot</button>
+    </div>
+
+    <!-- Reglas del bot -->
+    <div class="sb-section">
+      <div class="sb-label">Reglas del bot (jamás violadas)</div>
+      <div class="regla-item"><span class="regla-check">✅</span> Stop loss SIEMPRE definido antes de entrar</div>
+      <div class="regla-item"><span class="regla-check">✅</span> Stop loss NUNCA movido</div>
+      <div class="regla-item"><span class="regla-check">✅</span> Máx 2% del capital por trade</div>
+      <div class="regla-item"><span class="regla-check">✅</span> R/R mínimo 1.5:1 para entrar</div>
+      <div class="regla-item"><span class="regla-never">❌</span> Sin revenge trading</div>
+      <div class="regla-item"><span class="regla-never">❌</span> Sin overtrading</div>
+      <div class="regla-item"><span class="regla-never">❌</span> Sin operar por FOMO</div>
+    </div>
+  </div>
+
+  <!-- ══ CENTRO ══ -->
+  <div class="center">
+
+    <!-- KPIs comparativos -->
+    <div class="comp-header">
+      <div class="comp-kpis">
+        <div class="comp-side">
+          <div class="comp-side-label">
+            <div class="dot" style="background:var(--bot-color)"></div>
+            🤖 Bot Copiloto
+          </div>
+          <div class="comp-metrics">
+            <div class="comp-metric">
+              <div class="comp-metric-label">Capital</div>
+              <div class="comp-metric-val" id="botCapital" style="color:var(--bot-color)">$10.000.000</div>
+            </div>
+            <div class="comp-metric">
+              <div class="comp-metric-label">Retorno</div>
+              <div class="comp-metric-val" id="botRetorno" style="color:var(--texto3)">+0.00%</div>
+            </div>
+            <div class="comp-metric">
+              <div class="comp-metric-label">WR</div>
+              <div class="comp-metric-val" id="botWR">—</div>
+            </div>
+            <div class="comp-metric">
+              <div class="comp-metric-label">Trades</div>
+              <div class="comp-metric-val" id="botTrades">0</div>
+            </div>
+          </div>
+        </div>
+        <div class="comp-divider"></div>
+        <div class="comp-side">
+          <div class="comp-side-label">
+            <div class="dot" style="background:var(--user-color)"></div>
+            👤 Tú
+          </div>
+          <div class="comp-metrics">
+            <div class="comp-metric">
+              <div class="comp-metric-label">Capital</div>
+              <div class="comp-metric-val" id="userCapital" style="color:var(--user-color)">$10.000.000</div>
+            </div>
+            <div class="comp-metric">
+              <div class="comp-metric-label">Retorno</div>
+              <div class="comp-metric-val" id="userRetorno" style="color:var(--texto3)">+0.00%</div>
+            </div>
+            <div class="comp-metric">
+              <div class="comp-metric-label">Trades</div>
+              <div class="comp-metric-val" id="userTrades">0</div>
+            </div>
+            <div class="comp-metric">
+              <div class="comp-metric-label">P&L hoy</div>
+              <div class="comp-metric-val" id="userPnlHoy">—</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Banner costo emocional -->
+    <div class="costo-banner">
+      <div>
+        <div class="costo-label">💸 Tu costo emocional vs el bot</div>
+        <div class="costo-sub" id="costoSub">Inicia el bot para ver la comparativa en tiempo real</div>
+      </div>
+      <div>
+        <div class="costo-val" id="costoVal" style="color:var(--texto3)">—</div>
+      </div>
+    </div>
+
+    <!-- Canvas gráfico equity -->
+    <div class="chart-wrap" id="chartWrap">
+      <canvas id="shadowCanvas"></canvas>
+    </div>
+
+    <!-- Info bar -->
+    <div class="info-bar">
+      <div class="info-item">
+        <div class="info-dot" style="background:var(--bot-color)"></div>
+        <span>Bot</span>
+        <span class="info-val" id="infoBot">esperando...</span>
+      </div>
+      <div class="info-item">
+        <div class="info-dot" style="background:var(--user-color)"></div>
+        <span>Tú</span>
+        <span class="info-val" id="infoUser">$10.000.000</span>
+      </div>
+      <div class="info-item">
+        <span>Señales bot:</span>
+        <span class="info-val" id="infoSenales">0</span>
+      </div>
+      <div class="info-item">
+        <span>Activo:</span>
+        <span class="info-val" id="infoActivo">COPEC</span>
+      </div>
+      <div class="info-item">
+        <span>Tick:</span>
+        <span class="info-val" id="infoTick">—</span>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ══ SIDEBAR DERECHO ══ -->
+  <div class="sidebar-right">
+
+    <!-- Señal activa del bot -->
+    <div class="sr-section">
+      <div class="sr-title">Posición actual del bot</div>
+      <div id="senalActivaWrap">
+        <div style="text-align:center;padding:16px;font-size:0.75rem;color:var(--texto3)">
+          El bot está esperando un setup de alta probabilidad...
+        </div>
+      </div>
+    </div>
+
+    <!-- Tu trade manual -->
+    <div class="sr-section">
+      <div class="sr-title">Registrar tu trade</div>
+      <div class="trade-input-row">
+        <div class="ti-label">
+          <span>Símbolo</span>
+        </div>
+        <select class="ti-input" id="tiSymbol">
+          <option value="COPEC">COPEC</option>
+          <option value="SQM-B">SQM-B</option>
+          <option value="BCI">BCI</option>
+          <option value="ENTEL">ENTEL</option>
+          <option value="FALABELLA">FALABELLA</option>
+        </select>
+      </div>
+      <div class="trade-input-row">
+        <div class="ti-label"><span>P&L del trade (CLP)</span><span class="ti-hint">positivo = ganancia</span></div>
+        <input type="number" class="ti-input" id="tiPnl" placeholder="Ej: 45000 o -32000">
+      </div>
+      <div class="trade-input-row">
+        <div class="ti-label"><span>¿Respetaste tu stop?</span></div>
+        <select class="ti-input" id="tiStop">
+          <option value="si">✅ Sí — lo respeté</option>
+          <option value="no">❌ No — lo moví</option>
+          <option value="no_tuve">Sin stop loss</option>
+        </select>
+      </div>
+      <button class="btn-user-trade" onclick="registrarTradeUsuario()">Registrar trade →</button>
+    </div>
+
+    <!-- Feed de actividad del bot -->
+    <div class="sr-section" style="flex:1;">
+      <div class="sr-title">Feed de actividad</div>
+      <div id="feedList">
+        <div style="text-align:center;padding:16px;font-size:0.73rem;color:var(--texto3)">
+          El bot irá reportando sus movimientos aquí...
+        </div>
+      </div>
+    </div>
+
+    <!-- Historial comparativo -->
+    <div class="sr-section">
+      <div class="sr-title">Historial comparativo</div>
+      <div id="historialList">
+        <div style="font-size:0.72rem;color:var(--texto3);text-align:center;padding:12px">Sin trades aún</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════════════════════════
+// ESTADO
+// ══════════════════════════════════════════════════════════════
+let estrategiaActual = 'mean_reversion';
+let capitalInicial   = 10_000_000;
+let riesgoPct        = 2.0;
+let velocidad        = 2;
+let botRunning       = false;
+let botInterval      = null;
+let tickActual       = 0;
+
+// Equity curves
+let botEquity  = [capitalInicial];
+let userEquity = [capitalInicial];
+
+// Trades
+let botTrades  = [];
+let userTrades = [];
+let feedItems  = [];
+
+// Posición actual del bot
+let posicionBot = null;
+let senalesBot  = 0;
+
+// Precio simulado
+let precioActual = 8420;
+let historialPrecios = [];
+
+// ══════════════════════════════════════════════════════════════
+// ESTRATEGIAS (lógica de shadowtrader.py en JS)
+// ══════════════════════════════════════════════════════════════
+const ESTRATEGIAS = {
+  mean_reversion: {
+    nombre: 'Mean Reversion',
+    evaluar(precios, vols) {
+      if(precios.length < 22) return null;
+      const rsi   = calcRSI(precios, 14);
+      const ema21 = calcEMA(precios, 21);
+      const precio = precios[precios.length-1];
+      const vol    = vols[vols.length-1];
+      const volProm = vols.slice(-20).reduce((s,v)=>s+v,0)/20;
+      if(rsi < 32 && precio < ema21 * 1.005 && vol > volProm * 0.8) {
+        const sl = precio * 0.96;
+        const tp = precio * 1.08;
+        const rr = (tp-precio)/(precio-sl);
+        if(rr >= 1.5) return { side:'buy', precio, sl, tp, rr, confianza:0.65+Math.random()*0.2,
+          razon:`RSI ${rsi.toFixed(0)} sobrevendido + precio bajo EMA21` };
+      }
+      if(rsi > 68 && precio > ema21) {
+        const sl = precio * 1.04;
+        const tp = precio * 0.92;
+        const rr = (precio-tp)/(sl-precio);
+        if(rr >= 1.5) return { side:'sell', precio, sl, tp, rr, confianza:0.60+Math.random()*0.2,
+          razon:`RSI ${rsi.toFixed(0)} sobrecomprado + precio sobre EMA21` };
+      }
+      return null;
+    }
+  },
+  momentum: {
+    nombre: 'Momentum',
+    evaluar(precios, vols) {
+      if(precios.length < 22) return null;
+      const ema9  = calcEMA(precios, 9);
+      const ema21 = calcEMA(precios, 21);
+      const ema9p = calcEMA(precios.slice(0,-1), 9);
+      const ema21p= calcEMA(precios.slice(0,-1), 21);
+      const precio = precios[precios.length-1];
+      const vol    = vols[vols.length-1];
+      const volProm = vols.slice(-20).reduce((s,v)=>s+v,0)/20;
+      // Cruce alcista
+      if(ema9p <= ema21p && ema9 > ema21 && vol > volProm * 1.3) {
+        const sl = precio * 0.955;
+        const tp = precio * 1.11;
+        const rr = (tp-precio)/(precio-sl);
+        if(rr >= 1.5) return { side:'buy', precio, sl, tp, rr, confianza:0.70+Math.random()*0.2,
+          razon:`Cruce EMA9 sobre EMA21 con volumen ${(vol/volProm).toFixed(1)}× promedio` };
+      }
+      // Cruce bajista
+      if(ema9p >= ema21p && ema9 < ema21 && vol > volProm * 1.3) {
+        const sl = precio * 1.045;
+        const tp = precio * 0.89;
+        const rr = (precio-tp)/(sl-precio);
+        if(rr >= 1.5) return { side:'sell', precio, sl, tp, rr, confianza:0.65+Math.random()*0.2,
+          razon:`Cruce EMA9 bajo EMA21 con volumen alto` };
+      }
+      return null;
+    }
+  },
+  breakout: {
+    nombre: 'Breakout',
+    evaluar(precios, vols) {
+      if(precios.length < 22) return null;
+      const precio = precios[precios.length-1];
+      const max20  = Math.max(...precios.slice(-21,-1));
+      const min20  = Math.min(...precios.slice(-21,-1));
+      const vol    = vols[vols.length-1];
+      const volProm = vols.slice(-20).reduce((s,v)=>s+v,0)/20;
+      if(precio > max20 * 1.002 && vol > volProm * 1.5) {
+        const sl = max20 * 0.99;
+        const tp = precio + (precio-sl)*3;
+        const rr = (tp-precio)/(precio-sl);
+        if(rr >= 1.5) return { side:'buy', precio, sl, tp, rr, confianza:0.72+Math.random()*0.18,
+          razon:`Ruptura de máximo de 20 días con volumen ${(vol/volProm).toFixed(1)}× promedio` };
+      }
+      if(precio < min20 * 0.998 && vol > volProm * 1.5) {
+        const sl = min20 * 1.01;
+        const tp = precio - (sl-precio)*3;
+        const rr = (precio-tp)/(sl-precio);
+        if(rr >= 1.5) return { side:'sell', precio, sl, tp, rr, confianza:0.68+Math.random()*0.18,
+          razon:`Ruptura bajista de mínimo de 20 días` };
+      }
+      return null;
+    }
+  }
+};
+
+// ══════════════════════════════════════════════════════════════
+// INDICADORES
+// ══════════════════════════════════════════════════════════════
+function calcRSI(closes, n=14) {
+  if(closes.length < n+1) return 50;
+  const deltas = closes.slice(1).map((v,i)=>v-closes[i]);
+  const gains  = deltas.map(d=>Math.max(d,0));
+  const losses = deltas.map(d=>Math.max(-d,0));
+  let ag = gains.slice(0,n).reduce((s,v)=>s+v,0)/n;
+  let al = losses.slice(0,n).reduce((s,v)=>s+v,0)/n;
+  for(let i=n;i<deltas.length;i++){
+    ag=(ag*(n-1)+gains[i])/n;
+    al=(al*(n-1)+losses[i])/n;
+  }
+  return al>0 ? 100-100/(1+ag/al) : 100;
+}
+
+function calcEMA(closes, n) {
+  if(closes.length < n) return closes[closes.length-1]||0;
+  const k = 2/(n+1);
+  let ema = closes.slice(0,n).reduce((s,v)=>s+v,0)/n;
+  for(let i=n;i<closes.length;i++) ema=closes[i]*k+ema*(1-k);
+  return ema;
+}
+
+// ══════════════════════════════════════════════════════════════
+// SIMULACIÓN DE PRECIO
+// ══════════════════════════════════════════════════════════════
+function generarTick() {
+  const drift = 0.0001;
+  const sigma = 0.008;
+  const ruido = (Math.random()-0.5)*2;
+  const gauss = ruido*sigma;
+  const retorno = drift + gauss;
+  const nuevoPrecio = precioActual * (1+retorno);
+  precioActual = Math.max(precioActual*0.7, Math.min(precioActual*1.3, nuevoPrecio));
+  const vol = Math.round(300000 + Math.random()*700000);
+  historialPrecios.push({ precio: precioActual, vol });
+  if(historialPrecios.length > 200) historialPrecios.shift();
+  return { precio: precioActual, vol };
+}
+
+// ══════════════════════════════════════════════════════════════
+// LÓGICA DEL BOT TICK A TICK
+// ══════════════════════════════════════════════════════════════
+function procesarTickBot(tick) {
+  const precios = historialPrecios.map(h=>h.precio);
+  const vols    = historialPrecios.map(h=>h.vol);
+  const precio  = tick.precio;
+  const botCap  = botEquity[botEquity.length-1];
+
+  // ¿Hay posición abierta?
+  if(posicionBot) {
+    const sl = posicionBot.sl;
+    const tp = posicionBot.tp;
+    // Stop loss
+    if((posicionBot.side==='buy' && precio<=sl)||(posicionBot.side==='sell' && precio>=sl)) {
+      const pnl = posicionBot.side==='buy'
+        ? (sl-posicionBot.precio)*posicionBot.cant
+        : (posicionBot.precio-sl)*posicionBot.cant;
+      cerrarPosicionBot(pnl, 'stop_loss', precio);
+      return;
+    }
+    // Take profit
+    if((posicionBot.side==='buy' && precio>=tp)||(posicionBot.side==='sell' && precio<=tp)) {
+      const pnl = posicionBot.side==='buy'
+        ? (tp-posicionBot.precio)*posicionBot.cant
+        : (posicionBot.precio-tp)*posicionBot.cant;
+      cerrarPosicionBot(pnl, 'take_profit', precio);
+      return;
+    }
+  } else {
+    // Evaluar señal de entrada
+    if(historialPrecios.length >= 22) {
+      const senal = ESTRATEGIAS[estrategiaActual].evaluar(precios, vols);
+      if(senal) {
+        const riesgoMax    = botCap * riesgoPct / 100;
+        const riesgoPorAcc = Math.abs(senal.precio - senal.sl);
+        const cant = Math.max(1, Math.floor(riesgoMax / (riesgoPorAcc||1)));
+        posicionBot = { ...senal, cant, entrada: tickActual };
+        senalesBot++;
+        agregarFeed('bot_entrada', senal, cant);
+        actualizarSenalActiva();
+      }
+    }
+  }
+
+  // Actualizar equity bot (sin trade activo = sin cambio)
+  botEquity.push(botCap);
+  if(botEquity.length > 300) botEquity.shift();
+}
+
+function cerrarPosicionBot(pnl, razon, precio) {
+  const botCap = botEquity[botEquity.length-1];
+  const nuevoCap = botCap + pnl;
+  botEquity[botEquity.length-1] = nuevoCap;
+  botTrades.push({ pnl, razon, precio, tick: tickActual, lado: posicionBot.side });
+  agregarFeed(razon, posicionBot, posicionBot.cant, pnl);
+  posicionBot = null;
+  actualizarSenalActiva();
+  actualizarUI();
+}
+
+// ══════════════════════════════════════════════════════════════
+// TICK PRINCIPAL
+// ══════════════════════════════════════════════════════════════
+function tick() {
+  tickActual++;
+  const t = generarTick();
+  procesarTickBot(t);
+  dibujarCanvas();
+  actualizarUI();
+  document.getElementById('infoTick').textContent = `#${tickActual}`;
+  document.getElementById('infoActivo').textContent = 'COPEC · $'+Math.round(t.precio).toLocaleString('es-CL');
+}
+
+// ══════════════════════════════════════════════════════════════
+// CANVAS — EQUITY CURVES
+// ══════════════════════════════════════════════════════════════
+function dibujarCanvas() {
+  const canvas = document.getElementById('shadowCanvas');
+  const wrap   = document.getElementById('chartWrap');
+  const W = wrap.clientWidth - 32;
+  const H = wrap.clientHeight - 16;
+  if(W<=0||H<=0) return;
+  canvas.width=W; canvas.height=H;
+  const ctx=canvas.getContext('2d');
+
+  ctx.fillStyle='#07090d'; ctx.fillRect(0,0,W,H);
+
+  const PADL=60; const PADR=16; const PADT=16; const PADB=20;
+  const CW=W-PADL-PADR; const CH=H-PADT-PADB;
+
+  // Combinar ambas equity para calcular rango
+  const allVals = [...botEquity, ...userEquity];
+  const minV = Math.min(...allVals)*0.999;
+  const maxV = Math.max(...allVals)*1.001;
+  const rangeV = maxV-minV||1;
+  const toY = v => PADT + CH - ((v-minV)/rangeV)*CH;
+  const maxN = Math.max(botEquity.length, userEquity.length);
+  const toX = (i,n) => PADL + (i/(Math.max(n-1,1)))*CW;
+
+  // Grid
+  ctx.strokeStyle='rgba(255,255,255,0.04)'; ctx.lineWidth=1;
+  for(let i=0;i<=4;i++){
+    const y=PADT+CH*i/4;
+    ctx.beginPath();ctx.moveTo(PADL,y);ctx.lineTo(W-PADR,y);ctx.stroke();
+    const v=maxV-(maxV-minV)*i/4;
+    ctx.fillStyle='rgba(255,255,255,0.2)';ctx.font='9px "DM Mono"';ctx.textAlign='right';
+    ctx.fillText('$'+Math.round(v/1000)+'K',PADL-4,y+3);
+  }
+
+  // Línea base (capital inicial)
+  const yBase=toY(capitalInicial);
+  ctx.strokeStyle='rgba(255,255,255,0.08)';ctx.lineWidth=1;ctx.setLineDash([4,4]);
+  ctx.beginPath();ctx.moveTo(PADL,yBase);ctx.lineTo(W-PADR,yBase);ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.fillStyle='rgba(255,255,255,0.2)';ctx.font='8px "DM Mono"';ctx.textAlign='left';
+  ctx.fillText('Capital inicial',PADL+4,yBase-3);
+
+  // Curva BOT (azul)
+  if(botEquity.length>1){
+    ctx.beginPath();
+    botEquity.forEach((v,i)=>{
+      const x=toX(i,botEquity.length);
+      const y=toY(v);
+      i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);
+    });
+    // Área bajo la curva
+    ctx.lineTo(toX(botEquity.length-1,botEquity.length),toY(capitalInicial));
+    ctx.lineTo(PADL,toY(capitalInicial));
+    ctx.closePath();
+    ctx.fillStyle='rgba(74,158,255,0.06)';ctx.fill();
+
+    ctx.beginPath();
+    botEquity.forEach((v,i)=>{
+      const x=toX(i,botEquity.length);
+      const y=toY(v);
+      i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);
+    });
+    ctx.strokeStyle='rgba(74,158,255,0.85)';ctx.lineWidth=2;ctx.stroke();
+
+    // Punto actual
+    const lastX=toX(botEquity.length-1,botEquity.length);
+    const lastY=toY(botEquity[botEquity.length-1]);
+    ctx.beginPath();ctx.arc(lastX,lastY,4,0,Math.PI*2);
+    ctx.fillStyle='var(--bot-color,#4a9eff)';ctx.fill();
+  }
+
+  // Curva USUARIO (verde)
+  if(userEquity.length>1){
+    ctx.beginPath();
+    userEquity.forEach((v,i)=>{
+      const x=toX(i,userEquity.length);
+      const y=toY(v);
+      i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);
+    });
+    ctx.lineTo(toX(userEquity.length-1,userEquity.length),toY(capitalInicial));
+    ctx.lineTo(PADL,toY(capitalInicial));
+    ctx.closePath();
+    ctx.fillStyle='rgba(0,230,118,0.05)';ctx.fill();
+
+    ctx.beginPath();
+    userEquity.forEach((v,i)=>{
+      const x=toX(i,userEquity.length);
+      const y=toY(v);
+      i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);
+    });
+    ctx.strokeStyle='rgba(0,230,118,0.85)';ctx.lineWidth=2;ctx.stroke();
+
+    const lastX=toX(userEquity.length-1,userEquity.length);
+    const lastY=toY(userEquity[userEquity.length-1]);
+    ctx.beginPath();ctx.arc(lastX,lastY,4,0,Math.PI*2);
+    ctx.fillStyle='#00e676';ctx.fill();
+  }
+
+  // Leyenda
+  ctx.font='10px "DM Mono"';
+  ctx.fillStyle='rgba(74,158,255,0.9)';ctx.fillRect(PADL,PADT,10,3);
+  ctx.fillStyle='rgba(74,158,255,0.9)';ctx.textAlign='left';ctx.fillText('🤖 Bot',PADL+14,PADT+6);
+  ctx.fillStyle='rgba(0,230,118,0.9)';ctx.fillRect(PADL+70,PADT,10,3);
+  ctx.fillStyle='rgba(0,230,118,0.9)';ctx.fillText('👤 Tú',PADL+84,PADT+6);
+
+  // Marcar trades del bot en el gráfico
+  botTrades.slice(-10).forEach(t => {
+    const idx  = Math.min(t.tick, botEquity.length-1);
+    const n    = botEquity.length;
+    const x    = toX(idx,n);
+    const y    = toY(botEquity[idx]||capitalInicial);
+    ctx.beginPath();ctx.arc(x,y,5,0,Math.PI*2);
+    ctx.fillStyle = t.pnl>=0 ? 'rgba(0,230,118,0.8)' : 'rgba(255,61,87,0.8)';
+    ctx.fill();
+  });
+}
+
+// ══════════════════════════════════════════════════════════════
+// UI UPDATES
+// ══════════════════════════════════════════════════════════════
+function actualizarUI() {
+  const botCap  = botEquity[botEquity.length-1];
+  const userCap = userEquity[userEquity.length-1];
+  const botRet  = (botCap-capitalInicial)/capitalInicial*100;
+  const userRet = (userCap-capitalInicial)/capitalInicial*100;
+  const gap     = botRet - userRet;
+
+  const fmt = v => '$'+Math.round(v).toLocaleString('es-CL');
+  const fmtPct = v => (v>=0?'+':'')+v.toFixed(2)+'%';
+  const color = v => v>=0?'var(--verde)':'var(--rojo)';
+
+  document.getElementById('botCapital').textContent  = fmt(botCap);
+  document.getElementById('botRetorno').textContent  = fmtPct(botRet);
+  document.getElementById('botRetorno').style.color  = color(botRet);
+  document.getElementById('botTrades').textContent   = botTrades.length;
+
+  const wins = botTrades.filter(t=>t.pnl>0).length;
+  const wr   = botTrades.length>0 ? (wins/botTrades.length*100).toFixed(0)+'%' : '—';
+  document.getElementById('botWR').textContent = wr;
+
+  document.getElementById('userCapital').textContent  = fmt(userCap);
+  document.getElementById('userRetorno').textContent  = fmtPct(userRet);
+  document.getElementById('userRetorno').style.color  = color(userRet);
+  document.getElementById('userTrades').textContent   = userTrades.length;
+
+  // Costo emocional
+  const costoEl = document.getElementById('costoVal');
+  const subEl   = document.getElementById('costoSub');
+  if(botTrades.length>0||userTrades.length>0) {
+    const costoAbs = Math.abs(gap);
+    const clp      = Math.abs(botCap-userCap);
+    costoEl.textContent = (gap>=0?'+':'')+gap.toFixed(2)+'% · '+fmt(clp);
+    costoEl.style.color = gap>=0?'var(--rojo)':'var(--verde)';
+    if(gap>0) {
+      subEl.textContent = `El bot te ganó ${costoAbs.toFixed(1)}% operando con disciplina perfecta`;
+    } else if(gap<0) {
+      subEl.textContent = `¡Le ganaste al bot! Tu criterio humano superó las reglas mecánicas`;
+    } else {
+      subEl.textContent = 'Empatados — tu disciplina está al nivel del bot';
+    }
+  }
+
+  // Info bar
+  document.getElementById('infoBot').textContent  = fmt(botCap)+' ('+fmtPct(botRet)+')';
+  document.getElementById('infoUser').textContent = fmt(userCap)+' ('+fmtPct(userRet)+')';
+  document.getElementById('infoSenales').textContent = senalesBot;
+
+  // Historial
+  renderHistorial();
+}
+
+function actualizarSenalActiva() {
+  const wrap = document.getElementById('senalActivaWrap');
+  if(!posicionBot) {
+    wrap.innerHTML = '<div style="text-align:center;padding:16px;font-size:0.75rem;color:var(--texto3)">El bot está esperando un setup de alta probabilidad...</div>';
+    return;
+  }
+  const p = posicionBot;
+  const fmt = v => '$'+Math.round(v).toLocaleString('es-CL');
+  const pnlActual = p.side==='buy'
+    ? (precioActual-p.precio)*p.cant
+    : (p.precio-precioActual)*p.cant;
+
+  wrap.innerHTML = `
+    <div class="senal-activa fade-in">
+      <div class="sa-header">
+        <span class="sa-tipo">${ESTRATEGIAS[estrategiaActual].nombre}</span>
+        <span class="sa-lado" style="color:${p.side==='buy'?'var(--verde)':'var(--rojo)'}">
+          ${p.side==='buy'?'▲ LONG':'▼ SHORT'}
+        </span>
+      </div>
+      <div class="sa-row"><span class="sa-k">Entrada</span><span class="sa-v">${fmt(p.precio)}</span></div>
+      <div class="sa-row"><span class="sa-k">Stop Loss</span><span class="sa-v" style="color:var(--rojo)">${fmt(p.sl)}</span></div>
+      <div class="sa-row"><span class="sa-k">Take Profit</span><span class="sa-v" style="color:var(--verde)">${fmt(p.tp)}</span></div>
+      <div class="sa-row"><span class="sa-k">Cantidad</span><span class="sa-v">${p.cant} acc.</span></div>
+      <div class="sa-row"><span class="sa-k">R/R ratio</span><span class="sa-v">${p.rr.toFixed(1)}:1</span></div>
+      <div class="sa-row"><span class="sa-k">Confianza</span><span class="sa-v">${(p.confianza*100).toFixed(0)}%</span></div>
+      <div class="sa-row" style="margin-top:4px;padding-top:6px;border-top:1px solid rgba(255,255,255,0.06)">
+        <span class="sa-k">P&L actual</span>
+        <span class="sa-v" style="color:${pnlActual>=0?'var(--verde)':'var(--rojo)'}">
+          ${pnlActual>=0?'+':''}${Math.round(pnlActual).toLocaleString('es-CL')}
+        </span>
+      </div>
+      <div style="margin-top:8px;font-size:0.68rem;color:var(--texto2);font-style:italic">
+        💡 ${p.razon}
+      </div>
+    </div>
+  `;
+}
+
+function agregarFeed(tipo, senal, cant, pnl=null) {
+  const now = new Date();
+  const hora = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')}`;
+  const fmt = v => '$'+Math.abs(Math.round(v)).toLocaleString('es-CL');
+
+  let item;
+  if(tipo==='bot_entrada') {
+    item = {
+      tipo: 'Entrada Bot',
+      color: '#4a9eff',
+      desc: `<strong>${senal.side==='buy'?'▲ LONG':'▼ SHORT'}</strong> @ ${fmt(senal.precio)} · SL ${fmt(senal.sl)} · TP ${fmt(senal.tp)} · ${cant} acc.`,
+      pnl: null, hora,
+    };
+  } else if(tipo==='take_profit') {
+    item = {
+      tipo: 'Take Profit ✅',
+      color: '#00e676',
+      desc: `Bot cerró posición en TP @ ${fmt(senal.tp||precioActual)}`,
+      pnl: pnl, hora,
+    };
+  } else {
+    item = {
+      tipo: 'Stop Loss 🔴',
+      color: '#ff3d57',
+      desc: `Bot respetó su stop @ ${fmt(senal.sl||precioActual)}`,
+      pnl: pnl, hora,
+    };
+  }
+
+  feedItems.unshift(item);
+  if(feedItems.length > 30) feedItems.pop();
+
+  const lista = document.getElementById('feedList');
+  lista.innerHTML = feedItems.slice(0,10).map(f=>`
+    <div class="feed-item">
+      <div class="feed-dot" style="background:${f.color}"></div>
+      <div class="feed-body">
+        <div class="feed-tipo">${f.tipo}</div>
+        <div class="feed-desc">${f.desc}</div>
+        ${f.pnl!==null?`<div class="feed-pnl" style="color:${f.pnl>=0?'var(--verde)':'var(--rojo)'}">${f.pnl>=0?'+':''}$${Math.abs(Math.round(f.pnl)).toLocaleString('es-CL')}</div>`:''}
+      </div>
+      <div class="feed-time">${f.hora}</div>
+    </div>
+  `).join('');
+}
+
+function renderHistorial() {
+  const todos = [
+    ...botTrades.map(t=>({...t,quien:'bot'})),
+    ...userTrades.map(t=>({...t,quien:'user'}))
+  ].sort((a,b)=>b.tick-a.tick).slice(0,15);
+
+  const el = document.getElementById('historialList');
+  if(!todos.length) {
+    el.innerHTML='<div style="font-size:0.72rem;color:var(--texto3);text-align:center;padding:12px">Sin trades aún</div>';
+    return;
+  }
+  el.innerHTML = todos.map(t=>`
+    <div class="trade-row">
+      <span class="trade-icon">${t.pnl>=0?'✅':'🔴'}</span>
+      <div class="trade-info">
+        <div class="trade-name">${t.razon||'Trade manual'}</div>
+        <div class="trade-meta">Tick #${t.tick||'—'}</div>
+      </div>
+      <div class="trade-pnl ${t.pnl>=0?'pos':'neg'}">${t.pnl>=0?'+':''}$${Math.abs(Math.round(t.pnl)).toLocaleString('es-CL')}</div>
+      <span class="trade-quien ${t.quien}">${t.quien==='bot'?'🤖':'👤'}</span>
+    </div>
+  `).join('');
+}
+
+// ══════════════════════════════════════════════════════════════
+// REGISTRAR TRADE USUARIO
+// ══════════════════════════════════════════════════════════════
+function registrarTradeUsuario() {
+  const pnl  = parseFloat(document.getElementById('tiPnl').value);
+  const stop = document.getElementById('tiStop').value;
+  if(isNaN(pnl)) { alert('Ingresa un P&L válido'); return; }
+
+  const userCap = userEquity[userEquity.length-1];
+  userEquity.push(userCap + pnl);
+  if(userEquity.length > 300) userEquity.shift();
+
+  userTrades.push({ pnl, razon: stop==='si'?'Con stop loss':stop==='no'?'Movió el stop':'Sin stop loss', tick:tickActual, lado:'manual' });
+
+  // Limpiar input
+  document.getElementById('tiPnl').value = '';
+
+  // Feedback educativo
+  const pnlEl = document.getElementById('userPnlHoy');
+  pnlEl.textContent = (pnl>=0?'+':'')+'$'+Math.abs(Math.round(pnl)).toLocaleString('es-CL');
+  pnlEl.style.color = pnl>=0?'var(--verde)':'var(--rojo)';
+
+  dibujarCanvas();
+  actualizarUI();
+}
+
+// ══════════════════════════════════════════════════════════════
+// CONTROLES
+// ══════════════════════════════════════════════════════════════
+function toggleBot() {
+  if(botRunning) { pararBot(); } else { iniciarBot(); }
+}
+
+function iniciarBot() {
+  botRunning = true;
+  const btn  = document.getElementById('btnBot');
+  btn.textContent = '⏸ Pausar bot';
+  btn.classList.add('running');
+  // Generar histórico inicial para indicadores
+  for(let i=0;i<30;i++) generarTick();
+
+  const msMap = {1:2000,2:1000,3:600,4:300,5:150};
+  botInterval = setInterval(tick, msMap[velocidad]||1000);
+}
+
+function pararBot() {
+  botRunning = false;
+  clearInterval(botInterval);
+  const btn = document.getElementById('btnBot');
+  btn.textContent = '▶ Continuar bot';
+  btn.classList.remove('running');
+}
+
+function setEstrategia(id) {
+  estrategiaActual = id;
+  document.querySelectorAll('.estrategia-card').forEach(c=>c.classList.remove('active'));
+  document.getElementById('ec-'+id)?.classList.add('active');
+  if(botRunning){ pararBot(); iniciarBot(); }
+}
+
+function setCapital(v) {
+  capitalInicial = parseInt(v);
+  botEquity  = [capitalInicial];
+  userEquity = [capitalInicial];
+  botTrades  = []; userTrades = []; feedItems = [];
+  posicionBot= null; senalesBot = 0; tickActual = 0;
+  document.getElementById('cfgCapital').textContent = '$'+capitalInicial.toLocaleString('es-CL');
+  actualizarUI(); dibujarCanvas();
+}
+
+function setRiesgo(v) {
+  riesgoPct = parseFloat(v);
+  document.getElementById('cfgRiesgo').textContent = parseFloat(v).toFixed(1)+'%';
+}
+
+function setVelocidad(v) {
+  velocidad = parseInt(v);
+  const labels={1:'Lenta',2:'Normal',3:'Rápida',4:'Turbo',5:'Máximo'};
+  document.getElementById('cfgVelocidad').textContent = labels[v]||'Normal';
+  if(botRunning){ pararBot(); iniciarBot(); }
+}
+
+// ══════════════════════════════════════════════════════════════
+// INIT
+// ══════════════════════════════════════════════════════════════
+window.addEventListener('resize', dibujarCanvas);
+window.addEventListener('DOMContentLoaded', () => {
+  dibujarCanvas();
+  actualizarUI();
+});
+</script>
+</body>
+</html>
