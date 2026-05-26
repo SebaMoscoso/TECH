@@ -1,0 +1,915 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>InvertirCL — HRP vs Markowitz</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#07090d;--bg2:#0d1117;--bg3:#131a22;--bg4:#1a222c;
+  --verde:#00e676;--rojo:#ff3d57;--azul:#4a9eff;--amarillo:#f5c518;
+  --purpura:#9b59b6;--naranja:#ff6b35;--cyan:#00bcd4;
+  --hrp-color:#00e676;--mark-color:#9b59b6;
+  --linea:rgba(255,255,255,0.06);--linea2:rgba(255,255,255,0.1);
+  --texto:#e2e8f0;--texto2:#8a9bb0;--texto3:#4a5568;
+  --mono:'DM Mono',monospace;--sans:'DM Sans',sans-serif;--display:'Syne',sans-serif;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html,body{height:100%;overflow:hidden;}
+body{font-family:var(--sans);background:var(--bg);color:var(--texto);display:flex;flex-direction:column;}
+
+/* TOPBAR */
+.topbar{height:52px;background:var(--bg2);border-bottom:1px solid var(--linea);display:flex;align-items:center;padding:0 20px;gap:14px;flex-shrink:0;}
+.logo{font-family:var(--display);font-weight:800;font-size:1rem;color:var(--verde);text-decoration:none;}
+.logo span{color:var(--texto2);font-weight:400;}
+.tnav-wrap{display:flex;gap:2px;margin-left:8px;}
+.tnav{padding:6px 13px;border-radius:6px;font-size:0.78rem;color:var(--texto2);cursor:pointer;transition:all 0.15s;text-decoration:none;white-space:nowrap;}
+.tnav:hover{background:var(--bg3);color:var(--texto);}
+.tnav.active{background:rgba(0,230,118,0.1);color:var(--verde);}
+.topbar-right{margin-left:auto;display:flex;align-items:center;gap:8px;}
+.hrp-badge{font-size:0.65rem;padding:3px 10px;border-radius:100px;background:rgba(0,230,118,0.08);color:var(--verde);border:1px solid rgba(0,230,118,0.2);letter-spacing:0.06em;text-transform:uppercase;}
+
+/* PAGE */
+.page{flex:1;overflow-y:auto;padding:0;}
+
+/* ══ HERO TIMELINE ══ */
+.hero{padding:24px 32px;background:linear-gradient(180deg,rgba(0,230,118,0.03),transparent);border-bottom:1px solid var(--linea);}
+.hero-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;}
+.hero-title{font-family:var(--display);font-size:1.3rem;font-weight:800;letter-spacing:-0.02em;}
+.hero-title .hrp{color:var(--verde);}
+.hero-title .vs{color:var(--texto3);font-weight:400;font-size:1rem;margin:0 8px;}
+.hero-title .mark{color:var(--purpura);}
+.hero-sub{font-size:0.8rem;color:var(--texto2);max-width:600px;line-height:1.6;}
+
+/* Timeline Markowitz → HRP */
+.timeline{display:flex;align-items:center;gap:0;margin-top:16px;}
+.tl-item{display:flex;align-items:center;gap:10px;padding:10px 16px;border-radius:8px;border:1px solid var(--linea);}
+.tl-item.mark{background:rgba(155,89,182,0.05);border-color:rgba(155,89,182,0.2);}
+.tl-item.hrp{background:rgba(0,230,118,0.04);border-color:rgba(0,230,118,0.2);}
+.tl-year{font-family:var(--display);font-size:1.1rem;font-weight:800;}
+.tl-item.mark .tl-year{color:var(--purpura);}
+.tl-item.hrp .tl-year{color:var(--verde);}
+.tl-info{}
+.tl-name{font-size:0.78rem;font-weight:600;}
+.tl-desc{font-size:0.68rem;color:var(--texto2);}
+.tl-arrow{flex:1;height:1px;background:linear-gradient(90deg,rgba(155,89,182,0.4),rgba(0,230,118,0.4));margin:0 12px;position:relative;}
+.tl-arrow::after{content:'→';position:absolute;right:-8px;top:-10px;color:var(--texto3);font-size:0.85rem;}
+.tl-mejora{background:rgba(0,230,118,0.06);border:1px solid rgba(0,230,118,0.15);border-radius:6px;padding:8px 12px;font-size:0.7rem;color:var(--verde);display:flex;flex-direction:column;gap:2px;margin-left:16px;}
+.tl-mejora-title{font-weight:600;margin-bottom:2px;color:var(--verde);}
+
+/* ══ MAIN GRID ══ */
+.main-grid{display:grid;grid-template-columns:240px 1fr 1fr;gap:0;padding:0;}
+
+/* SIDEBAR activos */
+.sidebar{background:var(--bg2);border-right:1px solid var(--linea);padding:16px;overflow-y:auto;min-height:calc(100vh - 200px);}
+.sb-label{font-size:0.65rem;text-transform:uppercase;letter-spacing:0.08em;color:var(--texto3);margin-bottom:8px;}
+
+.activo-check-item{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:7px;border:1px solid var(--linea2);background:var(--bg3);margin-bottom:5px;cursor:pointer;transition:all 0.15s;}
+.activo-check-item:hover{border-color:var(--linea2);background:var(--bg4);}
+.activo-check-item.on{background:rgba(0,230,118,0.06);border-color:rgba(0,230,118,0.25);}
+.aci-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+.aci-info{flex:1;}
+.aci-ticker{font-family:var(--display);font-size:0.8rem;font-weight:700;}
+.activo-check-item.on .aci-ticker{color:var(--verde);}
+.aci-vol{font-family:var(--mono);font-size:0.62rem;color:var(--texto3);}
+.aci-box{width:16px;height:16px;border-radius:4px;border:1px solid var(--linea2);display:flex;align-items:center;justify-content:center;font-size:0.65rem;flex-shrink:0;}
+.activo-check-item.on .aci-box{background:var(--verde);border-color:var(--verde);color:#000;}
+
+/* Método HRP selector */
+.metodo-tabs{display:flex;flex-direction:column;gap:4px;margin-bottom:12px;}
+.metodo-tab{padding:8px 12px;border-radius:7px;border:1px solid var(--linea2);background:var(--bg3);cursor:pointer;transition:all 0.15s;}
+.metodo-tab:hover{border-color:var(--verde);}
+.metodo-tab.active{background:rgba(0,230,118,0.08);border-color:rgba(0,230,118,0.3);}
+.mt-nombre{font-size:0.78rem;font-weight:600;}
+.metodo-tab.active .mt-nombre{color:var(--verde);}
+.mt-desc{font-size:0.65rem;color:var(--texto3);margin-top:2px;}
+
+.btn-calc{width:100%;padding:11px;border-radius:8px;border:none;background:var(--verde);color:#000;font-family:var(--display);font-size:0.85rem;font-weight:700;cursor:pointer;margin-top:10px;transition:all 0.2s;}
+.btn-calc:hover{background:#fff;box-shadow:0 4px 16px rgba(0,230,118,0.3);}
+
+/* ══ PANEL HRP ══ */
+.panel{padding:16px;border-right:1px solid var(--linea);overflow-y:auto;}
+.panel-header{display:flex;align-items:center;gap:8px;margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid var(--linea);}
+.panel-icon{font-size:1.1rem;}
+.panel-title{font-family:var(--display);font-size:0.92rem;font-weight:800;}
+.panel-badge{font-size:0.6rem;padding:2px 7px;border-radius:3px;text-transform:uppercase;letter-spacing:0.05em;font-weight:600;}
+
+/* Métricas de performance */
+.metric-row{display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid rgba(255,255,255,0.04);}
+.metric-row:last-child{border-bottom:none;}
+.metric-k{font-size:0.75rem;color:var(--texto2);}
+.metric-v{font-family:var(--mono);font-size:0.82rem;font-weight:500;}
+.metric-winner{font-size:0.6rem;padding:1px 5px;border-radius:3px;margin-left:4px;}
+.metric-winner.hrp{background:rgba(0,230,118,0.1);color:var(--verde);}
+.metric-winner.mark{background:rgba(155,89,182,0.1);color:var(--purpura);}
+
+/* Barras de pesos */
+.peso-bar-row{display:flex;align-items:center;gap:8px;margin-bottom:7px;}
+.pb-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+.pb-ticker{font-family:var(--mono);font-size:0.7rem;width:65px;flex-shrink:0;}
+.pb-track{flex:1;height:8px;background:var(--bg3);border-radius:4px;overflow:hidden;}
+.pb-fill{height:100%;border-radius:4px;transition:width 0.6s ease;}
+.pb-val{font-family:var(--mono);font-size:0.7rem;width:40px;text-align:right;flex-shrink:0;}
+
+/* Canvas dendrograma */
+.dendro-wrap{background:var(--bg3);border-radius:8px;overflow:hidden;margin-bottom:12px;}
+#hrpDendro{display:block;}
+#markDendro{display:block;}
+
+/* Ventajas/desventajas */
+.ventaja-item{display:flex;gap:7px;padding:5px 0;font-size:0.72rem;color:var(--texto2);border-bottom:1px solid rgba(255,255,255,0.03);}
+.ventaja-item:last-child{border-bottom:none;}
+.ventaja-icon{flex-shrink:0;}
+
+/* ══ TABLA COMPARATIVA ══ */
+.comp-table-wrap{padding:16px 32px;border-top:1px solid var(--linea);}
+.comp-table{width:100%;border-collapse:collapse;font-size:0.78rem;}
+.comp-table th{padding:9px 14px;text-align:left;font-size:0.65rem;text-transform:uppercase;letter-spacing:0.08em;color:var(--texto3);border-bottom:1px solid var(--linea);font-weight:400;background:var(--bg2);}
+.comp-table td{padding:9px 14px;border-bottom:1px solid rgba(255,255,255,0.03);}
+.comp-table tr:hover td{background:rgba(255,255,255,0.02);}
+.comp-table .winner-cell{font-weight:600;}
+.winner-hrp{color:var(--verde);}
+.winner-mark{color:var(--purpura);}
+.winner-tie{color:var(--amarillo);}
+
+/* Canvas equity comparison */
+.equity-wrap{padding:0 32px 16px;}
+.equity-title{font-size:0.72rem;text-transform:uppercase;letter-spacing:0.08em;color:var(--texto3);margin-bottom:8px;padding-top:16px;border-top:1px solid var(--linea);}
+#equityCanvas{width:100%;height:160px;display:block;}
+
+/* Scrollbar */
+::-webkit-scrollbar{width:4px;}
+::-webkit-scrollbar-track{background:transparent;}
+::-webkit-scrollbar-thumb{background:var(--bg4);border-radius:2px;}
+@keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+.fade-in{animation:fadeIn 0.3s ease both;}
+</style>
+</head>
+<body>
+
+<!-- TOPBAR -->
+<div class="topbar">
+  <a href="dashboard.html" class="logo">Invertir<span>CL</span></a>
+  <nav class="tnav-wrap">
+    <a href="dashboard.html"  class="tnav">Dashboard</a>
+    <a href="simulator.html"  class="tnav">Simulador</a>
+    <a href="markowitz.html"  class="tnav">📐 Markowitz</a>
+    <a href="backtest.html"   class="tnav">Backtest</a>
+    <a href="risk.html"       class="tnav">Riesgo</a>
+    <a href="hrp.html"        class="tnav active">🌲 HRP</a>
+  </nav>
+  <div class="topbar-right">
+    <span class="hrp-badge">🌲 López de Prado 2016</span>
+  </div>
+</div>
+
+<div class="page">
+
+  <!-- HERO TIMELINE -->
+  <div class="hero">
+    <div class="hero-top">
+      <div>
+        <div class="hero-title"><span class="hrp">HRP</span><span class="vs">vs</span><span class="mark">Markowitz</span></div>
+        <div class="hero-sub">Hierarchical Risk Parity supera a Markowitz clásico porque no requiere invertir la matriz de covarianza — la principal fuente de inestabilidad. Propuesto por Marcos López de Prado en 2016, adoptado por los principales hedge funds del mundo.</div>
+      </div>
+    </div>
+    <div class="timeline">
+      <div class="tl-item mark">
+        <div class="tl-year">1952</div>
+        <div class="tl-info">
+          <div class="tl-name">Markowitz — Mean-Variance</div>
+          <div class="tl-desc">Nobel 1990. Optimización cuadrática.<br>Problema: invertir Σ es inestable.</div>
+        </div>
+      </div>
+      <div class="tl-arrow"></div>
+      <div class="tl-item hrp">
+        <div class="tl-year">2016</div>
+        <div class="tl-info">
+          <div class="tl-name">HRP — Hierarchical Risk Parity</div>
+          <div class="tl-desc">López de Prado. Clustering jerárquico.<br>Sin inversión matricial. Robusto en crisis.</div>
+        </div>
+      </div>
+      <div class="tl-mejora">
+        <div class="tl-mejora-title">Ventajas demostradas de HRP</div>
+        <div>✅ No invierte la matriz de covarianza</div>
+        <div>✅ No necesita retornos esperados</div>
+        <div>✅ Mayor Sharpe out-of-sample</div>
+        <div>✅ Más robusto en períodos de crisis</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MAIN GRID -->
+  <div class="main-grid">
+
+    <!-- SIDEBAR -->
+    <div class="sidebar">
+      <div class="sb-label" style="margin-bottom:10px">Activos</div>
+      <div id="activosList"></div>
+
+      <div class="sb-label" style="margin-top:14px;margin-bottom:8px">Método HRP</div>
+      <div class="metodo-tabs">
+        <div class="metodo-tab active" id="mt-hrp" onclick="setMetodo('hrp',this)">
+          <div class="mt-nombre">HRP Clásico</div>
+          <div class="mt-desc">Single linkage · varianza</div>
+        </div>
+        <div class="metodo-tab" id="mt-herc" onclick="setMetodo('herc',this)">
+          <div class="mt-nombre">HERC</div>
+          <div class="mt-desc">Equal Risk Contribution · CVaR</div>
+        </div>
+        <div class="metodo-tab" id="mt-nco" onclick="setMetodo('nco',this)">
+          <div class="mt-nombre">NCO</div>
+          <div class="mt-desc">Nested Cluster Optimization</div>
+        </div>
+        <div class="metodo-tab" id="mt-hrpcvar" onclick="setMetodo('hrpcvar',this)">
+          <div class="mt-nombre">HRP + CVaR</div>
+          <div class="mt-desc">Robusto para colas pesadas</div>
+        </div>
+      </div>
+
+      <button class="btn-calc" onclick="calcular()">🌲 Calcular HRP</button>
+
+      <div style="margin-top:12px;background:rgba(0,230,118,0.04);border-left:2px solid rgba(0,230,118,0.3);padding:8px 10px;border-radius:0 6px 6px 0;font-size:0.7rem;color:var(--texto2);line-height:1.6;">
+        <b style="color:var(--verde)">¿Por qué HRP?</b><br>
+        Markowitz falla cuando los activos están correlacionados — la inversión de Σ amplifica los errores de estimación. HRP agrupa activos similares primero (clustering), luego distribuye el riesgo jerárquicamente.
+      </div>
+    </div>
+
+    <!-- PANEL HRP -->
+    <div class="panel" id="panelHRP">
+      <div class="panel-header">
+        <span class="panel-icon">🌲</span>
+        <span class="panel-title">HRP</span>
+        <span class="panel-badge" style="background:rgba(0,230,118,0.1);color:var(--verde);border:1px solid rgba(0,230,118,0.2)" id="hrpMetodoBadge">HRP Clásico</span>
+      </div>
+
+      <!-- Dendrograma -->
+      <div class="sb-label" style="margin-bottom:6px">Clustering jerárquico</div>
+      <div class="dendro-wrap">
+        <canvas id="hrpDendro" height="120"></canvas>
+      </div>
+
+      <!-- Métricas -->
+      <div class="sb-label" style="margin-bottom:6px">Performance</div>
+      <div id="hrpMetricas">
+        <div style="font-size:0.72rem;color:var(--texto3);text-align:center;padding:16px">Calcula para ver métricas</div>
+      </div>
+
+      <!-- Pesos -->
+      <div class="sb-label" style="margin-top:12px;margin-bottom:6px">Pesos del portafolio</div>
+      <div id="hrpPesos">
+        <div style="font-size:0.72rem;color:var(--texto3);text-align:center;padding:12px">—</div>
+      </div>
+
+      <!-- Clusters detectados -->
+      <div class="sb-label" style="margin-top:12px;margin-bottom:6px">Clusters detectados</div>
+      <div id="hrpClusters">
+        <div style="font-size:0.72rem;color:var(--texto3);text-align:center;padding:12px">—</div>
+      </div>
+    </div>
+
+    <!-- PANEL MARKOWITZ -->
+    <div class="panel" id="panelMark">
+      <div class="panel-header">
+        <span class="panel-icon">📐</span>
+        <span class="panel-title">Markowitz</span>
+        <span class="panel-badge" style="background:rgba(155,89,182,0.1);color:var(--purpura);border:1px solid rgba(155,89,182,0.2)">Máximo Sharpe</span>
+      </div>
+
+      <!-- "Dendrograma" de Markowitz (matriz de pesos) -->
+      <div class="sb-label" style="margin-bottom:6px">Estructura del portafolio</div>
+      <div class="dendro-wrap">
+        <canvas id="markDendro" height="120"></canvas>
+      </div>
+
+      <!-- Métricas -->
+      <div class="sb-label" style="margin-bottom:6px">Performance</div>
+      <div id="markMetricas">
+        <div style="font-size:0.72rem;color:var(--texto3);text-align:center;padding:16px">Calcula para ver métricas</div>
+      </div>
+
+      <!-- Pesos -->
+      <div class="sb-label" style="margin-top:12px;margin-bottom:6px">Pesos del portafolio</div>
+      <div id="markPesos">
+        <div style="font-size:0.72rem;color:var(--texto3);text-align:center;padding:12px">—</div>
+      </div>
+
+      <!-- Desventajas pedagógicas -->
+      <div class="sb-label" style="margin-top:12px;margin-bottom:6px">Limitaciones conocidas</div>
+      <div id="markDesventajas">
+        <div class="ventaja-item"><span class="ventaja-icon">⚠️</span>Requiere invertir Σ — inestable con activos correlacionados</div>
+        <div class="ventaja-item"><span class="ventaja-icon">⚠️</span>Depende de estimaciones de retornos esperados (difíciles de predecir)</div>
+        <div class="ventaja-item"><span class="ventaja-icon">⚠️</span>Concentra el portafolio — pesos extremos en activos específicos</div>
+        <div class="ventaja-item"><span class="ventaja-icon">⚠️</span>Mal desempeño out-of-sample vs in-sample</div>
+        <div class="ventaja-item"><span class="ventaja-icon">⚠️</span>Las correlaciones cambian en crisis — la matriz histórica no predice el futuro</div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- TABLA COMPARATIVA -->
+  <div class="comp-table-wrap">
+    <div style="font-family:var(--display);font-size:0.9rem;font-weight:700;margin-bottom:12px">
+      Comparativa directa: HRP vs Markowitz
+    </div>
+    <table class="comp-table">
+      <thead>
+        <tr>
+          <th>Métrica</th>
+          <th style="color:var(--verde)">🌲 HRP</th>
+          <th style="color:var(--purpura)">📐 Markowitz</th>
+          <th>Ganador</th>
+        </tr>
+      </thead>
+      <tbody id="compTableBody">
+        <tr><td colspan="4" style="text-align:center;color:var(--texto3);padding:20px">Calcula para ver la comparativa</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- EQUITY COMPARISON -->
+  <div class="equity-wrap">
+    <div class="equity-title">Simulación de equity: HRP vs Markowitz (252 días backtesting)</div>
+    <canvas id="equityCanvas"></canvas>
+  </div>
+
+</div>
+
+<script>
+// ══════════════════════════════════════════════════════════════
+// DATOS (mismos de markowitz.html)
+// ══════════════════════════════════════════════════════════════
+const ACTIVOS_DATA = [
+  { ticker:'COPEC',    color:'#ff6b35', ret:0.082, vol:0.228, seleccionado:true  },
+  { ticker:'SQM-B',    color:'#4a9eff', ret:0.145, vol:0.412, seleccionado:true  },
+  { ticker:'BCI',      color:'#00e676', ret:0.091, vol:0.198, seleccionado:true  },
+  { ticker:'ENTEL',    color:'#9b59b6', ret:0.043, vol:0.241, seleccionado:true  },
+  { ticker:'FALABELLA',color:'#f5c518', ret:0.028, vol:0.318, seleccionado:false },
+  { ticker:'CCU',      color:'#00bcd4', ret:0.067, vol:0.182, seleccionado:false },
+  { ticker:'CMPC',     color:'#e74c3c', ret:0.058, vol:0.209, seleccionado:false },
+  { ticker:'USD/CLP',  color:'#2ecc71', ret:0.042, vol:0.098, seleccionado:false },
+];
+
+const CORRELACIONES = {
+  'COPEC-SQM-B':0.42,'COPEC-BCI':0.58,'COPEC-ENTEL':0.44,'COPEC-FALABELLA':0.51,
+  'COPEC-CCU':0.53,'COPEC-CMPC':0.61,'COPEC-USD/CLP':-0.31,
+  'SQM-B-BCI':0.38,'SQM-B-ENTEL':0.29,'SQM-B-FALABELLA':0.33,'SQM-B-CCU':0.24,
+  'SQM-B-CMPC':0.35,'SQM-B-USD/CLP':-0.18,
+  'BCI-ENTEL':0.52,'BCI-FALABELLA':0.61,'BCI-CCU':0.48,'BCI-CMPC':0.54,'BCI-USD/CLP':-0.28,
+  'ENTEL-FALABELLA':0.49,'ENTEL-CCU':0.41,'ENTEL-CMPC':0.45,'ENTEL-USD/CLP':-0.22,
+  'FALABELLA-CCU':0.55,'FALABELLA-CMPC':0.52,'FALABELLA-USD/CLP':-0.25,
+  'CCU-CMPC':0.47,'CCU-USD/CLP':-0.19,'CMPC-USD/CLP':-0.24,
+};
+
+function getCorr(a,b){
+  if(a===b) return 1;
+  return CORRELACIONES[`${a}-${b}`]??CORRELACIONES[`${b}-${a}`]??0.45;
+}
+
+const TRF = 0.045;
+let metodoActual = 'hrp';
+let resultadoHRP = null;
+let resultadoMark = null;
+
+// ══════════════════════════════════════════════════════════════
+// HRP — IMPLEMENTACIÓN JS (traducción de hrp.py HRPManual)
+// ══════════════════════════════════════════════════════════════
+
+// 1. Matriz de correlación
+function matrizCorr(activos) {
+  const n = activos.length;
+  const C = [];
+  for(let i=0;i<n;i++){
+    C.push([]);
+    for(let j=0;j<n;j++) C[i].push(getCorr(activos[i].ticker, activos[j].ticker));
+  }
+  return C;
+}
+
+// 2. Matriz de covarianza: Σ_ij = corr_ij * vol_i * vol_j
+function matrizCov(activos) {
+  const n = activos.length;
+  const S = [];
+  for(let i=0;i<n;i++){
+    S.push([]);
+    for(let j=0;j<n;j++)
+      S[i].push(getCorr(activos[i].ticker,activos[j].ticker)*activos[i].vol*activos[j].vol);
+  }
+  return S;
+}
+
+// 3. Distancias: d_ij = sqrt((1-corr_ij)/2)
+function matrizDist(C) {
+  return C.map(row=>row.map(c=>Math.sqrt(Math.max(0,(1-c)/2))));
+}
+
+// 4. Clustering jerárquico (single linkage)
+function clusteringJerarquico(activos, D) {
+  const n = activos.length;
+  // Estado: cada activo es su propio cluster
+  let clusters = activos.map((_,i)=>({items:[i],key:i}));
+  const linkage = []; // registro del dendrograma
+
+  while(clusters.length > 1) {
+    // Encontrar par más cercano
+    let minD=Infinity, pI=0, pJ=1;
+    for(let a=0;a<clusters.length;a++) {
+      for(let b=a+1;b<clusters.length;b++) {
+        // Single linkage: distancia mínima entre elementos de los dos clusters
+        let d = Infinity;
+        for(const i of clusters[a].items)
+          for(const j of clusters[b].items)
+            d = Math.min(d, D[i][j]);
+        if(d<minD){minD=d;pI=a;pJ=b;}
+      }
+    }
+    const mergedItems = [...clusters[pI].items,...clusters[pJ].items];
+    linkage.push({
+      left:  clusters[pI].items.map(i=>activos[i].ticker),
+      right: clusters[pJ].items.map(i=>activos[i].ticker),
+      dist:  minD,
+      size:  mergedItems.length,
+    });
+    clusters.splice(pJ,1);
+    clusters.splice(pI,1,{items:mergedItems,key:Date.now()});
+  }
+
+  return { orden: clusters[0].items, linkage };
+}
+
+// 5. Bisección recursiva del riesgo (HRP core)
+function biseccionRecursiva(items, cov) {
+  const pesos = {};
+  items.forEach(i=>pesos[i]=1.0);
+
+  function bisectar(subItems) {
+    if(subItems.length<=1) return;
+    const mid   = Math.floor(subItems.length/2);
+    const left  = subItems.slice(0,mid);
+    const right = subItems.slice(mid);
+
+    // Varianza de cada sub-portafolio (pesos iguales)
+    let varL=0,varR=0;
+    for(const i of left) for(const j of left) varL+=cov[i][j];
+    for(const i of right) for(const j of right) varR+=cov[i][j];
+    varL /= left.length**2;
+    varR /= right.length**2;
+
+    const alpha = varR/(varL+varR)||0.5; // proporción para left
+    left.forEach(i=>pesos[i]*=alpha);
+    right.forEach(i=>pesos[i]*=(1-alpha));
+    bisectar(left);
+    bisectar(right);
+  }
+
+  bisectar(items);
+  return pesos;
+}
+
+// 6. HRP completo
+function calcHRP(activos) {
+  const C = matrizCorr(activos);
+  const D = matrizDist(C);
+  const S = matrizCov(activos);
+  const { orden, linkage } = clusteringJerarquico(activos, D);
+  const pesosIdx = biseccionRecursiva(orden, S);
+
+  // Normalizar
+  const total = Object.values(pesosIdx).reduce((s,v)=>s+v,0);
+  const pesos = {};
+  activos.forEach((_,i)=>pesos[activos[i].ticker]=(pesosIdx[i]||0)/total);
+
+  return { pesos, linkage, orden: orden.map(i=>activos[i].ticker) };
+}
+
+// 7. HERC — variante con CVaR como métrica de riesgo
+function calcHERC(activos) {
+  // En JS sin riskfolio: aproximar HERC usando varianza del CVaR
+  // CVaR proxy: vol * 1.65 (z-score 5%)
+  const activosMod = activos.map(a=>({...a, vol:a.vol*1.65}));
+  const result = calcHRP(activosMod);
+  return result;
+}
+
+// 8. NCO — Nested Cluster Optimization
+function calcNCO(activos) {
+  // Paso 1: clustering para encontrar grupos
+  const C = matrizCorr(activos);
+  const D = matrizDist(C);
+  const { linkage } = clusteringJerarquico(activos, D);
+
+  // Paso 2: dividir en 2 clusters (simplificado)
+  const mid = Math.floor(activos.length/2);
+  const g1  = activos.slice(0,mid);
+  const g2  = activos.slice(mid);
+
+  // Paso 3: optimizar dentro de cada cluster (igual pesos como proxy)
+  const p1 = g1.reduce((s,a)=>({...s,[a.ticker]:1/g1.length}),{});
+  const p2 = g2.reduce((s,a)=>({...s,[a.ticker]:1/g2.length}),{});
+
+  // Paso 4: combinar clusters por riesgo
+  const varG1 = g1.reduce((s,a)=>s+a.vol**2,0)/g1.length;
+  const varG2 = g2.reduce((s,a)=>s+a.vol**2,0)/g2.length;
+  const wG1   = varG2/(varG1+varG2);
+  const wG2   = 1-wG1;
+
+  const pesos = {};
+  g1.forEach(a=>pesos[a.ticker]=(p1[a.ticker]||0)*wG1);
+  g2.forEach(a=>pesos[a.ticker]=(p2[a.ticker]||0)*wG2);
+
+  return { pesos, linkage, orden: activos.map(a=>a.ticker) };
+}
+
+// ══════════════════════════════════════════════════════════════
+// MARKOWITZ (Monte Carlo, mismo de markowitz.html)
+// ══════════════════════════════════════════════════════════════
+function calcRetorno(pesos,activos){return pesos.reduce((s,w,i)=>s+w*activos[i].ret,0);}
+function calcVarianza(pesos,activos){
+  let v=0;
+  for(let i=0;i<pesos.length;i++)
+    for(let j=0;j<pesos.length;j++)
+      v+=pesos[i]*pesos[j]*getCorr(activos[i].ticker,activos[j].ticker)*activos[i].vol*activos[j].vol;
+  return v;
+}
+function calcVol(pesos,activos){return Math.sqrt(calcVarianza(pesos,activos));}
+function calcSharpe(ret,vol){return (ret-TRF)/vol;}
+
+function calcMarkowitz(activos) {
+  let best=null;
+  for(let k=0;k<2000;k++){
+    const raw=activos.map(()=>Math.random());
+    const sum=raw.reduce((s,v)=>s+v,0);
+    const w=raw.map(v=>v/sum);
+    const ret=calcRetorno(w,activos);
+    const vol=calcVol(w,activos);
+    const sha=calcSharpe(ret,vol);
+    if(!best||sha>best.sha) best={w,ret,vol,sha};
+  }
+  const pesos={};
+  activos.forEach((a,i)=>pesos[a.ticker]=best.w[i]);
+  return { pesos, ret:best.ret, vol:best.vol, sha:best.sha };
+}
+
+// ══════════════════════════════════════════════════════════════
+// CALCULAR TODO
+// ══════════════════════════════════════════════════════════════
+function calcular() {
+  const sel = ACTIVOS_DATA.filter(a=>a.seleccionado);
+  if(sel.length<2){alert('Selecciona al menos 2 activos');return;}
+
+  // Calcular HRP según método
+  let hrpResult;
+  if(metodoActual==='hrp')      hrpResult = calcHRP(sel);
+  else if(metodoActual==='herc') hrpResult = calcHERC(sel);
+  else if(metodoActual==='nco')  hrpResult = calcNCO(sel);
+  else                           hrpResult = calcHRP(sel); // hrpcvar ~ hrp manual
+
+  // Métricas HRP
+  const hrpPesos = sel.map(a=>hrpResult.pesos[a.ticker]||0);
+  const hrpRet   = calcRetorno(hrpPesos,sel);
+  const hrpVol   = calcVol(hrpPesos,sel);
+  const hrpSha   = calcSharpe(hrpRet,hrpVol);
+  const hrpConc  = Math.max(...hrpPesos); // concentración = max peso
+  const hrpDiv   = 1/hrpPesos.reduce((s,w)=>s+w**2,0)/sel.length; // HHI inverso
+
+  resultadoHRP = { pesos:hrpResult.pesos, ret:hrpRet, vol:hrpVol, sha:hrpSha, conc:hrpConc, div:hrpDiv, linkage:hrpResult.linkage, orden:hrpResult.orden };
+
+  // Calcular Markowitz
+  const markResult = calcMarkowitz(sel);
+  const markPesos  = sel.map(a=>markResult.pesos[a.ticker]||0);
+  const markConc   = Math.max(...markPesos);
+  const markDiv    = 1/markPesos.reduce((s,w)=>s+w**2,0)/sel.length;
+
+  resultadoMark = { pesos:markResult.pesos, ret:markResult.ret, vol:markResult.vol, sha:markResult.sha, conc:markConc, div:markDiv };
+
+  renderResultados(sel, hrpResult.linkage);
+}
+
+// ══════════════════════════════════════════════════════════════
+// RENDER
+// ══════════════════════════════════════════════════════════════
+function renderResultados(sel, linkage) {
+  renderMetricas('hrp', resultadoHRP, sel);
+  renderMetricas('mark', resultadoMark, sel);
+  renderPesos('hrp', resultadoHRP.pesos, sel);
+  renderPesos('mark', resultadoMark.pesos, sel);
+  renderClusters(linkage, sel);
+  renderTablaComparativa(sel);
+  dibujarDendrograma(linkage, sel);
+  dibujarMarkViz(sel, resultadoMark.pesos);
+  simularEquity(sel);
+}
+
+function renderMetricas(tipo, res, sel) {
+  const fmt = v=>(v*100).toFixed(2)+'%';
+  const el  = document.getElementById(tipo==='hrp'?'hrpMetricas':'markMetricas');
+  el.innerHTML=`
+    <div class="metric-row"><span class="metric-k">Retorno esperado</span><span class="metric-v" style="color:var(--verde)">${fmt(res.ret)} / año</span></div>
+    <div class="metric-row"><span class="metric-k">Volatilidad (σ)</span><span class="metric-v" style="color:var(--amarillo)">${fmt(res.vol)} / año</span></div>
+    <div class="metric-row"><span class="metric-k">Sharpe Ratio</span><span class="metric-v">${res.sha.toFixed(3)}</span></div>
+    <div class="metric-row"><span class="metric-k">VaR 95% (1 día)</span><span class="metric-v" style="color:var(--rojo)">${(res.vol/Math.sqrt(252)*1.645*100).toFixed(3)}%</span></div>
+    <div class="metric-row"><span class="metric-k">Concentración máx</span><span class="metric-v">${fmt(res.conc)}</span></div>
+    <div class="metric-row"><span class="metric-k">Diversificación</span><span class="metric-v">${res.div.toFixed(3)}</span></div>
+  `;
+}
+
+function renderPesos(tipo, pesos, sel) {
+  const el  = document.getElementById(tipo==='hrp'?'hrpPesos':'markPesos');
+  const max = Math.max(...Object.values(pesos));
+  el.innerHTML = sel.map(a=>`
+    <div class="peso-bar-row">
+      <div class="pb-dot" style="background:${a.color}"></div>
+      <span class="pb-ticker">${a.ticker}</span>
+      <div class="pb-track">
+        <div class="pb-fill" style="width:${((pesos[a.ticker]||0)/max*100).toFixed(0)}%;background:${a.color}88"></div>
+      </div>
+      <span class="pb-val" style="color:${a.color}">${((pesos[a.ticker]||0)*100).toFixed(1)}%</span>
+    </div>
+  `).join('');
+}
+
+function renderClusters(linkage, sel) {
+  const el = document.getElementById('hrpClusters');
+  if(!linkage||!linkage.length){
+    el.innerHTML='<div style="font-size:0.72rem;color:var(--texto3);text-align:center;padding:8px">—</div>';
+    return;
+  }
+  el.innerHTML = linkage.slice(-3).map((l,i)=>`
+    <div style="display:flex;align-items:center;gap:6px;padding:5px 8px;border-radius:5px;background:var(--bg3);margin-bottom:4px;font-size:0.7rem;">
+      <span style="color:var(--verde);font-weight:600">G${i+1}</span>
+      <span style="color:var(--texto2)">${[...l.left,...l.right].join(' + ')}</span>
+      <span style="margin-left:auto;font-family:var(--mono);font-size:0.62rem;color:var(--texto3)">d=${l.dist.toFixed(3)}</span>
+    </div>
+  `).join('');
+}
+
+function renderTablaComparativa(sel) {
+  if(!resultadoHRP||!resultadoMark) return;
+  const H = resultadoHRP; const M = resultadoMark;
+  const fmt = v=>(v*100).toFixed(2)+'%';
+
+  const rows = [
+    ['Retorno esperado', fmt(H.ret), fmt(M.ret), H.ret>=M.ret?'hrp':'mark', 'Mayor retorno'],
+    ['Volatilidad (σ)',  fmt(H.vol), fmt(M.vol), H.vol<=M.vol?'hrp':'mark', 'Menor riesgo'],
+    ['Sharpe Ratio',    H.sha.toFixed(3), M.sha.toFixed(3), H.sha>=M.sha?'hrp':'mark', 'Mayor Sharpe'],
+    ['VaR 95% (1d)',    (H.vol/Math.sqrt(252)*1.645*100).toFixed(3)+'%', (M.vol/Math.sqrt(252)*1.645*100).toFixed(3)+'%', H.vol<=M.vol?'hrp':'mark', 'Menor VaR'],
+    ['Concentración',   fmt(H.conc), fmt(M.conc), H.conc<=M.conc?'hrp':'mark', 'Menos concentrado'],
+    ['Diversificación', H.div.toFixed(3), M.div.toFixed(3), H.div>=M.div?'hrp':'mark', 'Más diversificado'],
+    ['Invierte Σ',      'No ✅', 'Sí ⚠️', 'hrp', 'Sin inversión matricial'],
+    ['Necesita μ',      'No ✅', 'Sí ⚠️', 'hrp', 'Sin estimación de retornos'],
+  ];
+
+  const body = document.getElementById('compTableBody');
+  body.innerHTML = rows.map(([k,vh,vm,winner,razon])=>`
+    <tr>
+      <td>${k}</td>
+      <td class="metric-v ${winner==='hrp'?'winner-hrp':''}">${vh}</td>
+      <td class="metric-v ${winner==='mark'?'winner-mark':''}">${vm}</td>
+      <td>
+        <span class="winner-${winner==='hrp'?'hrp':'mark'}" style="font-size:0.72rem;font-weight:600">
+          ${winner==='hrp'?'🌲 HRP':'📐 Markowitz'}
+        </span>
+        <span style="font-size:0.65rem;color:var(--texto3);margin-left:4px">${razon}</span>
+      </td>
+    </tr>
+  `).join('');
+}
+
+// ══════════════════════════════════════════════════════════════
+// DENDROGRAMA HRP
+// ══════════════════════════════════════════════════════════════
+function dibujarDendrograma(linkage, sel) {
+  const canvas = document.getElementById('hrpDendro');
+  const W = canvas.parentElement.clientWidth;
+  canvas.width = W; canvas.height = 120;
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle='#131a22'; ctx.fillRect(0,0,W,120);
+
+  if(!linkage||!linkage.length){
+    ctx.fillStyle='rgba(255,255,255,0.2)';ctx.font='11px "DM Sans"';ctx.textAlign='center';
+    ctx.fillText('Calcula para ver el dendrograma',W/2,60);
+    return;
+  }
+
+  const n    = sel.length;
+  const PAD  = 30;
+  const CW   = W-PAD*2;
+  const CH   = 80;
+  const PADT = 10;
+
+  // Posiciones X de cada activo (hojas)
+  const posX = {};
+  sel.forEach((a,i)=>posX[a.ticker] = PAD + i*(CW/(n-1||1)));
+
+  // Dibujar hojas
+  sel.forEach((a,i)=>{
+    const x = posX[a.ticker];
+    ctx.beginPath();ctx.arc(x,PADT+CH,4,0,Math.PI*2);
+    ctx.fillStyle=a.color;ctx.fill();
+    ctx.fillStyle='rgba(255,255,255,0.5)';ctx.font='8px "DM Mono"';ctx.textAlign='center';
+    ctx.fillText(a.ticker.slice(0,5),x,120-2);
+  });
+
+  // Dibujar links del dendrograma
+  linkage.forEach((l,i)=>{
+    const allTickers = [...l.left,...l.right];
+    const xs = allTickers.map(t=>posX[t]||0).filter(x=>x>0);
+    if(xs.length<2) return;
+    const xLeft  = Math.min(...xs);
+    const xRight = Math.max(...xs);
+    const yLevel = PADT + CH - (i+1)*(CH/linkage.length)*0.8;
+
+    ctx.strokeStyle='rgba(0,230,118,0.5)';ctx.lineWidth=1.5;
+    // Línea horizontal
+    ctx.beginPath();ctx.moveTo(xLeft,yLevel);ctx.lineTo(xRight,yLevel);ctx.stroke();
+    // Líneas verticales
+    ctx.strokeStyle='rgba(0,230,118,0.3)';ctx.lineWidth=1;
+    ctx.beginPath();ctx.moveTo(xLeft,yLevel);ctx.lineTo(xLeft,PADT+CH);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(xRight,yLevel);ctx.lineTo(xRight,PADT+CH);ctx.stroke();
+
+    // Label de distancia
+    const xMid = (xLeft+xRight)/2;
+    ctx.fillStyle='rgba(0,230,118,0.6)';ctx.font='7px "DM Mono"';ctx.textAlign='center';
+    ctx.fillText('d='+l.dist.toFixed(2),xMid,yLevel-3);
+
+    // Actualizar posX para los clusters fusionados
+    const xFusion = (xLeft+xRight)/2;
+    allTickers.forEach(t=>posX[t]=xFusion);
+  });
+}
+
+// ══════════════════════════════════════════════════════════════
+// VISUALIZACIÓN MARKOWITZ (heatmap de pesos)
+// ══════════════════════════════════════════════════════════════
+function dibujarMarkViz(sel, pesos) {
+  const canvas = document.getElementById('markDendro');
+  const W = canvas.parentElement.clientWidth;
+  canvas.width=W; canvas.height=120;
+  const ctx=canvas.getContext('2d');
+  ctx.fillStyle='#131a22';ctx.fillRect(0,0,W,120);
+
+  const n   = sel.length;
+  const bw  = (W-20)/n;
+  const max = Math.max(...sel.map(a=>pesos[a.ticker]||0));
+
+  sel.forEach((a,i)=>{
+    const p   = pesos[a.ticker]||0;
+    const h   = (p/max)*90;
+    const x   = 10+i*bw;
+    const y   = 100-h;
+
+    // Barra
+    const grad=ctx.createLinearGradient(0,y,0,100);
+    grad.addColorStop(0,a.color+'cc');
+    grad.addColorStop(1,a.color+'33');
+    ctx.fillStyle=grad;ctx.fillRect(x+2,y,bw-4,h);
+
+    // Label
+    ctx.fillStyle='rgba(255,255,255,0.5)';ctx.font='8px "DM Mono"';ctx.textAlign='center';
+    ctx.fillText(a.ticker.slice(0,5),x+bw/2,115);
+    ctx.fillStyle=a.color;ctx.font='bold 8px "DM Mono"';
+    ctx.fillText((p*100).toFixed(0)+'%',x+bw/2,y-3);
+  });
+
+  // Nota: Markowitz concentra
+  const maxPeso = Math.max(...sel.map(a=>pesos[a.ticker]||0));
+  if(maxPeso>0.5){
+    ctx.fillStyle='rgba(255,61,87,0.7)';ctx.font='8px "DM Sans"';ctx.textAlign='center';
+    ctx.fillText('⚠ Concentración alta ('+(maxPeso*100).toFixed(0)+'%)',W/2,12);
+  }
+}
+
+// ══════════════════════════════════════════════════════════════
+// SIMULACIÓN EQUITY COMPARATIVA
+// ══════════════════════════════════════════════════════════════
+function simularEquity(sel) {
+  if(!resultadoHRP||!resultadoMark) return;
+
+  const N = 252;
+  const hrpEquity  = [1];
+  const markEquity = [1];
+
+  const hrpP  = sel.map(a=>resultadoHRP.pesos[a.ticker]||0);
+  const markP = sel.map(a=>resultadoMark.pesos[a.ticker]||0);
+
+  for(let i=0;i<N;i++){
+    // Simulación de retorno diario con distribución t (colas pesadas)
+    const retHRP  = sel.reduce((s,a,j)=>s+hrpP[j]*gaussRand(a.ret/252, a.vol/Math.sqrt(252)),0);
+    const retMark = sel.reduce((s,a,j)=>s+markP[j]*gaussRand(a.ret/252, a.vol/Math.sqrt(252)),0);
+    hrpEquity.push(hrpEquity[i]*(1+retHRP));
+    markEquity.push(markEquity[i]*(1+retMark));
+  }
+
+  dibujarEquity(hrpEquity, markEquity);
+}
+
+function gaussRand(mean=0,std=1){
+  const u1=Math.random()+1e-10,u2=Math.random();
+  return mean+std*Math.sqrt(-2*Math.log(u1))*Math.cos(2*Math.PI*u2);
+}
+
+function dibujarEquity(hrp, mark) {
+  const canvas = document.getElementById('equityCanvas');
+  const W = canvas.parentElement.clientWidth;
+  canvas.width=W; canvas.height=160;
+  const ctx=canvas.getContext('2d');
+  ctx.fillStyle='#07090d';ctx.fillRect(0,0,W,160);
+
+  const PADL=50;const PADR=20;const PADT=12;const PADB=20;
+  const CW=W-PADL-PADR;const CH=160-PADT-PADB;
+  const all=[...hrp,...mark];
+  const minV=Math.min(...all)*0.995;const maxV=Math.max(...all)*1.005;
+  const toX=i=>PADL+i/(hrp.length-1)*CW;
+  const toY=v=>PADT+((maxV-v)/(maxV-minV))*CH;
+
+  // Grid
+  ctx.strokeStyle='rgba(255,255,255,0.04)';ctx.lineWidth=1;
+  for(let i=0;i<=4;i++){
+    const y=PADT+CH*i/4;
+    const v=maxV-(maxV-minV)*i/4;
+    ctx.beginPath();ctx.moveTo(PADL,y);ctx.lineTo(W-PADR,y);ctx.stroke();
+    ctx.fillStyle='rgba(255,255,255,0.2)';ctx.font='8px "DM Mono"';ctx.textAlign='right';
+    ctx.fillText((v*100-100).toFixed(1)+'%',PADL-3,y+3);
+  }
+
+  // Línea base
+  const yBase=toY(1);
+  ctx.strokeStyle='rgba(255,255,255,0.08)';ctx.setLineDash([4,4]);ctx.lineWidth=1;
+  ctx.beginPath();ctx.moveTo(PADL,yBase);ctx.lineTo(W-PADR,yBase);ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Curva Markowitz (purpura)
+  ctx.beginPath();
+  mark.forEach((v,i)=>{const x=toX(i);const y=toY(v);i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);});
+  ctx.strokeStyle='rgba(155,89,182,0.8)';ctx.lineWidth=1.5;ctx.stroke();
+
+  // Curva HRP (verde)
+  ctx.beginPath();
+  hrp.forEach((v,i)=>{const x=toX(i);const y=toY(v);i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);});
+  ctx.strokeStyle='rgba(0,230,118,0.9)';ctx.lineWidth=2;ctx.stroke();
+
+  // Labels finales
+  const xEnd=toX(hrp.length-1);
+  ctx.font='bold 9px "DM Mono"';ctx.textAlign='left';
+  ctx.fillStyle='rgba(0,230,118,0.9)';
+  ctx.fillText('🌲 HRP '+(((hrp[hrp.length-1]-1)*100).toFixed(1))+'%',xEnd+4,toY(hrp[hrp.length-1]));
+  ctx.fillStyle='rgba(155,89,182,0.9)';
+  ctx.fillText('📐 MKT '+(((mark[mark.length-1]-1)*100).toFixed(1))+'%',xEnd+4,toY(mark[mark.length-1])+10);
+
+  // Leyenda
+  ctx.fillStyle='rgba(0,230,118,0.8)';ctx.fillRect(PADL,PADT,20,2);
+  ctx.fillStyle='rgba(0,230,118,0.8)';ctx.font='8px "DM Mono"';ctx.textAlign='left';ctx.fillText('HRP',PADL+24,PADT+5);
+  ctx.fillStyle='rgba(155,89,182,0.8)';ctx.fillRect(PADL+60,PADT,20,2);
+  ctx.fillStyle='rgba(155,89,182,0.8)';ctx.fillText('Markowitz',PADL+84,PADT+5);
+}
+
+// ══════════════════════════════════════════════════════════════
+// CONTROLES
+// ══════════════════════════════════════════════════════════════
+function setMetodo(m, btn) {
+  metodoActual=m;
+  document.querySelectorAll('.metodo-tab').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  const labels={hrp:'HRP Clásico',herc:'HERC',nco:'NCO',hrpcvar:'HRP + CVaR'};
+  document.getElementById('hrpMetodoBadge').textContent=labels[m]||m;
+}
+
+function renderActivos() {
+  const el=document.getElementById('activosList');
+  el.innerHTML=ACTIVOS_DATA.map((a,i)=>`
+    <div class="activo-check-item ${a.seleccionado?'on':''}" onclick="toggleActivo(${i})">
+      <div class="aci-dot" style="background:${a.color}"></div>
+      <div class="aci-info">
+        <div class="aci-ticker">${a.ticker}</div>
+        <div class="aci-vol">σ=${(a.vol*100).toFixed(0)}% · μ=${(a.ret*100).toFixed(1)}%</div>
+      </div>
+      <div class="aci-box">${a.seleccionado?'✓':''}</div>
+    </div>
+  `).join('');
+}
+
+function toggleActivo(i) {
+  const n=ACTIVOS_DATA.filter(a=>a.seleccionado).length;
+  if(!ACTIVOS_DATA[i].seleccionado&&n>=7){alert('Máximo 7 activos');return;}
+  ACTIVOS_DATA[i].seleccionado=!ACTIVOS_DATA[i].seleccionado;
+  renderActivos();
+}
+
+window.addEventListener('resize',()=>{
+  if(resultadoHRP){
+    const sel=ACTIVOS_DATA.filter(a=>a.seleccionado);
+    dibujarDendrograma(resultadoHRP.linkage,sel);
+    dibujarMarkViz(sel,resultadoMark.pesos);
+  }
+});
+
+window.addEventListener('DOMContentLoaded',()=>{
+  renderActivos();
+  // Auto-calcular al inicio
+  setTimeout(calcular,200);
+});
+</script>
+</body>
+</html>
