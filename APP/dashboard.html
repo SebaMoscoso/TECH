@@ -778,6 +778,21 @@ body {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.6; }
 }
+@keyframes flash-up {
+  0%   { background: rgba(0,230,118,0.2); }
+  100% { background: transparent; }
+}
+@keyframes flash-down {
+  0%   { background: rgba(255,61,87,0.2); }
+  100% { background: transparent; }
+}
+.flash-up   { animation: flash-up   0.6s ease-out; border-radius: 4px; }
+.flash-down { animation: flash-down 0.6s ease-out; border-radius: 4px; }
+.kpi-status { display:inline-block; width:6px; height:6px; border-radius:50%; margin-left:6px; vertical-align:middle; flex-shrink:0; }
+.kpi-status.live     { background:var(--verde); box-shadow:0 0 4px var(--verde); animation:pulse-dot 2s infinite; }
+.kpi-status.delay    { background:var(--amarillo); }
+.kpi-status.fallback { background:var(--texto3); }
+@keyframes pulse-dot { 0%,100%{opacity:1} 50%{opacity:0.4} }
 /* ══ ONBOARDING (J2) ════════════════════════════════════════ */
 #ob-backdrop {
   position:fixed;inset:0;z-index:900;
@@ -1296,7 +1311,8 @@ body {
   </div>
 </div>
 
-<script src="../js/market.js"></script>
+<script src="JS/market.js"></script>
+<script src="JS/poller.js"></script>
 <script>
 // ── DATOS SIMULADOS ──────────────────────────────────────────
 const acciones = [
@@ -1486,10 +1502,29 @@ async function cargarDatosReales() {
   }
 }
 
+function flashEl(el, subio) {
+  if (!el) return;
+  el.classList.remove('flash-up', 'flash-down');
+  void el.offsetWidth;
+  el.classList.add(subio ? 'flash-up' : 'flash-down');
+  el.addEventListener('animationend', () => el.classList.remove('flash-up', 'flash-down'), { once: true });
+}
+
+function actualizarStatus(idStatus, live, esFallback) {
+  const el = document.getElementById(idStatus);
+  if (!el) return;
+  if (esFallback) { el.className = 'kpi-status fallback'; el.title = 'Dato de respaldo — API no disponible'; }
+  else if (live)  { el.className = 'kpi-status live';     el.title = '⚡ Dato en tiempo real'; }
+  else            { el.className = 'kpi-status delay';    el.title = '🕒 Dato con delay (15 min)'; }
+}
+
 function actualizarTicker(idPrice, idChange, priceStr, pct, live) {
   const pEl = document.getElementById(idPrice);
   const cEl = document.getElementById(idChange);
   if (pEl) {
+    const prevVal = parseFloat(pEl.textContent.replace(/[^0-9.,]/g,'').replace('.','').replace(',','.')) || 0;
+    const newVal  = parseFloat(priceStr.replace(/[^0-9.,]/g,'').replace('.','').replace(',','.')) || 0;
+    if (prevVal > 0 && newVal !== prevVal) flashEl(pEl, newVal > prevVal);
     pEl.textContent = priceStr;
     if (live) pEl.title = '⚡ Precio en tiempo real';
   }
@@ -1500,15 +1535,20 @@ function actualizarTicker(idPrice, idChange, priceStr, pct, live) {
   }
 }
 
-function actualizarKPI(idPrice, idChange, val, pct, live) {
+function actualizarKPI(idPrice, idChange, val, pct, live, idStatus, esFallback) {
   const pEl = document.getElementById(idPrice);
   const cEl = document.getElementById(idChange);
-  if (pEl) pEl.textContent = val.toLocaleString('es-CL',{minimumFractionDigits:2,maximumFractionDigits:2});
+  if (pEl) {
+    const prevVal = parseFloat(pEl.textContent.replace(/[^0-9,]/g,'').replace(',','.')) || 0;
+    if (prevVal > 0 && val !== prevVal) flashEl(pEl, val > prevVal);
+    pEl.textContent = val.toLocaleString('es-CL',{minimumFractionDigits:2,maximumFractionDigits:2});
+  }
   if (cEl && pct !== null) {
     const isPos = pct >= 0;
     cEl.textContent = `${isPos?'▲':'▼'} ${isPos?'+':''}${pct.toFixed(2)}%`;
     cEl.className = `kpi-change ${isPos?'pos':'neg'}`;
   }
+  if (idStatus) actualizarStatus(idStatus, live, esFallback);
 }
 
 // Fallback con variación aleatoria si la API falla
@@ -1523,15 +1563,14 @@ function animarTickersFallback() {
 }
 
 function animarTickers() {
-  // Cargar datos reales inmediatamente
   cargarDatosReales();
-  // Refrescar cada 30 segundos
-  Market.startPolling(30_000);
-  // Suscribirse a actualizaciones
-  Market.subscribe('USDCLP', d => {
-    if (d?.promedio) actualizarTicker('t-usd','t-usd-ch','$'+parseFloat(d.promedio).toLocaleString('es-CL',{minimumFractionDigits:2}),null,d.live);
-  });
-  // Variación leve del gráfico (sigue siendo generado localmente)
+  setInterval(cargarDatosReales, 30_000);
+
+  if (typeof StockPoller !== 'undefined') {
+    StockPoller.start(['COPEC.SN','SQM-B.SN','BCI.SN','CCU.SN','FALABELLA.SN','ENTEL.SN']);
+    StockPoller.subscribe('ALL', d => actualizarFilaAccion(d.symbol, d.price, d.changePct));
+  }
+
   setInterval(() => {
     const last = chartPoints[chartPoints.length-1];
     const newPt = last + (Math.random()-0.48)*3;
@@ -1539,6 +1578,23 @@ function animarTickers() {
     if (chartPoints.length > 80) chartPoints.shift();
     drawChart();
   }, 5000);
+}
+
+function actualizarFilaAccion(symbol, price, changePct) {
+  const nemo = symbol.replace('.SN','');
+  document.querySelectorAll('#accionesTable tr').forEach(row => {
+    const symEl = row.querySelector('.mkt-sym');
+    if (symEl && symEl.textContent === nemo) {
+      const priceEl = row.querySelector('.mkt-price');
+      if (priceEl) priceEl.textContent = '$' + price.toLocaleString('es-CL');
+      const chgEl = row.querySelector('[data-chg]');
+      if (chgEl && changePct !== undefined) {
+        const isPos = changePct >= 0;
+        chgEl.textContent = `${isPos?'▲':'▼'} ${isPos?'+':''}${changePct.toFixed(2)}%`;
+        chgEl.style.color = isPos ? 'var(--verde)' : 'var(--rojo)';
+      }
+    }
+  });
 }
 
 // ══════════════════════════════════════════════════════════════
