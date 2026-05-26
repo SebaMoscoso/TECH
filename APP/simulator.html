@@ -679,6 +679,7 @@ body { font-family: var(--sans); background: var(--bg); color: var(--texto); dis
     <div class="rtab" onclick="switchTab('estadisticas')">Stats</div>
     <div class="rtab" onclick="switchTab('disciplina')" title="Score de Disciplina Institucional">🎯</div>
     <div class="rtab" onclick="switchTab('imbalance')" title="Order Imbalance — Presión compradora/vendedora">⚖️</div>
+    <div class="rtab" onclick="switchTab('diario')" title="Diario de Trading">📓</div>
   </div>
 
   <div class="right-content" id="rightContent">
@@ -713,6 +714,18 @@ body { font-family: var(--sans); background: var(--bg); color: var(--texto); dis
     <h3 id="modalTitle">Confirmar compra</h3>
     <p id="modalDesc">Revisa los detalles de tu orden antes de ejecutar.</p>
     <div class="modal-order" id="modalOrder"></div>
+
+    <!-- DIARIO DE TRADING -->
+    <div style="margin-top:14px;border-top:1px solid var(--linea);padding-top:14px">
+      <div style="font-size:0.72rem;text-transform:uppercase;letter-spacing:0.06em;color:var(--texto3);margin-bottom:6px">
+        📓 ¿Por qué entras a este trade? <span style="color:var(--rojo)">*</span>
+      </div>
+      <textarea id="journalEntrada" placeholder="Ej: RSI en 28, precio en soporte, volumen creciente..."
+        style="width:100%;background:var(--bg3);border:1px solid var(--linea2);border-radius:6px;color:var(--texto);font-family:var(--sans);font-size:0.8rem;padding:8px 10px;resize:none;height:60px;outline:none;line-height:1.5"
+        oninput="this.style.borderColor=this.value.trim().length>10?'var(--verde)':\'var(--linea2)\';document.getElementById('journalHint').style.color=this.value.trim().length>10?'var(--verde)':\'var(--texto3)\'"></textarea>
+      <div style="font-size:0.68rem;color:var(--texto3);margin-top:4px" id="journalHint">Mínimo 10 caracteres</div>
+    </div>
+
     <div class="modal-btns">
       <button class="modal-btn cancel" onclick="cerrarModal()">Cancelar</button>
       <button class="modal-btn confirm-c" id="modalConfirm" onclick="ejecutarOrden()">Ejecutar orden</button>
@@ -1281,10 +1294,17 @@ function ejecutarOrden() {
   const now = new Date();
   const hora = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
   const tradeId = `t_${Date.now()}`;
+
+  // Capturar razón de entrada del diario
+  const journalEl = document.getElementById('journalEntrada');
+  const razonEntrada = journalEl ? journalEl.value.trim() : '';
+  if (journalEl) journalEl.value = '';
+
   const tradeData = {
     id: tradeId, sym: accionSel.sym, tipo: isCompra?'compra':'venta',
     cant, precio: accionSel.precio, stop, tp, hora, pnl: null,
     timestamp: now.toISOString(),
+    journal: { entrada: razonEntrada, salida: null },
   };
   trades.unshift(tradeData);
 
@@ -1931,6 +1951,108 @@ renderRightPanel = function(tab) {
     suscribirImbalance();
   };
 })();
+
+// ── DIARIO DE TRADING — S6 ────────────────────────────────────
+// Análisis de patrones en las razones de entrada/salida
+const PALABRAS_FOMO   = ['creo','feeling','parece','intuición','apuesta','todos','sube','rápido','oportunidad','ahora','urgente'];
+const PALABRAS_TECNIC = ['rsi','ema','soporte','resistencia','volumen','macd','bollinger','tendencia','ruptura','vela','patrón','atr','fibonacci','media'];
+const PALABRAS_REVENGE= ['recuperar','perdida','perder','rabias','compensar','revancha','desquitar'];
+
+function _analizarTexto(texto) {
+  if (!texto) return { tipo:'sin_razon', score:0 };
+  const t = texto.toLowerCase();
+  const fomoCount    = PALABRAS_FOMO.filter(w=>t.includes(w)).length;
+  const tecnicCount  = PALABRAS_TECNIC.filter(w=>t.includes(w)).length;
+  const revengeCount = PALABRAS_REVENGE.filter(w=>t.includes(w)).length;
+
+  if (revengeCount > 0)  return { tipo:'revenge',  score:-2, palabras: PALABRAS_REVENGE.filter(w=>t.includes(w)) };
+  if (fomoCount > tecnicCount) return { tipo:'fomo', score:-1, palabras: PALABRAS_FOMO.filter(w=>t.includes(w)) };
+  if (tecnicCount > 0)  return { tipo:'tecnico',  score:+1, palabras: PALABRAS_TECNIC.filter(w=>t.includes(w)) };
+  return { tipo:'neutro', score:0 };
+}
+
+function _renderDiario(el) {
+  const tradesConJournal = trades.filter(t => t.journal?.entrada);
+  const todos = trades.filter(t => t.journal);
+
+  if (todos.length === 0) {
+    el.innerHTML = `<div style="padding:20px;text-align:center;color:var(--texto3);font-size:0.82rem">
+      <div style="font-size:2rem;margin-bottom:8px">📓</div>
+      El diario se llena automáticamente cuando ejecutas trades.<br>
+      Antes de cada orden te pedimos una razón de entrada.
+    </div>`;
+    return;
+  }
+
+  // Análisis global
+  const analisis = tradesConJournal.map(t => ({ trade:t, analisis:_analizarTexto(t.journal?.entrada) }));
+  const fomos    = analisis.filter(a=>a.analisis.tipo==='fomo').length;
+  const tecnicos = analisis.filter(a=>a.analisis.tipo==='tecnico').length;
+  const revenges = analisis.filter(a=>a.analisis.tipo==='revenge').length;
+  const total    = tradesConJournal.length;
+  const pctTecnico = total > 0 ? Math.round(tecnicos/total*100) : 0;
+
+  const colorGlobal = pctTecnico>=70?'var(--verde)':pctTecnico>=40?'var(--amarillo)':'var(--rojo)';
+
+  el.innerHTML = `
+    <!-- Resumen global -->
+    <div style="padding:14px 16px;border-bottom:1px solid var(--linea)">
+      <div style="font-size:0.7rem;text-transform:uppercase;letter-spacing:0.06em;color:var(--texto3);margin-bottom:8px">Análisis de tus razones</div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px">
+        <div style="background:var(--bg3);border-radius:6px;padding:8px;text-align:center">
+          <div style="font-family:var(--mono);font-size:1rem;color:var(--verde)">${tecnicos}</div>
+          <div style="font-size:0.62rem;color:var(--texto3);margin-top:2px">Técnicos</div>
+        </div>
+        <div style="background:var(--bg3);border-radius:6px;padding:8px;text-align:center">
+          <div style="font-family:var(--mono);font-size:1rem;color:var(--amarillo)">${fomos}</div>
+          <div style="font-size:0.62rem;color:var(--texto3);margin-top:2px">FOMO</div>
+        </div>
+        <div style="background:var(--bg3);border-radius:6px;padding:8px;text-align:center">
+          <div style="font-family:var(--mono);font-size:1rem;color:var(--rojo)">${revenges}</div>
+          <div style="font-size:0.62rem;color:var(--texto3);margin-top:2px">Revenge</div>
+        </div>
+      </div>
+      <div style="height:5px;background:var(--bg4);border-radius:3px;overflow:hidden;margin-bottom:4px">
+        <div style="height:100%;width:${pctTecnico}%;background:${colorGlobal};border-radius:3px;transition:width 0.5s"></div>
+      </div>
+      <div style="font-size:0.7rem;color:${colorGlobal}">${pctTecnico}% de tus entradas son técnicas</div>
+    </div>
+
+    <!-- Lista de entradas del diario -->
+    <div style="overflow-y:auto;max-height:320px">
+      ${todos.slice(0,20).map(t => {
+        const an = _analizarTexto(t.journal?.entrada);
+        const colorTipo = an.tipo==='tecnico'?'var(--verde)':an.tipo==='fomo'?'var(--amarillo)':an.tipo==='revenge'?'var(--rojo)':'var(--texto3)';
+        const emojiTipo = an.tipo==='tecnico'?'📊':an.tipo==='fomo'?'😰':an.tipo==='revenge'?'😡':'📝';
+        return `<div style="padding:10px 16px;border-bottom:1px solid rgba(255,255,255,0.03)">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+            <span style="font-size:0.8rem;font-weight:500">${t.sym} · ${t.tipo.toUpperCase()} ${t.cant}</span>
+            <span style="font-size:0.7rem;color:${colorTipo}">${emojiTipo} ${an.tipo}</span>
+          </div>
+          ${t.journal?.entrada ? `<div style="font-size:0.74rem;color:var(--texto2);background:var(--bg3);padding:6px 8px;border-radius:5px;border-left:2px solid ${colorTipo}">
+            <span style="color:var(--texto3);font-size:0.65rem">ENTRADA: </span>${t.journal.entrada}
+          </div>` : '<div style="font-size:0.7rem;color:var(--texto3);font-style:italic">Sin razón de entrada registrada</div>'}
+          ${t.journal?.salida ? `<div style="font-size:0.74rem;color:var(--texto2);background:var(--bg3);padding:6px 8px;border-radius:5px;border-left:2px solid var(--azul);margin-top:4px">
+            <span style="color:var(--texto3);font-size:0.65rem">SALIDA: </span>${t.journal.salida}
+          </div>` : ''}
+        </div>`;
+      }).join('')}
+    </div>`;
+}
+
+// Inyectar diario en renderRightPanel
+const _renderRightOrig2 = renderRightPanel;
+renderRightPanel = function(tab) {
+  if (tab === 'diario') {
+    const el = document.getElementById('rightContent');
+    _renderDiario(el);
+    document.querySelectorAll('.rtab').forEach((t,i,arr) => {
+      t.classList.toggle('active', t.getAttribute('onclick')?.includes('diario'));
+    });
+    return;
+  }
+  _renderRightOrig2(tab);
+};
 </script>
 
 <!-- ── FOOTER DISCLAIMER LEGAL ── -->
