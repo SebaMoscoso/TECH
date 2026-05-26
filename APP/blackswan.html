@@ -1,0 +1,986 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>InvertirCL — Black Swan Simulator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:#07090d; --bg2:#0d1117; --bg3:#131a22; --bg4:#1a222c;
+  --verde:#00e676; --rojo:#ff3d57; --azul:#4a9eff; --amarillo:#f5c518;
+  --purpura:#9b59b6; --naranja:#ff6b35;
+  --linea:rgba(255,255,255,0.06); --linea2:rgba(255,255,255,0.1);
+  --texto:#e2e8f0; --texto2:#8a9bb0; --texto3:#4a5568;
+  --mono:'DM Mono',monospace; --sans:'DM Sans',sans-serif; --display:'Syne',sans-serif;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html,body{height:100%;overflow:hidden;}
+body{font-family:var(--sans);background:var(--bg);color:var(--texto);display:flex;flex-direction:column;}
+
+/* ── TOPBAR ── */
+.topbar{height:52px;background:var(--bg2);border-bottom:1px solid var(--linea);display:flex;align-items:center;padding:0 20px;gap:14px;flex-shrink:0;}
+.logo{font-family:var(--display);font-weight:800;font-size:1rem;color:var(--verde);text-decoration:none;}
+.logo span{color:var(--texto2);font-weight:400;}
+.tnav-wrap{display:flex;gap:2px;margin-left:8px;}
+.tnav{padding:6px 13px;border-radius:6px;font-size:0.78rem;color:var(--texto2);cursor:pointer;transition:all 0.15s;text-decoration:none;white-space:nowrap;}
+.tnav:hover{background:var(--bg3);color:var(--texto);}
+.tnav.active{background:rgba(255,61,87,0.12);color:var(--rojo);}
+.topbar-right{margin-left:auto;display:flex;align-items:center;gap:8px;}
+.chaos-badge{font-size:0.65rem;padding:3px 10px;border-radius:100px;background:rgba(255,61,87,0.1);color:var(--rojo);border:1px solid rgba(255,61,87,0.25);letter-spacing:0.06em;text-transform:uppercase;animation:badgePulse 2s infinite;}
+@keyframes badgePulse{0%,100%{opacity:1}50%{opacity:0.6}}
+
+/* ── LAYOUT ── */
+.layout{display:grid;grid-template-columns:300px 1fr 300px;flex:1;overflow:hidden;}
+
+/* ══ SIDEBAR IZQUIERDO — Escenarios ══ */
+.sidebar-left{background:var(--bg2);border-right:1px solid var(--linea);display:flex;flex-direction:column;overflow-y:auto;}
+.sb-header{padding:16px 18px;border-bottom:1px solid var(--linea);}
+.sb-title{font-family:var(--display);font-size:0.9rem;font-weight:700;margin-bottom:4px;}
+.sb-sub{font-size:0.7rem;color:var(--texto2);line-height:1.5;}
+
+/* Cards de escenario */
+.escenario-card{padding:14px 18px;border-bottom:1px solid var(--linea);cursor:pointer;transition:all 0.15s;position:relative;overflow:hidden;}
+.escenario-card::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:transparent;transition:background 0.2s;}
+.escenario-card.active::before{background:var(--color-esc);}
+.escenario-card:hover{background:rgba(255,255,255,0.02);}
+.escenario-card.active{background:rgba(255,61,87,0.03);}
+.esc-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;}
+.esc-emoji{font-size:1.2rem;}
+.esc-badges{display:flex;gap:4px;}
+.esc-badge{font-size:0.58rem;padding:2px 6px;border-radius:3px;font-weight:600;text-transform:uppercase;letter-spacing:0.04em;}
+.esc-name{font-family:var(--display);font-size:0.88rem;font-weight:700;margin-bottom:4px;}
+.escenario-card.active .esc-name{color:var(--color-esc);}
+.esc-desc{font-size:0.7rem;color:var(--texto2);line-height:1.45;margin-bottom:8px;}
+.esc-stats{display:flex;gap:12px;}
+.esc-stat{font-family:var(--mono);font-size:0.65rem;}
+.esc-stat .lbl{color:var(--texto3);}
+.esc-stat .val{font-weight:500;}
+
+/* ══ CENTRO — Gráfico + controles ══ */
+.center{display:flex;flex-direction:column;overflow:hidden;background:var(--bg);}
+
+/* Header del escenario activo */
+.crisis-header{padding:12px 20px;background:var(--bg2);border-bottom:1px solid var(--linea);flex-shrink:0;display:flex;align-items:center;justify-content:space-between;}
+.crisis-header-left{display:flex;align-items:center;gap:12px;}
+.crisis-emoji-big{font-size:1.6rem;}
+.crisis-title{font-family:var(--display);font-size:1rem;font-weight:800;}
+.crisis-subtitle{font-size:0.72rem;color:var(--texto2);margin-top:2px;}
+.crisis-header-right{display:flex;gap:8px;}
+.speed-btn{padding:5px 12px;border-radius:6px;border:1px solid var(--linea2);background:var(--bg3);color:var(--texto2);font-size:0.72rem;cursor:pointer;font-family:var(--sans);transition:all 0.15s;}
+.speed-btn.active{background:rgba(255,61,87,0.1);border-color:rgba(255,61,87,0.3);color:var(--rojo);}
+.btn-play{padding:6px 16px;border-radius:6px;border:none;background:var(--rojo);color:#fff;font-family:var(--display);font-size:0.78rem;font-weight:700;cursor:pointer;transition:all 0.2s;}
+.btn-play:hover{background:#ff1a35;box-shadow:0 4px 16px rgba(255,61,87,0.3);}
+.btn-play.running{background:var(--amarillo);color:#000;}
+.btn-play:disabled{background:var(--bg3);color:var(--texto3);cursor:not-allowed;}
+
+/* Canvas */
+.chart-wrap{flex:1;position:relative;overflow:hidden;padding:10px 16px 6px;}
+#crisisCanvas{width:100%;height:100%;display:block;}
+
+/* Info bar */
+.info-bar{padding:8px 20px;background:var(--bg2);border-top:1px solid var(--linea);display:flex;align-items:center;gap:20px;flex-shrink:0;}
+.info-item{display:flex;align-items:center;gap:6px;font-size:0.7rem;color:var(--texto2);}
+.info-val{font-family:var(--mono);font-weight:500;}
+.info-val.pos{color:var(--verde);}
+.info-val.neg{color:var(--rojo);}
+.info-val.warn{color:var(--amarillo);}
+
+/* ══ SIDEBAR DERECHO — Trade + resultado ══ */
+.sidebar-right{background:var(--bg2);border-left:1px solid var(--linea);display:flex;flex-direction:column;overflow-y:auto;}
+
+/* Sección orden */
+.order-section{padding:14px 16px;border-bottom:1px solid var(--linea);}
+.order-title{font-size:0.68rem;text-transform:uppercase;letter-spacing:0.08em;color:var(--texto3);margin-bottom:12px;}
+
+/* Side tabs */
+.side-tabs{display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-bottom:12px;}
+.side-tab{padding:8px;border-radius:7px;border:1px solid var(--linea2);background:var(--bg3);color:var(--texto2);font-size:0.78rem;cursor:pointer;text-align:center;transition:all 0.15s;font-family:var(--sans);}
+.side-tab.buy.active{background:rgba(0,230,118,0.1);border-color:rgba(0,230,118,0.35);color:var(--verde);}
+.side-tab.sell.active{background:rgba(255,61,87,0.1);border-color:rgba(255,61,87,0.35);color:var(--rojo);}
+
+/* Inputs */
+.input-row{margin-bottom:10px;}
+.input-label{font-size:0.7rem;color:var(--texto2);margin-bottom:4px;display:flex;justify-content:space-between;}
+.input-hint{color:var(--texto3);font-family:var(--mono);font-size:0.68rem;}
+.s-input{width:100%;background:var(--bg3);border:1px solid var(--linea2);border-radius:7px;padding:8px 11px;font-family:var(--mono);font-size:0.85rem;color:var(--texto);outline:none;transition:border-color 0.15s;}
+.s-input:focus{border-color:var(--rojo);}
+
+/* Slider cantidad */
+.qty-wrap{display:flex;align-items:center;gap:8px;}
+.qty-slider{flex:1;-webkit-appearance:none;background:var(--bg3);height:4px;border-radius:2px;outline:none;cursor:pointer;}
+.qty-slider::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;border-radius:50%;background:var(--rojo);cursor:pointer;border:2px solid var(--bg2);}
+.qty-val{font-family:var(--mono);font-size:0.82rem;color:var(--texto);width:60px;text-align:right;}
+
+/* Resumen orden */
+.order-summary{background:var(--bg3);border-radius:8px;padding:10px 12px;margin-top:10px;}
+.order-summary-row{display:flex;justify-content:space-between;font-size:0.72rem;padding:3px 0;}
+.order-summary-row .k{color:var(--texto2);}
+.order-summary-row .v{font-family:var(--mono);}
+.order-summary-row .v.warn{color:var(--rojo);}
+.order-summary-row .v.ok{color:var(--verde);}
+
+.btn-ejecutar{width:100%;padding:11px;border-radius:8px;border:none;background:var(--rojo);color:#fff;font-family:var(--display);font-size:0.88rem;font-weight:700;cursor:pointer;margin-top:10px;transition:all 0.2s;position:relative;overflow:hidden;}
+.btn-ejecutar:hover{background:#ff1a35;box-shadow:0 4px 16px rgba(255,61,87,0.3);}
+.btn-ejecutar:disabled{background:var(--bg3);color:var(--texto3);cursor:not-allowed;}
+
+/* Resultado */
+.resultado-section{padding:14px 16px;border-bottom:1px solid var(--linea);}
+.resultado-card{border-radius:10px;padding:14px;border:1px solid;}
+.resultado-card.ganancia{background:rgba(0,230,118,0.04);border-color:rgba(0,230,118,0.2);}
+.resultado-card.perdida{background:rgba(255,61,87,0.04);border-color:rgba(255,61,87,0.15);}
+.resultado-card.neutro{background:var(--bg3);border-color:var(--linea2);}
+.res-header{display:flex;align-items:center;gap:8px;margin-bottom:10px;}
+.res-icon{font-size:1.3rem;}
+.res-titulo{font-family:var(--display);font-size:0.92rem;font-weight:700;}
+.res-row{display:flex;justify-content:space-between;font-size:0.73rem;padding:4px 0;border-bottom:1px solid rgba(255,255,255,0.04);}
+.res-row:last-child{border-bottom:none;}
+.res-k{color:var(--texto2);}
+.res-v{font-family:var(--mono);font-weight:500;}
+
+/* Lecciones */
+.lecciones-section{padding:14px 16px;}
+.lec-title{font-size:0.68rem;text-transform:uppercase;letter-spacing:0.08em;color:var(--texto3);margin-bottom:8px;}
+.leccion-item{display:flex;gap:8px;padding:8px 10px;border-radius:6px;background:rgba(74,158,255,0.04);border:1px solid rgba(74,158,255,0.1);margin-bottom:6px;font-size:0.73rem;color:var(--texto2);line-height:1.55;}
+.leccion-item .lec-icon{flex-shrink:0;font-size:0.9rem;}
+
+/* Stress test */
+.stress-section{padding:14px 16px;border-top:1px solid var(--linea);}
+.stress-title{font-size:0.68rem;text-transform:uppercase;letter-spacing:0.08em;color:var(--texto3);margin-bottom:10px;}
+.stress-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:10px;}
+.stress-stat{background:var(--bg3);border-radius:6px;padding:8px;}
+.stress-stat-label{font-size:0.6rem;color:var(--texto3);text-transform:uppercase;letter-spacing:0.05em;}
+.stress-stat-val{font-family:var(--mono);font-size:0.85rem;margin-top:2px;}
+.btn-stress{width:100%;padding:9px;border-radius:7px;border:1px solid rgba(155,89,182,0.3);background:rgba(155,89,182,0.06);color:var(--purpura);font-family:var(--sans);font-size:0.78rem;cursor:pointer;transition:all 0.15s;}
+.btn-stress:hover{background:rgba(155,89,182,0.12);}
+
+/* Datos clave overlay */
+.datos-clave{background:rgba(255,61,87,0.04);border:1px solid rgba(255,61,87,0.12);border-radius:8px;padding:10px 12px;margin:0 16px 12px;}
+.dk-title{font-size:0.65rem;color:var(--rojo);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px;}
+.dk-item{font-size:0.7rem;color:var(--texto2);padding:3px 0;border-bottom:1px solid rgba(255,255,255,0.03);display:flex;gap:6px;}
+.dk-item:last-child{border-bottom:none;}
+.dk-item::before{content:'▶';color:var(--rojo);font-size:0.55rem;margin-top:2px;flex-shrink:0;}
+
+/* Scrollbar */
+::-webkit-scrollbar{width:4px;}
+::-webkit-scrollbar-track{background:transparent;}
+::-webkit-scrollbar-thumb{background:var(--bg4);border-radius:2px;}
+@keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+.fade-in{animation:fadeIn 0.3s ease both;}
+</style>
+</head>
+<body>
+
+<!-- TOPBAR -->
+<div class="topbar">
+  <a href="dashboard.html" class="logo">Invertir<span>CL</span></a>
+  <nav class="tnav-wrap">
+    <a href="dashboard.html" class="tnav">Dashboard</a>
+    <a href="simulator.html" class="tnav">Simulador</a>
+    <a href="backtest.html"  class="tnav">Backtest</a>
+    <a href="risk.html"      class="tnav">Riesgo</a>
+    <a href="learn.html"     class="tnav">Aprender</a>
+    <a href="heatmap.html"   class="tnav">Liquidez</a>
+    <a href="blackswan.html" class="tnav active">🦢 Black Swan</a>
+  </nav>
+  <div class="topbar-right">
+    <span class="chaos-badge">⚠️ Modo Crisis</span>
+  </div>
+</div>
+
+<div class="layout">
+
+  <!-- ══ SIDEBAR IZQUIERDO — Selector escenario ══ -->
+  <div class="sidebar-left">
+    <div class="sb-header">
+      <div class="sb-title">🦢 Black Swan Simulator</div>
+      <div class="sb-sub">Opera en crisis históricas reales. Aprende que los stops no siempre se ejecutan al precio esperado.</div>
+    </div>
+
+    <div id="escenariosList"></div>
+  </div>
+
+  <!-- ══ CENTRO — Gráfico ══ -->
+  <div class="center">
+    <div class="crisis-header">
+      <div class="crisis-header-left">
+        <span class="crisis-emoji-big" id="crisisEmoji">🦠</span>
+        <div>
+          <div class="crisis-title" id="crisisTitle">Crash COVID-19 Marzo 2020</div>
+          <div class="crisis-subtitle" id="crisisSubtitle">Feb 2020 – Abr 2020 · IPSA cayó 35% en 3 semanas</div>
+        </div>
+      </div>
+      <div class="crisis-header-right">
+        <button class="speed-btn active" onclick="setSpeed(1,this)">1×</button>
+        <button class="speed-btn" onclick="setSpeed(2,this)">2×</button>
+        <button class="speed-btn" onclick="setSpeed(5,this)">5×</button>
+        <button class="btn-play" id="btnPlay" onclick="togglePlay()">▶ Iniciar crisis</button>
+      </div>
+    </div>
+
+    <div class="chart-wrap" id="chartWrap">
+      <canvas id="crisisCanvas"></canvas>
+    </div>
+
+    <div class="info-bar">
+      <div class="info-item">Día <span class="info-val" id="infoDia">—</span></div>
+      <div class="info-item">Precio <span class="info-val" id="infoPrecio">—</span></div>
+      <div class="info-item">Cambio día <span class="info-val" id="infoCambioDia">—</span></div>
+      <div class="info-item">Retorno acum. <span class="info-val neg" id="infoAcum">—</span></div>
+      <div class="info-item">Volatilidad <span class="info-val warn" id="infoVol">—</span></div>
+      <div class="info-item">Slippage estimado <span class="info-val warn" id="infoSlippage">—</span></div>
+    </div>
+  </div>
+
+  <!-- ══ SIDEBAR DERECHO — Orden + resultado ══ -->
+  <div class="sidebar-right">
+
+    <!-- Datos clave del escenario -->
+    <div class="datos-clave" id="datosClave"></div>
+
+    <!-- Orden -->
+    <div class="order-section">
+      <div class="order-title">Ejecutar operación en la crisis</div>
+
+      <div class="side-tabs">
+        <button class="side-tab buy active" id="tabBuy" onclick="setSide('buy')">🟢 Long (Compra)</button>
+        <button class="side-tab sell" id="tabSell" onclick="setSide('sell')">🔴 Short (Venta)</button>
+      </div>
+
+      <div class="input-row">
+        <div class="input-label">
+          <span>Precio de entrada</span>
+          <span class="input-hint" id="hintEntrada">—</span>
+        </div>
+        <input type="number" class="s-input" id="inEntrada" placeholder="Ej: 4800" oninput="actualizarResumen()">
+      </div>
+
+      <div class="input-row">
+        <div class="input-label">
+          <span>Stop Loss</span>
+          <span class="input-hint" id="hintSL">—% del precio</span>
+        </div>
+        <input type="number" class="s-input" id="inSL" placeholder="Ej: 4400" oninput="actualizarResumen()">
+      </div>
+
+      <div class="input-row">
+        <div class="input-label">
+          <span>Take Profit</span>
+          <span class="input-hint" id="hintTP">—% del precio</span>
+        </div>
+        <input type="number" class="s-input" id="inTP" placeholder="Ej: 5400" oninput="actualizarResumen()">
+      </div>
+
+      <div class="input-row">
+        <div class="input-label">
+          <span>Cantidad (acciones)</span>
+          <span class="input-hint" id="hintCantidad">100 acciones</span>
+        </div>
+        <div class="qty-wrap">
+          <input type="range" class="qty-slider" min="10" max="1000" step="10" value="100"
+            id="sliderCantidad" oninput="document.getElementById('hintCantidad').textContent=this.value+' acciones';actualizarResumen()">
+          <span class="qty-val" id="qtyVal">100</span>
+        </div>
+      </div>
+
+      <div class="order-summary" id="orderSummary">
+        <div class="order-summary-row"><span class="k">Capital en riesgo</span><span class="v" id="sumRiesgo">—</span></div>
+        <div class="order-summary-row"><span class="k">Slippage estimado entrada</span><span class="v warn" id="sumSlippage">—</span></div>
+        <div class="order-summary-row"><span class="k">R/R ratio</span><span class="v" id="sumRR">—</span></div>
+        <div class="order-summary-row"><span class="k">Pérdida máx (con slippage)</span><span class="v warn" id="sumPerdidaMax">—</span></div>
+      </div>
+
+      <button class="btn-ejecutar" id="btnEjecutar" onclick="ejecutarTrade()">
+        ⚡ Ejecutar en la crisis
+      </button>
+    </div>
+
+    <!-- Resultado -->
+    <div class="resultado-section" id="resultadoSection" style="display:none"></div>
+
+    <!-- Lecciones -->
+    <div class="lecciones-section" id="leccionesSection" style="display:none"></div>
+
+    <!-- Stress Test -->
+    <div class="stress-section">
+      <div class="stress-title">🔬 Stress Test — 500 simulaciones</div>
+      <div class="stress-grid" id="stressGrid">
+        <div class="stress-stat"><div class="stress-stat-label">P&L promedio</div><div class="stress-stat-val" style="color:var(--texto3)">—</div></div>
+        <div class="stress-stat"><div class="stress-stat-label">Prob. pérdida</div><div class="stress-stat-val" style="color:var(--texto3)">—</div></div>
+        <div class="stress-stat"><div class="stress-stat-label">VaR 95%</div><div class="stress-stat-val" style="color:var(--texto3)">—</div></div>
+        <div class="stress-stat"><div class="stress-stat-label">Prob. ruina</div><div class="stress-stat-val" style="color:var(--texto3)">—</div></div>
+      </div>
+      <button class="btn-stress" onclick="correrStressTest()">Correr stress test</button>
+    </div>
+
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════════════════════════
+// DATOS DE ESCENARIOS (traducción de blackswan.py)
+// ══════════════════════════════════════════════════════════════
+const ESCENARIOS = {
+  covid_2020: {
+    id:'covid_2020', emoji:'🦠', color:'#ff6b35',
+    nombre:'Crash COVID-19 Marzo 2020',
+    descripcion:'El IPSA perdió 35% en 3 semanas. La caída más rápida de la historia.',
+    fechaInicio:'Feb 2020', fechaFin:'Abr 2020',
+    caidaMax:-35.0, duracionDias:70, volatMult:6.8, slippageExtra:0.05,
+    precioBase:5800,
+    datosClave:[
+      '24 Feb 2020: Primera caída — IPSA -5% en 1 día',
+      '12 Mar 2020: Circuitos cortafuego activados en múltiples bolsas',
+      '18 Mar 2020: Mínimo — IPSA en 3.800 desde 5.800',
+      'Slippage de hasta 8% en activos ilíquidos',
+    ],
+    leccion:'La velocidad del crash COVID fue sin precedentes. Los stops de mercado se ejecutaron muy por debajo del precio.',
+    patron:'crash_rapido',
+  },
+  crisis_2008: {
+    id:'crisis_2008', emoji:'🏦', color:'#ff3d57',
+    nombre:'Crisis Subprime 2008',
+    descripcion:'Colapso del sistema financiero global. IPSA cayó 37% en 6 meses.',
+    fechaInicio:'Sep 2008', fechaFin:'Mar 2009',
+    caidaMax:-37.0, duracionDias:180, volatMult:4.2, slippageExtra:0.03,
+    precioBase:3800,
+    datosClave:[
+      '15 Sep 2008: Lehman Brothers quiebra — IPSA cae 7% en 1 día',
+      'Oct 2008: Volatilidad más alta desde 1929',
+      'Los stops se ejecutaron con hasta 5% de slippage',
+      'Correlación de todos los activos → 1.0',
+    ],
+    leccion:'En una crisis sistémica, la diversificación falla. El único hedge real es el cash.',
+    patron:'caida_gradual',
+  },
+  estallido_2019: {
+    id:'estallido_2019', emoji:'🇨🇱', color:'#f5c518',
+    nombre:'Estallido Social Chile 2019',
+    descripcion:'Crisis política única de Chile. IPSA cayó 15% en la primera semana.',
+    fechaInicio:'Oct 2019', fechaFin:'Dic 2019',
+    caidaMax:-20.0, duracionDias:74, volatMult:3.5, slippageExtra:0.025,
+    precioBase:5200,
+    datosClave:[
+      '18 Oct 2019: Inicio estallido — IPSA cae 4% en 1 día',
+      '22 Oct 2019: IPSA pierde 15% en una semana',
+      'Dólar sube de $710 a $830 en 2 semanas',
+      'Falabella y Cencosud las más golpeadas',
+    ],
+    leccion:'El riesgo político local puede ser más rápido y severo que el riesgo de mercado global.',
+    patron:'shock_politico',
+  },
+  flash_crash_2010: {
+    id:'flash_crash_2010', emoji:'⚡', color:'#9b59b6',
+    nombre:'Flash Crash Mayo 2010',
+    descripcion:'El Dow Jones cayó 1.000 puntos en minutos. Se recuperó en 20 minutos.',
+    fechaInicio:'6 May 2010', fechaFin:'6 May 2010',
+    caidaMax:-9.2, duracionDias:1, volatMult:15.0, slippageExtra:0.08,
+    precioBase:10800,
+    datosClave:[
+      '14:42 ET: El Dow cae 600 puntos en minutos',
+      '14:47 ET: Caída total de 998 puntos (-9.2%)',
+      '15:07 ET: Recuperación del 70%',
+      'Stops ejecutados hasta 50% por debajo del precio',
+    ],
+    leccion:'En un Flash Crash, tus stops de mercado pueden ejecutarse a precios absurdos.',
+    patron:'flash',
+  },
+  crisis_rusa_1998: {
+    id:'crisis_rusa_1998', emoji:'🇷🇺', color:'#4a9eff',
+    nombre:'Crisis Financiera Rusia 1998',
+    descripcion:'Default ruso y colapso de LTCM. Mercados emergentes perdieron hasta 50%.',
+    fechaInicio:'Jul 1998', fechaFin:'Oct 1998',
+    caidaMax:-22.0, duracionDias:122, volatMult:3.8, slippageExtra:0.04,
+    precioBase:680,
+    datosClave:[
+      '17 Ago 1998: Rusia declara default de deuda soberana',
+      'LTCM pierde $4.000 millones en semanas',
+      'Mercados emergentes caen 50% en 3 meses',
+      'El contagio llegó a Chile',
+    ],
+    leccion:'El contagio financiero es rápido y no discrimina. Un default en otro país puede hundir tu portafolio local.',
+    patron:'contagio',
+  },
+};
+
+// ══════════════════════════════════════════════════════════════
+// ESTADO
+// ══════════════════════════════════════════════════════════════
+let escenarioActual = 'covid_2020';
+let diasGenerados   = [];
+let diaActual       = 0;
+let playing         = false;
+let speed           = 1;
+let intervaloPlay   = null;
+let sideActual      = 'buy';
+let tradeEjecutado  = null;
+
+// ══════════════════════════════════════════════════════════════
+// GENERACIÓN DE DATOS DE CRISIS (lógica de blackswan.py en JS)
+// ══════════════════════════════════════════════════════════════
+function generarDiasCrisis(esc) {
+  const dias = [];
+  let precio = esc.precioBase;
+  const n    = Math.min(esc.duracionDias, esc.patron === 'flash' ? 288 : esc.duracionDias); // flash = intraday ticks
+
+  // Patrón de caída según tipo
+  for (let i = 0; i < n; i++) {
+    const prog     = i / n;
+    const volBase  = precio * 0.008;
+    const volCrisis = volBase * esc.volatMult;
+
+    // Drift: caída progresiva con rebotes
+    let drift = (esc.caidaMax / 100) / n;
+
+    if (esc.patron === 'crash_rapido') {
+      // Caída exponencial en primeros 30 días, luego rebote parcial
+      if (i < 30) drift *= 2.5;
+      else if (i < 45) drift = Math.abs(drift) * 0.5; // rebote
+      else drift *= 0.8;
+    } else if (esc.patron === 'flash') {
+      // Caída vertical y recuperación
+      if (i < n * 0.35)      drift = -0.004;
+      else if (i < n * 0.45) drift = -0.008;  // pánico máximo
+      else if (i < n * 0.7)  drift =  0.006;  // recuperación
+      else                    drift =  0.001;
+    } else if (esc.patron === 'shock_politico') {
+      // Caída brusca inicial, luego zigzag
+      if (i < 5) drift *= 3;
+      else drift *= (0.5 + Math.random() * 0.5);
+    }
+
+    const ruido = (Math.random() - 0.5) * 2 * volCrisis;
+    const cambio = precio * drift + ruido;
+    const open  = precio;
+    const close = Math.max(precio * 0.3, precio + cambio);
+    const rango  = Math.abs(cambio) * (1.2 + Math.random() * 0.8);
+    const high  = Math.max(open, close) + rango * 0.3;
+    const low   = Math.min(open, close) - rango * 0.7;
+    const vol   = Math.round(500000 * esc.volatMult * (0.8 + Math.random() * 0.4));
+    const ret   = ((close - open) / open * 100);
+
+    dias.push({ dia:i+1, open, high, low, close, vol, ret, precio_close:close });
+    precio = close;
+  }
+  return dias;
+}
+
+// ══════════════════════════════════════════════════════════════
+// RENDER SIDEBAR DE ESCENARIOS
+// ══════════════════════════════════════════════════════════════
+function renderEscenarios() {
+  const lista = document.getElementById('escenariosList');
+  lista.innerHTML = Object.values(ESCENARIOS).map(esc => `
+    <div class="escenario-card ${esc.id===escenarioActual?'active':''}"
+         style="--color-esc:${esc.color}"
+         onclick="cargarEscenario('${esc.id}')">
+      <div class="esc-top">
+        <span class="esc-emoji">${esc.emoji}</span>
+        <div class="esc-badges">
+          <span class="esc-badge" style="background:${esc.color}22;color:${esc.color};border:1px solid ${esc.color}44">
+            ${esc.caidaMax}%
+          </span>
+          <span class="esc-badge" style="background:rgba(245,197,24,0.1);color:var(--amarillo);border:1px solid rgba(245,197,24,0.2)">
+            Vol ×${esc.volatMult}
+          </span>
+        </div>
+      </div>
+      <div class="esc-name">${esc.nombre}</div>
+      <div class="esc-desc">${esc.descripcion}</div>
+      <div class="esc-stats">
+        <div class="esc-stat"><span class="lbl">Duración </span><span class="val">${esc.duracionDias}d</span></div>
+        <div class="esc-stat"><span class="lbl">Slippage </span><span class="val" style="color:var(--rojo)">+${(esc.slippageExtra*100).toFixed(1)}%</span></div>
+      </div>
+    </div>
+  `).join('');
+}
+
+// ══════════════════════════════════════════════════════════════
+// CARGAR ESCENARIO
+// ══════════════════════════════════════════════════════════════
+function cargarEscenario(id) {
+  detener();
+  escenarioActual = id;
+  tradeEjecutado  = null;
+  const esc = ESCENARIOS[id];
+
+  diasGenerados = generarDiasCrisis(esc);
+  diaActual     = 0;
+
+  // Header
+  document.getElementById('crisisEmoji').textContent    = esc.emoji;
+  document.getElementById('crisisTitle').textContent    = esc.nombre;
+  document.getElementById('crisisSubtitle').textContent = `${esc.fechaInicio} – ${esc.fechaFin} · IPSA cayó ${Math.abs(esc.caidaMax)}% máximo`;
+
+  // Datos clave
+  document.getElementById('datosClave').innerHTML = `
+    <div class="dk-title">⚠️ Datos históricos del evento</div>
+    ${esc.datosClave.map(d=>`<div class="dk-item">${d}</div>`).join('')}
+  `;
+
+  // Input defaults
+  const p = Math.round(esc.precioBase);
+  document.getElementById('inEntrada').value = p;
+  document.getElementById('inSL').value      = Math.round(p * (sideActual==='buy' ? 0.92 : 1.08));
+  document.getElementById('inTP').value      = Math.round(p * (sideActual==='buy' ? 1.12 : 0.88));
+
+  // Ocultar resultado anterior
+  document.getElementById('resultadoSection').style.display  = 'none';
+  document.getElementById('leccionesSection').style.display   = 'none';
+  document.getElementById('btnPlay').textContent = '▶ Iniciar crisis';
+  document.getElementById('btnPlay').classList.remove('running');
+
+  renderEscenarios();
+  actualizarResumen();
+  dibujarCanvas();
+  actualizarInfoBar();
+}
+
+// ══════════════════════════════════════════════════════════════
+// PLAY / PAUSE
+// ══════════════════════════════════════════════════════════════
+function togglePlay() {
+  if (playing) detener();
+  else iniciar();
+}
+
+function iniciar() {
+  if (diaActual >= diasGenerados.length - 1) diaActual = 0;
+  playing = true;
+  document.getElementById('btnPlay').textContent = '⏸ Pausar';
+  document.getElementById('btnPlay').classList.add('running');
+  const ms = Math.max(80, 500 / speed);
+  intervaloPlay = setInterval(() => {
+    if (diaActual < diasGenerados.length - 1) {
+      diaActual++;
+      dibujarCanvas();
+      actualizarInfoBar();
+    } else {
+      detener();
+    }
+  }, ms);
+}
+
+function detener() {
+  playing = false;
+  clearInterval(intervaloPlay);
+  const btn = document.getElementById('btnPlay');
+  if (btn) {
+    btn.textContent = diaActual >= diasGenerados.length - 1 ? '↺ Reiniciar' : '▶ Continuar';
+    btn.classList.remove('running');
+  }
+}
+
+function setSpeed(s, btn) {
+  speed = s;
+  document.querySelectorAll('.speed-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  if (playing) { detener(); iniciar(); }
+}
+
+// ══════════════════════════════════════════════════════════════
+// CANVAS — GRÁFICO DE VELAS
+// ══════════════════════════════════════════════════════════════
+function dibujarCanvas() {
+  const canvas = document.getElementById('crisisCanvas');
+  const wrap   = document.getElementById('chartWrap');
+  const W = wrap.clientWidth - 32;
+  const H = wrap.clientHeight - 16;
+  canvas.width  = W;
+  canvas.height = H;
+  const ctx = canvas.getContext('2d');
+
+  ctx.fillStyle = '#07090d';
+  ctx.fillRect(0,0,W,H);
+
+  if (!diasGenerados.length) return;
+
+  const VOLH   = Math.round(H * 0.2);
+  const CHARTH = H - VOLH - 10;
+  const PADL   = 50; const PADR = 10;
+  const dias   = diasGenerados.slice(0, diaActual + 1);
+  if (!dias.length) return;
+
+  const n     = dias.length;
+  const total = diasGenerados.length;
+  const cw    = (W - PADL - PADR) / Math.max(total, 1);
+  const bw    = Math.max(2, cw * 0.6);
+
+  const prices = dias.flatMap(d => [d.high, d.low]);
+  const minP   = Math.min(...prices) * 0.99;
+  const maxP   = Math.max(...prices) * 1.01;
+  const rangeP = maxP - minP || 1;
+  const maxVol = Math.max(...dias.map(d=>d.vol));
+
+  const toY  = v => 6 + (1-(v-minP)/rangeP) * (CHARTH-12);
+  const toVH = v => VOLH * (v/maxVol);
+  const toX  = i => PADL + i * cw + cw/2;
+
+  // Grid
+  ctx.strokeStyle = 'rgba(255,255,255,0.04)';
+  ctx.lineWidth = 1;
+  for(let i=1;i<=4;i++){
+    const y = 6 + (CHARTH-12)*i/4;
+    ctx.beginPath(); ctx.moveTo(PADL,y); ctx.lineTo(W-PADR,y); ctx.stroke();
+    const p = maxP - (maxP-minP)*i/4;
+    ctx.fillStyle='rgba(255,255,255,0.2)';
+    ctx.font='9px "DM Mono"';ctx.textAlign='right';
+    ctx.fillText('$'+Math.round(p).toLocaleString('es-CL'), PADL-4, y+3);
+  }
+
+  // Separador vol
+  ctx.strokeStyle='rgba(255,255,255,0.05)';
+  ctx.setLineDash([3,3]);
+  ctx.beginPath();ctx.moveTo(PADL,CHARTH+5);ctx.lineTo(W-PADR,CHARTH+5);ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Línea de precio inicial (referencia)
+  const precioRef = diasGenerados[0].open;
+  const yRef = toY(precioRef);
+  ctx.strokeStyle='rgba(255,255,255,0.12)';
+  ctx.lineWidth=1;ctx.setLineDash([5,5]);
+  ctx.beginPath();ctx.moveTo(PADL,yRef);ctx.lineTo(W-PADR,yRef);ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.fillStyle='rgba(255,255,255,0.25)';ctx.font='8px "DM Mono"';ctx.textAlign='left';
+  ctx.fillText('Precio inicial',PADL+4,yRef-3);
+
+  // Zona de caída esperada (fondo rojo suave)
+  const yMarcaMax = toY(diasGenerados[diasGenerados.length-1].close * 0.95);
+  ctx.fillStyle='rgba(255,61,87,0.03)';
+  ctx.fillRect(PADL, yMarcaMax, W-PADL-PADR, CHARTH-yMarcaMax);
+
+  // Velas
+  dias.forEach((d, i) => {
+    const x  = toX(i);
+    const isPos = d.close >= d.open;
+    const color = isPos ? '#00e676' : '#ff3d57';
+    const yH = toY(d.high);
+    const yL = toY(d.low);
+    const yO = toY(Math.max(d.open,d.close));
+    const yC = toY(Math.min(d.open,d.close));
+    const bH = Math.max(2, yC-yO);
+
+    // Mecha
+    ctx.strokeStyle=color;ctx.lineWidth=1;ctx.globalAlpha=0.7;
+    ctx.beginPath();ctx.moveTo(x,yH);ctx.lineTo(x,yL);ctx.stroke();
+
+    // Cuerpo
+    ctx.fillStyle=color;ctx.globalAlpha=0.85;
+    ctx.fillRect(x-bw/2,yO,bw,bH);
+    ctx.globalAlpha=1;
+
+    // Barra de volumen
+    const vH = toVH(d.vol);
+    ctx.fillStyle=isPos?'rgba(0,230,118,0.2)':'rgba(255,61,87,0.2)';
+    ctx.fillRect(x-bw/2, H-vH, bw, vH);
+  });
+
+  // Líneas de SL/TP si hay trade
+  const entrada = parseFloat(document.getElementById('inEntrada').value);
+  const sl      = parseFloat(document.getElementById('inSL').value);
+  const tp      = parseFloat(document.getElementById('inTP').value);
+
+  if(entrada && sl) {
+    // SL
+    ctx.strokeStyle='rgba(255,61,87,0.7)';ctx.lineWidth=1;ctx.setLineDash([5,4]);
+    ctx.beginPath();ctx.moveTo(PADL,toY(sl));ctx.lineTo(W-PADR,toY(sl));ctx.stroke();
+    ctx.fillStyle='rgba(255,61,87,0.8)';ctx.font='bold 9px "DM Mono"';ctx.textAlign='left';
+    ctx.fillText('SL $'+Math.round(sl).toLocaleString('es-CL'),PADL+4,toY(sl)-3);
+  }
+  if(entrada && tp) {
+    ctx.strokeStyle='rgba(0,230,118,0.7)';ctx.lineWidth=1;
+    ctx.beginPath();ctx.moveTo(PADL,toY(tp));ctx.lineTo(W-PADR,toY(tp));ctx.stroke();
+    ctx.fillStyle='rgba(0,230,118,0.8)';ctx.font='bold 9px "DM Mono"';ctx.textAlign='left';
+    ctx.fillText('TP $'+Math.round(tp).toLocaleString('es-CL'),PADL+4,toY(tp)-3);
+    ctx.setLineDash([]);
+  }
+  if(entrada) {
+    ctx.strokeStyle='rgba(245,197,24,0.8)';ctx.lineWidth=1.5;ctx.setLineDash([]);
+    ctx.beginPath();ctx.moveTo(PADL,toY(entrada));ctx.lineTo(W-PADR,toY(entrada));ctx.stroke();
+    ctx.fillStyle='rgba(245,197,24,1)';ctx.font='bold 9px "DM Mono"';ctx.textAlign='left';
+    ctx.fillText('Entrada $'+Math.round(entrada).toLocaleString('es-CL'),PADL+4,toY(entrada)-3);
+  }
+
+  // Precio actual (línea amarilla)
+  if(dias.length>0) {
+    const ultimoClose = dias[dias.length-1].close;
+    const yActual = toY(ultimoClose);
+    ctx.shadowColor='rgba(245,197,24,0.5)';ctx.shadowBlur=6;
+    ctx.strokeStyle='rgba(245,197,24,0.9)';ctx.lineWidth=1.5;ctx.setLineDash([]);
+    ctx.beginPath();ctx.moveTo(W-PADR-60,yActual);ctx.lineTo(W-PADR,yActual);ctx.stroke();
+    ctx.shadowBlur=0;
+    const lbl='$'+Math.round(ultimoClose).toLocaleString('es-CL');
+    const lw=ctx.measureText(lbl).width+10;
+    ctx.fillStyle='rgba(245,197,24,1)';
+    ctx.fillRect(W-PADR-lw-2, yActual-8, lw+4, 14);
+    ctx.fillStyle='#000';ctx.font='bold 9px "DM Mono"';ctx.textAlign='left';
+    ctx.fillText(lbl,W-PADR-lw,yActual+3);
+  }
+}
+
+// ══════════════════════════════════════════════════════════════
+// INFO BAR
+// ══════════════════════════════════════════════════════════════
+function actualizarInfoBar() {
+  if(!diasGenerados.length || diaActual<0) return;
+  const d   = diasGenerados[Math.min(diaActual, diasGenerados.length-1)];
+  const esc = ESCENARIOS[escenarioActual];
+  const acum = ((d.close - diasGenerados[0].open) / diasGenerados[0].open * 100);
+  const slipEst = (esc.slippageExtra * 100).toFixed(1);
+
+  document.getElementById('infoDia').textContent    = `${diaActual+1} / ${diasGenerados.length}`;
+  document.getElementById('infoPrecio').textContent = '$'+Math.round(d.close).toLocaleString('es-CL');
+  const retEl = document.getElementById('infoCambioDia');
+  retEl.textContent = (d.ret>=0?'+':'')+d.ret.toFixed(2)+'%';
+  retEl.className = 'info-val '+(d.ret>=0?'pos':'neg');
+  const acumEl = document.getElementById('infoAcum');
+  acumEl.textContent = (acum>=0?'+':'')+acum.toFixed(2)+'%';
+  acumEl.className = 'info-val '+(acum>=0?'pos':'neg');
+  document.getElementById('infoVol').textContent     = esc.volatMult+'× normal';
+  document.getElementById('infoSlippage').textContent = '~'+slipEst+'% adicional';
+}
+
+// ══════════════════════════════════════════════════════════════
+// RESUMEN DE ORDEN
+// ══════════════════════════════════════════════════════════════
+function actualizarResumen() {
+  const entrada  = parseFloat(document.getElementById('inEntrada').value) || 0;
+  const sl       = parseFloat(document.getElementById('inSL').value) || 0;
+  const tp       = parseFloat(document.getElementById('inTP').value) || 0;
+  const cantidad = parseInt(document.getElementById('sliderCantidad').value) || 100;
+  const esc      = ESCENARIOS[escenarioActual];
+
+  document.getElementById('qtyVal').textContent = cantidad;
+
+  if(!entrada || !sl || !tp) return;
+
+  // Slippage estimado
+  const slippageEnt = entrada * (esc.slippageExtra + 0.01);
+  const precioEjec  = sideActual==='buy' ? entrada + slippageEnt : entrada - slippageEnt;
+  const riesgo      = Math.abs(precioEjec - sl) * cantidad;
+  const ganancia    = Math.abs(tp - precioEjec) * cantidad;
+  const rr          = ganancia / (riesgo || 1);
+  const perdidaMax  = riesgo + slippageEnt * cantidad * 0.5;
+
+  const pct = v => (Math.abs(v-entrada)/entrada*100).toFixed(1)+'%';
+
+  document.getElementById('hintSL').textContent  = pct(sl)+' del precio';
+  document.getElementById('hintTP').textContent  = pct(tp)+' del precio';
+  document.getElementById('hintEntrada').textContent = '$'+Math.round(entrada).toLocaleString('es-CL');
+
+  document.getElementById('sumRiesgo').textContent    = '$'+Math.round(riesgo).toLocaleString('es-CL');
+  document.getElementById('sumSlippage').textContent  = '$'+Math.round(slippageEnt*cantidad).toLocaleString('es-CL')+' est.';
+  document.getElementById('sumRR').textContent        = rr.toFixed(1)+':1';
+  document.getElementById('sumRR').className          = 'v '+(rr>=2?'ok':'warn');
+  document.getElementById('sumPerdidaMax').textContent = '$'+Math.round(perdidaMax).toLocaleString('es-CL');
+
+  dibujarCanvas();
+}
+
+// ══════════════════════════════════════════════════════════════
+// EJECUTAR TRADE (simula la lógica de blackswan.py)
+// ══════════════════════════════════════════════════════════════
+function ejecutarTrade() {
+  detener();
+  const esc      = ESCENARIOS[escenarioActual];
+  const entrada  = parseFloat(document.getElementById('inEntrada').value);
+  const sl       = parseFloat(document.getElementById('inSL').value);
+  const tp       = parseFloat(document.getElementById('inTP').value);
+  const cantidad = parseInt(document.getElementById('sliderCantidad').value);
+
+  if(!entrada||!sl||!tp) { alert('Completa todos los campos'); return; }
+
+  // Slippage en entrada
+  const slBase    = 0.01 + esc.slippageExtra * Math.random() * 2;
+  const precioEjec = sideActual==='buy' ? entrada*(1+slBase) : entrada*(1-slBase);
+  const slippageEnt = Math.abs(precioEjec-entrada)*cantidad;
+
+  // Simular días
+  let resultado = null;
+  const diasSim = generarDiasCrisis(esc);
+
+  for(let i=0; i<diasSim.length; i++) {
+    const d = diasSim[i];
+    // ¿Stop tocado?
+    const slTocado = sideActual==='buy' ? d.low<=sl : d.high>=sl;
+    if(slTocado) {
+      const slipSalida = esc.slippageExtra * Math.random() * 2;
+      const precioSalida = sideActual==='buy' ? sl*(1-slipSalida) : sl*(1+slipSalida);
+      const pnlBruto = sideActual==='buy' ? (precioSalida-precioEjec)*cantidad : (precioEjec-precioSalida)*cantidad;
+      const pnlNeto  = pnlBruto - slippageEnt;
+      resultado = { tipo:'stop_loss', dia:i+1, precioEjec, precioSalida, pnlNeto, slippageEnt, slipSalida:Math.abs(precioSalida-sl)*cantidad };
+      break;
+    }
+    // ¿TP tocado?
+    const tpTocado = sideActual==='buy' ? d.high>=tp : d.low<=tp;
+    if(tpTocado) {
+      const precioSalida = sideActual==='buy' ? tp*(1-esc.slippageExtra*0.3) : tp*(1+esc.slippageExtra*0.3);
+      const pnlBruto = sideActual==='buy' ? (precioSalida-precioEjec)*cantidad : (precioEjec-precioSalida)*cantidad;
+      const pnlNeto  = pnlBruto - slippageEnt;
+      resultado = { tipo:'take_profit', dia:i+1, precioEjec, precioSalida, pnlNeto, slippageEnt, slipSalida:0 };
+      break;
+    }
+  }
+
+  if(!resultado) {
+    const ultimo = diasSim[diasSim.length-1].close;
+    const pnlBruto = sideActual==='buy' ? (ultimo-precioEjec)*cantidad : (precioEjec-ultimo)*cantidad;
+    resultado = { tipo:'fin_escenario', dia:diasSim.length, precioEjec, precioSalida:ultimo, pnlNeto:pnlBruto-slippageEnt, slippageEnt, slipSalida:0 };
+  }
+
+  tradeEjecutado = resultado;
+  mostrarResultado(resultado, esc, entrada, sl, tp, cantidad);
+
+  // Avanzar canvas al día de salida
+  diaActual = Math.min(resultado.dia, diasGenerados.length-1);
+  dibujarCanvas();
+}
+
+function mostrarResultado(r, esc, entrada, sl, tp, cantidad) {
+  const ganancia = r.pnlNeto >= 0;
+  const tipoLabel = r.tipo==='take_profit' ? '🎯 Take Profit alcanzado' : r.tipo==='stop_loss' ? '🔴 Stop Loss ejecutado' : '⏰ Fin del escenario';
+  const claseCard = r.tipo==='take_profit' ? 'ganancia' : r.tipo==='stop_loss' ? 'perdida' : (ganancia?'ganancia':'perdida');
+  const fmt = v => '$'+Math.abs(Math.round(v)).toLocaleString('es-CL');
+  const pct = v => ((v / (r.precioEjec*cantidad))*100).toFixed(2)+'%';
+
+  const seccion = document.getElementById('resultadoSection');
+  seccion.style.display='block';
+  seccion.innerHTML = `
+    <div class="order-title">Resultado</div>
+    <div class="resultado-card ${claseCard} fade-in">
+      <div class="res-header">
+        <span class="res-icon">${r.tipo==='take_profit'?'✅':r.tipo==='stop_loss'?'🛑':'📊'}</span>
+        <span class="res-titulo" style="color:${r.tipo==='take_profit'?'var(--verde)':'var(--rojo)'}">${tipoLabel}</span>
+      </div>
+      <div class="res-row"><span class="res-k">Día de salida</span><span class="res-v">Día ${r.dia}</span></div>
+      <div class="res-row"><span class="res-k">Precio entrada real</span><span class="res-v" style="color:var(--amarillo)">$${Math.round(r.precioEjec).toLocaleString('es-CL')}</span></div>
+      <div class="res-row"><span class="res-k">Slippage entrada</span><span class="res-v" style="color:var(--rojo)">-${fmt(r.slippageEnt)}</span></div>
+      <div class="res-row"><span class="res-k">Precio solicitado</span><span class="res-v">$${Math.round(entrada).toLocaleString('es-CL')}</span></div>
+      <div class="res-row"><span class="res-k">Precio ejecutado salida</span><span class="res-v">$${Math.round(r.precioSalida).toLocaleString('es-CL')}</span></div>
+      <div class="res-row"><span class="res-k">Slippage salida</span><span class="res-v" style="color:var(--rojo)">-${fmt(r.slipSalida)}</span></div>
+      <div class="res-row" style="margin-top:4px;padding-top:8px;border-top:1px solid rgba(255,255,255,0.08)">
+        <span class="res-k" style="font-weight:600;color:var(--texto)">P&L Neto</span>
+        <span class="res-v" style="font-size:1rem;color:${r.pnlNeto>=0?'var(--verde)':'var(--rojo)'}">
+          ${r.pnlNeto>=0?'+':''}${fmt(r.pnlNeto)} (${r.pnlNeto>=0?'+':''}${pct(r.pnlNeto)})
+        </span>
+      </div>
+    </div>
+  `;
+
+  // Lecciones
+  const lecciones = [];
+  if(r.tipo==='stop_loss') {
+    const slipPct = Math.abs(r.precioSalida-sl)/sl*100;
+    if(slipPct>1) lecciones.push(`Tu stop se ejecutó ${slipPct.toFixed(1)}% peor que el precio solicitado. En crisis, el slippage puede ser brutal.`);
+    lecciones.push('En una crisis, nunca pongas stops de mercado demasiado ajustados. El gap entre bid y ask se multiplica.');
+  } else if(r.tipo==='take_profit') {
+    lecciones.push('¡Disciplina recompensada! Lograste take profit en plena crisis. La mayoría de los traders mueve el TP al ver que el precio se acerca.');
+  }
+  lecciones.push(`Lección del ${esc.nombre}: ${esc.leccion}`);
+
+  const lecSeccion = document.getElementById('leccionesSection');
+  lecSeccion.style.display='block';
+  lecSeccion.innerHTML = `
+    <div class="lec-title">📚 Lecciones de esta operación</div>
+    ${lecciones.map(l=>`<div class="leccion-item"><span class="lec-icon">💡</span><span>${l}</span></div>`).join('')}
+  `;
+}
+
+// ══════════════════════════════════════════════════════════════
+// STRESS TEST
+// ══════════════════════════════════════════════════════════════
+function correrStressTest() {
+  const esc      = ESCENARIOS[escenarioActual];
+  const entrada  = parseFloat(document.getElementById('inEntrada').value) || esc.precioBase;
+  const sl       = parseFloat(document.getElementById('inSL').value)      || entrada*0.92;
+  const tp       = parseFloat(document.getElementById('inTP').value)      || entrada*1.12;
+  const cantidad = parseInt(document.getElementById('sliderCantidad').value) || 100;
+
+  const N = 500;
+  const pnls = [];
+
+  for(let sim=0; sim<N; sim++) {
+    const dias = generarDiasCrisis(esc);
+    const diaEntrada = Math.floor(Math.random() * Math.max(1, Math.floor(dias.length*0.3)));
+    const slBase = 0.01 + esc.slippageExtra * Math.random() * 2;
+    const precioEjec = sideActual==='buy' ? entrada*(1+slBase) : entrada*(1-slBase);
+    const slipEnt = Math.abs(precioEjec-entrada)*cantidad;
+    let pnl = null;
+
+    for(let i=diaEntrada; i<dias.length; i++) {
+      const d = dias[i];
+      if(sideActual==='buy' ? d.low<=sl : d.high>=sl) {
+        const slipS = esc.slippageExtra*Math.random()*2;
+        const ps = sideActual==='buy' ? sl*(1-slipS) : sl*(1+slipS);
+        pnl = (sideActual==='buy'?ps-precioEjec:precioEjec-ps)*cantidad - slipEnt;
+        break;
+      }
+      if(sideActual==='buy' ? d.high>=tp : d.low<=tp) {
+        const ps = sideActual==='buy' ? tp*0.999 : tp*1.001;
+        pnl = (sideActual==='buy'?ps-precioEjec:precioEjec-ps)*cantidad - slipEnt;
+        break;
+      }
+    }
+    if(pnl===null) {
+      const u = dias[dias.length-1].close;
+      pnl = (sideActual==='buy'?u-precioEjec:precioEjec-u)*cantidad - slipEnt;
+    }
+    pnls.push(pnl);
+  }
+
+  pnls.sort((a,b)=>a-b);
+  const n       = pnls.length;
+  const promedio = pnls.reduce((s,v)=>s+v,0)/n;
+  const var95   = pnls[Math.floor(n*0.05)];
+  const probPerd = pnls.filter(p=>p<0).length/n*100;
+  const probRuina = pnls.filter(p=>p<-entrada*cantidad*0.2).length/n*100;
+  const fmt = v => (v>=0?'+':'')+'$'+Math.abs(Math.round(v)).toLocaleString('es-CL');
+
+  document.getElementById('stressGrid').innerHTML = `
+    <div class="stress-stat">
+      <div class="stress-stat-label">P&L promedio</div>
+      <div class="stress-stat-val" style="color:${promedio>=0?'var(--verde)':'var(--rojo)'}">${fmt(promedio)}</div>
+    </div>
+    <div class="stress-stat">
+      <div class="stress-stat-label">Prob. pérdida</div>
+      <div class="stress-stat-val" style="color:var(--amarillo)">${probPerd.toFixed(1)}%</div>
+    </div>
+    <div class="stress-stat">
+      <div class="stress-stat-label">VaR 95%</div>
+      <div class="stress-stat-val" style="color:var(--rojo)">${fmt(var95)}</div>
+    </div>
+    <div class="stress-stat">
+      <div class="stress-stat-label">Prob. ruina</div>
+      <div class="stress-stat-val" style="color:${probRuina>10?'var(--rojo)':'var(--amarillo)'}">
+        ${probRuina.toFixed(1)}%
+      </div>
+    </div>
+  `;
+}
+
+// ══════════════════════════════════════════════════════════════
+// SIDE (buy/sell)
+// ══════════════════════════════════════════════════════════════
+function setSide(s) {
+  sideActual = s;
+  document.getElementById('tabBuy').className  = 'side-tab buy'  + (s==='buy'  ? ' active':'');
+  document.getElementById('tabSell').className = 'side-tab sell' + (s==='sell' ? ' active':'');
+  actualizarResumen();
+}
+
+// ══════════════════════════════════════════════════════════════
+// RESIZE
+// ══════════════════════════════════════════════════════════════
+window.addEventListener('resize', () => dibujarCanvas());
+
+// ══════════════════════════════════════════════════════════════
+// INIT
+// ══════════════════════════════════════════════════════════════
+window.addEventListener('DOMContentLoaded', () => {
+  renderEscenarios();
+  cargarEscenario('covid_2020');
+});
+</script>
+</body>
+</html>
