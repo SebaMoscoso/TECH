@@ -427,7 +427,7 @@ select.param-input{cursor:pointer;}
         </div>
       </div>
 
-      <!-- Lista de trades -->\n      <div class=\"trades-panel\" id=\"tradesPanel\">\n        <div class=\"panel-header\" style=\"position:sticky;top:0;z-index:1;background:var(--bg2)\">\n          <div class=\"panel-title\">Trades simulados</div>\n          <span id=\"tradeCount\" style=\"font-size:0.72rem;color:var(--texto2)\"></span>\n        </div>\n        <!-- generado por JS -->\n      </div>\n\n      <!-- Monte Carlo panel -->\n      <div id=\"mcPanel\" style=\"display:none;margin-top:16px;\">\n        <div class=\"panel-header\" style=\"display:flex;align-items:center;justify-content:space-between;margin-bottom:12px\">\n          <div class=\"panel-title\">🎲 Monte Carlo — 1.000 variaciones</div>\n          <button onclick=\"correrMonteCarlo()\" id=\"mcBtn\" style=\"background:var(--azul);color:#000;border:none;padding:6px 14px;border-radius:6px;cursor:pointer;font-size:0.78rem;font-weight:600\">▶ Simular</button>\n        </div>\n        <div id=\"mcResultado\" style=\"font-size:0.8rem;color:var(--texto2);padding:12px;background:var(--bg3);border-radius:8px\">Presiona Simular para correr 1.000 variaciones del backtest anterior.</div>\n      </div>\n\n    </div>\n  </div>\n\n</div><!-- /main -->\n</div><!-- /layout -->
+      <!-- Lista de trades -->\n      <div class=\"trades-panel\" id=\"tradesPanel\">\n        <div class=\"panel-header\" style=\"position:sticky;top:0;z-index:1;background:var(--bg2)\">\n          <div class=\"panel-title\">Trades simulados</div>\n          <span id=\"tradeCount\" style=\"font-size:0.72rem;color:var(--texto2)\"></span>\n        </div>\n        <!-- generado por JS -->\n      </div>\n\n      <!-- Monte Carlo panel -->\n      <div id=\"mcPanel\" style=\"display:none;margin-top:16px;\">\n        <div class=\"panel-header\" style=\"display:flex;align-items:center;justify-content:space-between;margin-bottom:12px\">\n          <div class=\"panel-title\">🎲 Monte Carlo — 1.000 variaciones</div>\n          <button onclick=\"correrMonteCarlo()\" id=\"mcBtn\" style=\"background:var(--azul);color:#000;border:none;padding:6px 14px;border-radius:6px;cursor:pointer;font-size:0.78rem;font-weight:600\">▶ Simular</button>\n        </div>\n        <div id=\"mcResultado\" style=\"font-size:0.8rem;color:var(--texto2);padding:12px;background:var(--bg3);border-radius:8px\">Presiona Simular para correr 1.000 variaciones del backtest anterior.</div>\n      </div>\n\n      <!-- Walk-Forward panel -->\n      <div id=\"wfPanel\" style=\"display:none;margin-top:16px;\">\n        <div class=\"panel-header\" style=\"display:flex;align-items:center;justify-content:space-between;margin-bottom:12px\">\n          <div class=\"panel-title\">🔄 Walk-Forward Testing</div>\n          <button onclick=\"correrWalkForward()\" id=\"wfBtn\" style=\"background:#9b59b6;color:#fff;border:none;padding:6px 14px;border-radius:6px;cursor:pointer;font-size:0.78rem;font-weight:600\">▶ Analizar</button>\n        </div>\n        <div id=\"wfResultado\" style=\"font-size:0.8rem;color:var(--texto2);padding:12px;background:var(--bg3);border-radius:8px\">Presiona Analizar para verificar si la estrategia generaliza fuera de muestra o tiene overfitting.</div>\n      </div>\n\n    </div>\n  </div>\n\n</div><!-- /main -->\n</div><!-- /layout -->
 
 <script>
 // ── ESTRATEGIAS ───────────────────────────────────────────────
@@ -1279,8 +1279,9 @@ correrBacktest = async function() {
 };
 
 function _mostrarVeredicto(r) {
-  // Mostrar panel Monte Carlo
+  // Mostrar panel Monte Carlo y Walk-Forward
   document.getElementById('mcPanel').style.display = 'block';
+  document.getElementById('wfPanel').style.display = 'block';
 
   // Agregar veredicto y Sortino al panel de KPIs si existe
   const extra = document.getElementById('kpiExtra');
@@ -1443,6 +1444,222 @@ function _renderBarrasMC(r) {
     const color = v < CAPITAL ? 'var(--rojo)' : v >= CAPITAL*2 ? 'var(--verde)' : 'var(--azul)';
     return `<div style="flex:1;background:${color};height:${h}px;border-radius:3px 3px 0 0;opacity:${0.5+i*0.1}" title="P${[5,25,50,75,95][i]}: $${v.toLocaleString('es-CL')}"></div>`;
   }).join('');
+}
+</script>
+
+<!-- ── WALK-FORWARD ENGINE — S17 ──────────────────────────────
+     Portado de walkforward.py
+     Ventanas rodantes IS (entrenamiento) + OOS (validación)
+     Detecta overfitting — si el WR cae fuera de muestra, la
+     estrategia fue sobreajustada al pasado
+-->
+<script>
+function _wfBacktestVentana(candles, stratId, params={}) {
+  const fn = STRAT_MAP[stratId];
+  if (!fn || candles.length < 20) return { wr:0, ret:0, sharpe:0, n_trades:0 };
+
+  const CAPITAL = 10_000_000;
+  const RIESGO  = 2.0;
+  const COM     = 0.001;
+  const SLIP    = 0.0005;
+
+  let capital = CAPITAL;
+  const equity = [capital];
+  const trades = [];
+  let pos = null;
+
+  for (let i=20; i<candles.length; i++) {
+    const win    = candles.slice(0,i+1);
+    const closes = win.map(c=>c.close);
+    const precio = closes[closes.length-1];
+    const fecha  = candles[i].date;
+
+    if (pos) {
+      const c = candles[i];
+      if (c.low <= pos.stop) {
+        const pSal = pos.stop*(1-SLIP);
+        const pnl  = Math.round((pSal-pos.pe)*pos.qty - pos.com - pSal*pos.qty*COM);
+        capital += pnl; trades.push({pnl}); pos=null;
+      } else if (c.high >= pos.tp) {
+        const pnl = Math.round((pos.tp-pos.pe)*pos.qty - pos.com - pos.tp*pos.qty*COM);
+        capital += pnl; trades.push({pnl}); pos=null;
+      } else {
+        const s = fn(win, closes, params);
+        if (s?.señal==='salida') {
+          const pnl = Math.round((precio*(1-SLIP)-pos.pe)*pos.qty - pos.com - precio*pos.qty*COM);
+          capital += pnl; trades.push({pnl}); pos=null;
+        }
+      }
+    }
+    if (!pos) {
+      const s = fn(candles.slice(0,i+1), closes, params);
+      if (s?.señal==='buy' && s.stop>0) {
+        const rr = (s.tp-precio)/(precio-s.stop);
+        if (rr>=1.5) {
+          const rMax = capital*RIESGO/100;
+          const qty  = Math.max(1, Math.floor(rMax/(precio-s.stop)));
+          const pe   = precio*(1+SLIP);
+          pos = { pe, stop:s.stop, tp:s.tp, qty, com:pe*qty*COM };
+        }
+      }
+    }
+    equity.push(capital);
+  }
+
+  const n   = trades.length;
+  const wr  = n>0 ? trades.filter(t=>t.pnl>0).length/n*100 : 0;
+  const ret = (equity[equity.length-1]-CAPITAL)/CAPITAL*100;
+  const rets = equity.slice(1).map((v,i)=>(v-equity[i])/equity[i]);
+  const mean = rets.reduce((a,b)=>a+b,0)/Math.max(rets.length,1);
+  const std  = Math.sqrt(rets.reduce((a,r)=>a+(r-mean)**2,0)/Math.max(rets.length,1));
+  const sharpe = std>0 ? mean/std*Math.sqrt(252) : 0;
+
+  return { wr:+wr.toFixed(1), ret:+ret.toFixed(2), sharpe:+sharpe.toFixed(2), n_trades:n };
+}
+
+function runWalkForward(candles, stratId, params={}, diasIS=120, diasOOS=60) {
+  if (candles.length < diasIS+diasOOS) throw new Error(`Necesitas al menos ${diasIS+diasOOS} días de datos.`);
+
+  const ventanas = [];
+  let i=0, nV=1;
+
+  while (i+diasIS+diasOOS <= candles.length) {
+    const isData  = candles.slice(i, i+diasIS);
+    const oosData = candles.slice(i+diasIS, i+diasIS+diasOOS);
+
+    const resIS  = _wfBacktestVentana(isData,  stratId, params);
+    const resOOS = _wfBacktestVentana(oosData, stratId, params);
+
+    const degradacion = +(resOOS.wr - resIS.wr).toFixed(1);
+    const positivo    = resOOS.ret > 0;
+    const robusto     = degradacion > -15 && positivo;
+
+    ventanas.push({
+      numero: nV,
+      fecha_is:  `${isData[0].date} → ${isData[isData.length-1].date}`,
+      fecha_oos: `${oosData[0].date} → ${oosData[oosData.length-1].date}`,
+      wr_is:  resIS.wr,  ret_is:  resIS.ret,  n_is:  resIS.n_trades,
+      wr_oos: resOOS.wr, ret_oos: resOOS.ret, n_oos: resOOS.n_trades,
+      degradacion, positivo, robusto,
+    });
+    i += diasOOS; nV++;
+  }
+
+  if (!ventanas.length) throw new Error('No se generaron ventanas suficientes.');
+
+  const wrISProm      = ventanas.reduce((a,v)=>a+v.wr_is,0)/ventanas.length;
+  const wrOOSProm     = ventanas.reduce((a,v)=>a+v.wr_oos,0)/ventanas.length;
+  const retOOSProm    = ventanas.reduce((a,v)=>a+v.ret_oos,0)/ventanas.length;
+  const degProm       = ventanas.reduce((a,v)=>a+v.degradacion,0)/ventanas.length;
+  const consistencia  = ventanas.filter(v=>v.positivo).length/ventanas.length*100;
+  const eficiencia    = wrISProm>0 ? wrOOSProm/wrISProm : 0;
+
+  let nivel, veredicto;
+  if (degProm>-10 && consistencia>=65 && retOOSProm>0) {
+    nivel='ROBUSTO'; veredicto='Edge real confirmado. La estrategia generaliza bien en datos no vistos.';
+  } else if (degProm>-20 && consistencia>=50) {
+    nivel='ACEPTABLE'; veredicto='Cierta degradación fuera de muestra. Revisar parámetros o aumentar período IS.';
+  } else {
+    nivel='OVERFITTING'; veredicto='La estrategia fue sobreajustada al pasado. NO operar en vivo.';
+  }
+
+  return {
+    ventanas, nivel, veredicto,
+    wrISProm:+wrISProm.toFixed(1), wrOOSProm:+wrOOSProm.toFixed(1),
+    retOOSProm:+retOOSProm.toFixed(2), degProm:+degProm.toFixed(1),
+    consistencia:+consistencia.toFixed(1), eficiencia:+eficiencia.toFixed(2),
+  };
+}
+
+async function correrWalkForward() {
+  const btn = document.getElementById('wfBtn');
+  if (!backData?._resultado) {
+    alert('Primero corre un backtest para cargar los datos históricos.');
+    return;
+  }
+  btn.textContent = '⏳ Analizando...';
+  btn.disabled = true;
+
+  const activoEl  = document.getElementById('activoSel');
+  const periodoEl = document.getElementById('periodoSel');
+  const activo    = activoEl?.value || 'IPSA';
+  const periodo   = periodoEl?.value || '1A';
+  const symbol    = SYMBOL_MAP[activo] || '^IPSA';
+  const range     = PERIOD_MAP[periodo] || '1y';
+
+  try {
+    // Cargar datos históricos (mismo activo y período)
+    let candles;
+    if (typeof Market !== 'undefined') {
+      candles = await Market.getHistorico(symbol, range, '1d');
+    }
+    if (!candles || candles.length < 180) throw new Error('Necesitas al menos 6 meses de datos para Walk-Forward. Selecciona "1A" o más.');
+
+    const params = {};
+    document.querySelectorAll('.param-input').forEach(el => {
+      params[el.dataset.key] = parseFloat(el.value) || el.value;
+    });
+
+    await new Promise(r=>setTimeout(r,100));
+    const r = runWalkForward(candles, stratSel.id, params, 120, 60);
+
+    const colorNivel = r.nivel==='ROBUSTO' ? 'var(--verde)' : r.nivel==='ACEPTABLE' ? 'var(--amarillo)' : 'var(--rojo)';
+    const emojiNivel = r.nivel==='ROBUSTO' ? '✅' : r.nivel==='ACEPTABLE' ? '⚠️' : '❌';
+
+    document.getElementById('wfResultado').innerHTML = `
+      <!-- Veredicto -->
+      <div style="background:var(--bg2);border:1px solid ${colorNivel}33;border-radius:10px;padding:14px;margin-bottom:12px;text-align:center">
+        <div style="font-size:1.5rem;margin-bottom:4px">${emojiNivel}</div>
+        <div style="font-family:var(--display);font-weight:800;color:${colorNivel};font-size:1.1rem">${r.nivel}</div>
+        <div style="font-size:0.78rem;color:var(--texto2);margin-top:6px">${r.veredicto}</div>
+      </div>
+
+      <!-- Métricas globales -->
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px">
+        <div style="background:var(--bg2);border-radius:8px;padding:10px;text-align:center">
+          <div style="font-family:var(--mono);font-size:0.95rem">${r.wrISProm}% → ${r.wrOOSProm}%</div>
+          <div style="font-size:0.62rem;color:var(--texto3);margin-top:3px;text-transform:uppercase">WR IS → OOS</div>
+        </div>
+        <div style="background:var(--bg2);border-radius:8px;padding:10px;text-align:center">
+          <div style="font-family:var(--mono);font-size:0.95rem;color:${r.degProm>-10?'var(--verde)':'var(--rojo)'}">${r.degProm>0?'+':''}${r.degProm}%</div>
+          <div style="font-size:0.62rem;color:var(--texto3);margin-top:3px;text-transform:uppercase">Degradación WR</div>
+        </div>
+        <div style="background:var(--bg2);border-radius:8px;padding:10px;text-align:center">
+          <div style="font-family:var(--mono);font-size:0.95rem;color:${r.consistencia>=65?'var(--verde)':'var(--amarillo)'}">${r.consistencia}%</div>
+          <div style="font-size:0.62rem;color:var(--texto3);margin-top:3px;text-transform:uppercase">Consistencia OOS</div>
+        </div>
+      </div>
+
+      <!-- Tabla de ventanas -->
+      <div style="font-size:0.68rem;text-transform:uppercase;letter-spacing:0.06em;color:var(--texto3);margin-bottom:6px">${r.ventanas.length} ventanas analizadas</div>
+      <div style="display:flex;flex-direction:column;gap:4px">
+        ${r.ventanas.map(v=>`
+          <div style="background:var(--bg2);border-radius:6px;padding:8px 10px;border-left:3px solid ${v.robusto?'var(--verde)':v.positivo?'var(--amarillo)':'var(--rojo)'}">
+            <div style="display:flex;justify-content:space-between;align-items:center">
+              <span style="font-size:0.72rem;color:var(--texto2)">V${v.numero} · OOS: ${v.fecha_oos}</span>
+              <span style="font-size:0.72rem;font-family:var(--mono);color:${v.robusto?'var(--verde)':v.positivo?'var(--amarillo)':'var(--rojo)'}">${v.robusto?'✅ Robusto':v.positivo?'⚠️ Aceptable':'❌ Overfitting'}</span>
+            </div>
+            <div style="display:flex;gap:16px;margin-top:4px;font-size:0.7rem">
+              <span>IS WR: <b>${v.wr_is}%</b></span>
+              <span>OOS WR: <b style="color:${v.wr_oos>=v.wr_is*0.85?'var(--verde)':'var(--rojo)'}">${v.wr_oos}%</b></span>
+              <span>Deg: <b>${v.degradacion>0?'+':''}${v.degradacion}%</b></span>
+              <span>OOS Ret: <b style="color:${v.ret_oos>=0?'var(--verde)':'var(--rojo)'}">${v.ret_oos>=0?'+':''}${v.ret_oos}%</b></span>
+            </div>
+          </div>`).join('')}
+      </div>
+
+      <!-- Explicación educativa -->
+      <div style="margin-top:10px;padding:10px;background:rgba(74,158,255,0.05);border:1px solid rgba(74,158,255,0.15);border-radius:8px;font-size:0.72rem;color:var(--texto2);line-height:1.6">
+        💡 <b style="color:var(--azul)">¿Qué es esto?</b> El Walk-Forward divide el historial en ventanas IS (In-Sample = entrenamiento) y OOS (Out-of-Sample = validación). Si el Win Rate cae drásticamente en OOS, la estrategia fue optimizada sobre el pasado y no funcionará en el futuro real.
+      </div>`;
+
+    btn.textContent = '↺ Re-analizar';
+    btn.disabled = false;
+  } catch(e) {
+    document.getElementById('wfResultado').innerHTML = `<span style="color:var(--rojo)">Error: ${e.message}</span>`;
+    btn.textContent = '▶ Analizar';
+    btn.disabled = false;
+  }
 }
 </script>
 </body>

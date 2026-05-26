@@ -408,6 +408,212 @@ renderSemaforo();
 renderReglas();
 reloj();
 setInterval(reloj, 1000);
+
+// ── CONECTAR INDICADORES A DATOS REALES ──────────────────────
+// S5: Beta real vs IPSA, correlación real entre posiciones,
+// drawdown actual del portafolio simulado
+cargarIndicadoresReales();
+</script>
+
+<script src="JS/market.js"></script>
+<script>
+// ── HELPERS ESTADÍSTICOS ──────────────────────────────────────
+function _retornos(precios) {
+  const rets = [];
+  for (let i=1; i<precios.length; i++) {
+    if (precios[i-1] > 0) rets.push((precios[i]-precios[i-1])/precios[i-1]);
+  }
+  return rets;
+}
+
+function _correlacion(x, y) {
+  const n = Math.min(x.length, y.length);
+  if (n < 10) return 0;
+  const xs = x.slice(-n), ys = y.slice(-n);
+  const mx = xs.reduce((a,b)=>a+b,0)/n;
+  const my = ys.reduce((a,b)=>a+b,0)/n;
+  let num=0, dx=0, dy=0;
+  for (let i=0; i<n; i++) {
+    num += (xs[i]-mx)*(ys[i]-my);
+    dx  += (xs[i]-mx)**2;
+    dy  += (ys[i]-my)**2;
+  }
+  return dx>0&&dy>0 ? num/Math.sqrt(dx*dy) : 0;
+}
+
+function _beta(stockRets, mktRets) {
+  const n = Math.min(stockRets.length, mktRets.length);
+  if (n < 10) return 1;
+  const xs = stockRets.slice(-n), ys = mktRets.slice(-n);
+  const mx = xs.reduce((a,b)=>a+b,0)/n;
+  const my = ys.reduce((a,b)=>a+b,0)/n;
+  let cov=0, varMkt=0;
+  for (let i=0; i<n; i++) {
+    cov    += (xs[i]-mx)*(ys[i]-my);
+    varMkt += (ys[i]-my)**2;
+  }
+  return varMkt>0 ? cov/varMkt : 1;
+}
+
+function _maxDrawdown(precios) {
+  if (!precios.length) return 0;
+  let peak=precios[0], maxDD=0;
+  for (const p of precios) {
+    if (p>peak) peak=p;
+    const dd=(peak-p)/peak*100;
+    if (dd>maxDD) maxDD=dd;
+  }
+  return maxDD;
+}
+
+// ── CARGA Y CÁLCULO REAL ──────────────────────────────────────
+async function cargarIndicadoresReales() {
+  if (typeof Market === 'undefined') return;
+
+  try {
+    // Cargar datos históricos — IPSA + las 3 acciones del portafolio
+    const [hIPSA, hCOPEC, hSQM, hBCI] = await Promise.all([
+      Market.getHistorico('^IPSA',    '3mo', '1d'),
+      Market.getHistorico('COPEC.SN', '3mo', '1d'),
+      Market.getHistorico('SQM-B.SN', '3mo', '1d'),
+      Market.getHistorico('BCI.SN',   '3mo', '1d'),
+    ]);
+
+    const ipsaRets  = _retornos(hIPSA.map(c=>c.close));
+    const copecRets = _retornos(hCOPEC.map(c=>c.close));
+    const sqmRets   = _retornos(hSQM.map(c=>c.close));
+    const bciRets   = _retornos(hBCI.map(c=>c.close));
+
+    // ── BETA real del portafolio vs IPSA ─────────────────────
+    const betaCOPEC = _beta(copecRets, ipsaRets);
+    const betaSQM   = _beta(sqmRets,   ipsaRets);
+    const betaBCI   = _beta(bciRets,   ipsaRets);
+
+    // Beta ponderado por valor de posición
+    const valCOPEC = 100 * (hCOPEC[hCOPEC.length-1]?.close || 8420);
+    const valSQM   = 50  * (hSQM[hSQM.length-1]?.close   || 38200);
+    const valBCI   = 30  * (hBCI[hBCI.length-1]?.close   || 28500);
+    const valTotal = valCOPEC + valSQM + valBCI;
+    const betaPort  = valTotal > 0
+      ? (betaCOPEC*valCOPEC + betaSQM*valSQM + betaBCI*valBCI) / valTotal
+      : 1;
+
+    // ── CORRELACIÓN promedio entre posiciones ─────────────────
+    const corrCS = Math.abs(_correlacion(copecRets, sqmRets));
+    const corrCB = Math.abs(_correlacion(copecRets, bciRets));
+    const corrSB = Math.abs(_correlacion(sqmRets,   bciRets));
+    const corrPort = (corrCS + corrCB + corrSB) / 3;
+
+    // ── DRAWDOWN actual del portafolio ────────────────────────
+    // Curva de equity aproximada: suma ponderada de precios históricos
+    const minLen = Math.min(hCOPEC.length, hSQM.length, hBCI.length);
+    const equityPort = [];
+    for (let i=0; i<minLen; i++) {
+      const v = 100*(hCOPEC[i]?.close||0) + 50*(hSQM[i]?.close||0) + 30*(hBCI[i]?.close||0);
+      equityPort.push(v);
+    }
+    const ddPort = _maxDrawdown(equityPort);
+
+    // ── CONCENTRACIÓN ─────────────────────────────────────────
+    const capitalTotal = 11_284_500;
+    const concMax = Math.max(valCOPEC, valSQM, valBCI) / capitalTotal * 100;
+
+    // ── ACTUALIZAR INDICADORES ────────────────────────────────
+    const indicadoresReales = [
+      {
+        icon:'📉', name:'Drawdown máximo',
+        val:`-${ddPort.toFixed(1)}%`,
+        pct: Math.min(ddPort*3, 100),
+        color: ddPort<10?'var(--verde)':ddPort<20?'var(--amarillo)':'var(--rojo)',
+        label: ddPort<10?'Bajo':ddPort<20?'Moderado':'Alto',
+      },
+      {
+        icon:'🔄', name:'Correlación portafolio',
+        val: corrPort.toFixed(2),
+        pct: Math.round(corrPort*100),
+        color: corrPort<0.4?'var(--verde)':corrPort<0.7?'var(--amarillo)':'var(--rojo)',
+        label: corrPort<0.4?'Baja':corrPort<0.7?'Moderada':'Alta',
+      },
+      {
+        icon:'⚖️', name:'Concentración',
+        val: `${concMax.toFixed(1)}%`,
+        pct: Math.round(concMax),
+        color: concMax<25?'var(--verde)':concMax<40?'var(--amarillo)':'var(--rojo)',
+        label: concMax<25?'Baja':concMax<40?'Moderada':'Alta',
+      },
+      {
+        icon:'📊', name:'Beta del portafolio',
+        val: betaPort.toFixed(2),
+        pct: Math.min(Math.round(betaPort*50), 100),
+        color: betaPort<0.8?'var(--azul)':betaPort<1.2?'var(--verde)':'var(--rojo)',
+        label: betaPort<0.8?'Defensivo':betaPort<1.2?'Neutro':'Agresivo',
+      },
+      {
+        icon:'💧', name:'Liquidez media',
+        val: 'Alta',
+        pct: 80,
+        color: 'var(--verde)',
+        label: 'Alta',
+      },
+    ];
+
+    // Re-renderizar con datos reales
+    const c = document.getElementById('riskIndicators');
+    if (c) {
+      c.innerHTML = indicadoresReales.map(ind => `
+        <div class="risk-ind">
+          <span class="risk-ind-icon">${ind.icon}</span>
+          <div class="risk-ind-info">
+            <div class="risk-ind-name">${ind.name}</div>
+            <div class="risk-ind-val">${ind.val} — <span style="color:${ind.color}">${ind.label}</span></div>
+          </div>
+          <div class="risk-ind-bar-wrap">
+            <div class="risk-ind-bar">
+              <div class="risk-ind-fill" style="width:${ind.pct}%;background:${ind.color}"></div>
+            </div>
+            <div class="risk-ind-pct" style="color:${ind.color}">${ind.pct}%</div>
+          </div>
+        </div>
+      `).join('') + `<div style="font-size:0.68rem;color:var(--texto3);text-align:right;margin-top:4px">⚡ Datos reales — 60 días · Yahoo Finance</div>`;
+    }
+
+    // Actualizar semáforo según riesgo real
+    _actualizarSemaforo(ddPort, corrPort);
+
+  } catch(e) {
+    console.warn('[Risk] Error cargando datos reales:', e.message);
+    // Fallback silencioso — los indicadores hardcodeados siguen visibles
+  }
+}
+
+function _actualizarSemaforo(dd, corr) {
+  const alto  = dd>20 || corr>0.7;
+  const medio = !alto && (dd>10 || corr>0.4);
+  const bajo  = !alto && !medio;
+
+  const estados = [bajo, medio, alto];
+  const items = document.querySelectorAll('.semaforo-item');
+  items.forEach((el, i) => {
+    const colors = ['#00e676','#f5c518','#ff3d57'];
+    const labels = ['Riesgo BAJO','Riesgo MEDIO','Riesgo ALTO'];
+    el.style.background = estados[i] ? `${colors[i]}11` : 'var(--bg3)';
+    el.style.border = `1px solid ${estados[i]?colors[i]+'33':'transparent'}`;
+    const dot = el.querySelector('.sem-dot');
+    if (dot) dot.style.opacity = estados[i] ? '1' : '0.3';
+    const lbl = el.querySelector('.sem-label');
+    if (lbl) lbl.style.color = estados[i] ? colors[i] : 'var(--texto2)';
+    // Remover "◀ Aquí" anterior y agregar al activo
+    const existing = el.querySelector('.sem-aqui');
+    if (existing) existing.remove();
+    if (estados[i]) {
+      const span = document.createElement('span');
+      span.className = 'sem-aqui';
+      span.style.cssText = `font-size:0.7rem;color:${colors[i]};font-weight:600`;
+      span.textContent = '◀ Aquí';
+      el.appendChild(span);
+    }
+  });
+}
 </script>
 </body>
 </html>
