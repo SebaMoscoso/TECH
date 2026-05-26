@@ -1,0 +1,817 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>InvertirCL — Quant-Copilot IA</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#07090d;--bg2:#0d1117;--bg3:#131a22;--bg4:#1a222c;
+  --verde:#00e676;--rojo:#ff3d57;--azul:#4a9eff;--amarillo:#f5c518;
+  --purpura:#9b59b6;--naranja:#ff6b35;--cyan:#00bcd4;
+  --linea:rgba(255,255,255,0.06);--linea2:rgba(255,255,255,0.1);
+  --texto:#e2e8f0;--texto2:#8a9bb0;--texto3:#4a5568;
+  --mono:'DM Mono',monospace;--sans:'DM Sans',sans-serif;--display:'Syne',sans-serif;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html,body{height:100%;overflow:hidden;}
+body{font-family:var(--sans);background:var(--bg);color:var(--texto);display:flex;flex-direction:column;}
+
+/* TOPBAR */
+.topbar{height:52px;background:var(--bg2);border-bottom:1px solid var(--linea);display:flex;align-items:center;padding:0 20px;gap:14px;flex-shrink:0;}
+.logo{font-family:var(--display);font-weight:800;font-size:1rem;color:var(--verde);text-decoration:none;}
+.logo span{color:var(--texto2);font-weight:400;}
+.tnav-wrap{display:flex;gap:2px;margin-left:8px;}
+.tnav{padding:6px 13px;border-radius:6px;font-size:0.78rem;color:var(--texto2);cursor:pointer;transition:all 0.15s;text-decoration:none;white-space:nowrap;}
+.tnav:hover{background:var(--bg3);color:var(--texto);}
+.tnav.active{background:rgba(74,158,255,0.1);color:var(--azul);}
+.topbar-right{margin-left:auto;display:flex;align-items:center;gap:8px;}
+.ai-badge{font-size:0.65rem;padding:3px 10px;border-radius:100px;background:rgba(74,158,255,0.1);color:var(--azul);border:1px solid rgba(74,158,255,0.2);letter-spacing:0.06em;text-transform:uppercase;}
+.ai-dot{width:6px;height:6px;border-radius:50%;background:var(--azul);animation:pulse 2s infinite;}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.3}}
+
+/* LAYOUT */
+.layout{display:grid;grid-template-columns:280px 1fr 320px;flex:1;overflow:hidden;}
+
+/* ══ SIDEBAR IZQUIERDO ══ */
+.sidebar-left{background:var(--bg2);border-right:1px solid var(--linea);display:flex;flex-direction:column;overflow-y:auto;}
+.sb-section{padding:14px 18px;border-bottom:1px solid var(--linea);}
+.sb-title{font-family:var(--display);font-size:0.9rem;font-weight:700;margin-bottom:4px;}
+.sb-sub{font-size:0.7rem;color:var(--texto2);line-height:1.5;}
+.sb-label{font-size:0.65rem;text-transform:uppercase;letter-spacing:0.08em;color:var(--texto3);margin-bottom:8px;}
+
+/* Modo selector */
+.modo-card{padding:10px 12px;border-radius:8px;border:1px solid var(--linea2);background:var(--bg3);cursor:pointer;margin-bottom:6px;transition:all 0.15s;}
+.modo-card:hover{border-color:var(--azul);}
+.modo-card.active{background:rgba(74,158,255,0.08);border-color:rgba(74,158,255,0.35);}
+.modo-card.active::before{content:'';display:block;width:3px;height:100%;background:var(--azul);position:absolute;left:0;top:0;border-radius:2px 0 0 2px;}
+.modo-card{position:relative;}
+.mc-top{display:flex;align-items:center;gap:6px;margin-bottom:3px;}
+.mc-icon{font-size:0.95rem;}
+.mc-nombre{font-size:0.82rem;font-weight:600;}
+.modo-card.active .mc-nombre{color:var(--azul);}
+.mc-desc{font-size:0.68rem;color:var(--texto3);}
+
+/* API Key input */
+.apikey-wrap{position:relative;}
+.apikey-input{width:100%;background:var(--bg3);border:1px solid var(--linea2);border-radius:7px;padding:8px 36px 8px 10px;font-family:var(--mono);font-size:0.72rem;color:var(--texto);outline:none;transition:border-color 0.15s;}
+.apikey-input:focus{border-color:var(--azul);}
+.apikey-input::placeholder{color:var(--texto3);}
+.apikey-toggle{position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--texto3);font-size:0.85rem;}
+.apikey-hint{font-size:0.65rem;color:var(--texto3);margin-top:4px;line-height:1.5;}
+
+/* Ejemplos de prompts */
+.ejemplo-btn{width:100%;text-align:left;padding:8px 10px;border-radius:6px;border:1px solid var(--linea);background:var(--bg3);color:var(--texto2);font-size:0.72rem;cursor:pointer;margin-bottom:5px;transition:all 0.15s;line-height:1.4;}
+.ejemplo-btn:hover{border-color:var(--azul);color:var(--texto);}
+.ejemplo-btn .ej-tag{font-size:0.6rem;padding:1px 5px;border-radius:3px;background:rgba(74,158,255,0.1);color:var(--azul);margin-bottom:3px;display:inline-block;}
+
+/* Config backtest */
+.config-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;}
+.config-label{font-size:0.75rem;color:var(--texto2);}
+.config-select{background:var(--bg3);border:1px solid var(--linea2);border-radius:6px;padding:5px 8px;font-size:0.75rem;color:var(--texto);outline:none;font-family:var(--sans);cursor:pointer;}
+
+/* ══ CENTRO — Chat + input ══ */
+.center{display:flex;flex-direction:column;overflow:hidden;}
+
+/* Header modo */
+.modo-header{padding:12px 20px;background:var(--bg2);border-bottom:1px solid var(--linea);flex-shrink:0;display:flex;align-items:center;gap:10px;}
+.modo-header-icon{font-size:1.2rem;}
+.modo-header-title{font-family:var(--display);font-size:0.95rem;font-weight:800;}
+.modo-header-desc{font-size:0.72rem;color:var(--texto2);}
+
+/* Chat area */
+.chat-area{flex:1;overflow-y:auto;padding:16px 20px;display:flex;flex-direction:column;gap:12px;}
+
+/* Mensajes */
+.msg{display:flex;gap:10px;max-width:100%;}
+.msg.user{flex-direction:row-reverse;}
+.msg-avatar{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:0.85rem;flex-shrink:0;}
+.msg.ai .msg-avatar{background:rgba(74,158,255,0.15);border:1px solid rgba(74,158,255,0.3);}
+.msg.user .msg-avatar{background:rgba(0,230,118,0.12);border:1px solid rgba(0,230,118,0.25);}
+.msg-bubble{background:var(--bg2);border:1px solid var(--linea);border-radius:12px;padding:12px 14px;max-width:85%;font-size:0.82rem;line-height:1.65;}
+.msg.user .msg-bubble{background:rgba(0,230,118,0.06);border-color:rgba(0,230,118,0.2);}
+.msg-bubble strong{color:var(--texto);font-weight:600;}
+.msg-bubble .tag{font-size:0.62rem;padding:2px 6px;border-radius:3px;background:rgba(74,158,255,0.1);color:var(--azul);display:inline-block;margin-bottom:4px;}
+
+/* Estrategia generada */
+.estrategia-card{background:rgba(74,158,255,0.05);border:1px solid rgba(74,158,255,0.2);border-radius:10px;padding:14px;margin-top:8px;}
+.ec-title{font-family:var(--display);font-size:0.85rem;font-weight:700;color:var(--azul);margin-bottom:8px;}
+.ec-row{display:flex;justify-content:space-between;font-size:0.75rem;padding:3px 0;border-bottom:1px solid rgba(255,255,255,0.04);}
+.ec-row:last-child{border-bottom:none;}
+.ec-k{color:var(--texto2);}
+.ec-v{font-family:var(--mono);font-weight:500;}
+.btn-run-bt{padding:8px 16px;border-radius:7px;border:none;background:var(--verde);color:#000;font-family:var(--display);font-size:0.78rem;font-weight:700;cursor:pointer;margin-top:10px;transition:all 0.15s;}
+.btn-run-bt:hover{background:#fff;}
+
+/* Loading */
+.loading-msg{display:flex;align-items:center;gap:8px;font-size:0.78rem;color:var(--texto2);padding:8px 0;}
+.loading-dots{display:flex;gap:4px;}
+.loading-dots span{width:6px;height:6px;border-radius:50%;background:var(--azul);animation:dotPulse 1.2s infinite;}
+.loading-dots span:nth-child(2){animation-delay:0.2s;}
+.loading-dots span:nth-child(3){animation-delay:0.4s;}
+@keyframes dotPulse{0%,80%,100%{transform:scale(0.8);opacity:0.5}40%{transform:scale(1);opacity:1}}
+
+/* Input area */
+.input-area{padding:12px 20px;background:var(--bg2);border-top:1px solid var(--linea);flex-shrink:0;}
+.input-wrap{display:flex;gap:8px;align-items:flex-end;}
+.chat-input{flex:1;background:var(--bg3);border:1px solid var(--linea2);border-radius:10px;padding:10px 14px;font-family:var(--sans);font-size:0.82rem;color:var(--texto);outline:none;resize:none;min-height:42px;max-height:120px;transition:border-color 0.15s;line-height:1.5;}
+.chat-input:focus{border-color:var(--azul);}
+.chat-input::placeholder{color:var(--texto3);}
+.btn-send{padding:10px 18px;border-radius:10px;border:none;background:var(--azul);color:#fff;font-family:var(--display);font-size:0.82rem;font-weight:700;cursor:pointer;transition:all 0.2s;flex-shrink:0;}
+.btn-send:hover{background:#3d8fe0;box-shadow:0 4px 16px rgba(74,158,255,0.3);}
+.btn-send:disabled{background:var(--bg3);color:var(--texto3);cursor:not-allowed;box-shadow:none;}
+.input-hint{font-size:0.65rem;color:var(--texto3);margin-top:5px;}
+
+/* ══ SIDEBAR DERECHO — Resultado + backtest ══ */
+.sidebar-right{background:var(--bg2);border-left:1px solid var(--linea);display:flex;flex-direction:column;overflow-y:auto;}
+.sr-section{padding:14px 16px;border-bottom:1px solid var(--linea);}
+.sr-title{font-size:0.68rem;text-transform:uppercase;letter-spacing:0.08em;color:var(--texto3);margin-bottom:10px;}
+
+/* Backtest result */
+.bt-stat{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid rgba(255,255,255,0.04);font-size:0.75rem;}
+.bt-stat:last-child{border-bottom:none;}
+.bt-k{color:var(--texto2);}
+.bt-v{font-family:var(--mono);font-weight:500;}
+
+/* Parámetros sugeridos */
+.param-sugerido{background:var(--bg3);border-radius:7px;padding:8px 10px;margin-bottom:6px;}
+.ps-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;}
+.ps-param{font-family:var(--mono);font-size:0.75rem;color:var(--azul);}
+.ps-cambio{font-family:var(--mono);font-size:0.72rem;}
+.ps-impacto{font-size:0.68rem;color:var(--texto2);line-height:1.45;}
+
+/* Ideas generadas */
+.idea-card{background:var(--bg3);border-radius:8px;padding:10px 12px;margin-bottom:6px;border:1px solid var(--linea);}
+.idea-nombre{font-size:0.78rem;font-weight:600;margin-bottom:3px;}
+.idea-desc{font-size:0.7rem;color:var(--texto2);line-height:1.45;margin-bottom:5px;}
+.idea-badge{font-size:0.58rem;padding:2px 6px;border-radius:3px;}
+.idea-badge.bajo{background:rgba(0,230,118,0.1);color:var(--verde);}
+.idea-badge.medio{background:rgba(245,197,24,0.1);color:var(--amarillo);}
+.idea-badge.alto{background:rgba(255,61,87,0.1);color:var(--rojo);}
+
+/* Canvas backtest equity */
+.bt-equity-wrap{padding:8px 0;}
+#btCanvas{width:100%;height:80px;display:block;border-radius:6px;}
+
+/* Scrollbar */
+::-webkit-scrollbar{width:4px;}
+::-webkit-scrollbar-track{background:transparent;}
+::-webkit-scrollbar-thumb{background:var(--bg4);border-radius:2px;}
+@keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+.fade-in{animation:fadeIn 0.3s ease both;}
+</style>
+</head>
+<body>
+
+<!-- TOPBAR -->
+<div class="topbar">
+  <a href="dashboard.html" class="logo">Invertir<span>CL</span></a>
+  <nav class="tnav-wrap">
+    <a href="dashboard.html"     class="tnav">Dashboard</a>
+    <a href="simulator.html"     class="tnav">Simulador</a>
+    <a href="backtest.html"      class="tnav">Backtest</a>
+    <a href="markowitz.html"     class="tnav">📐 Markowitz</a>
+    <a href="hrp.html"           class="tnav">🌲 HRP</a>
+    <a href="quantcopilot.html"  class="tnav active">🤖 Copilot</a>
+  </nav>
+  <div class="topbar-right">
+    <div class="ai-dot"></div>
+    <span class="ai-badge">Claude API</span>
+  </div>
+</div>
+
+<div class="layout">
+
+  <!-- ══ SIDEBAR IZQUIERDO ══ -->
+  <div class="sidebar-left">
+    <div class="sb-section">
+      <div class="sb-title">🤖 Quant-Copilot IA</div>
+      <div class="sb-sub">Describe tu estrategia en lenguaje natural. Claude la convierte en parámetros del editor de backtest y la optimiza automáticamente.</div>
+    </div>
+
+    <!-- Modo -->
+    <div class="sb-section">
+      <div class="sb-label">Modo</div>
+      <div class="modo-card active" id="modo-traducir" onclick="setModo('traducir',this)">
+        <div class="mc-top"><span class="mc-icon">💬</span><span class="mc-nombre">Idea → Estrategia</span></div>
+        <div class="mc-desc">Describe tu idea en español, Claude genera la estrategia</div>
+      </div>
+      <div class="modo-card" id="modo-optimizar" onclick="setModo('optimizar',this)">
+        <div class="mc-top"><span class="mc-icon">🔧</span><span class="mc-nombre">Optimizar parámetros</span></div>
+        <div class="mc-desc">Pega tus resultados de backtest, Claude sugiere mejoras</div>
+      </div>
+      <div class="modo-card" id="modo-diagnosticar" onclick="setModo('diagnosticar',this)">
+        <div class="mc-top"><span class="mc-icon">🔍</span><span class="mc-nombre">Diagnosticar backtest</span></div>
+        <div class="mc-desc">Explica en lenguaje simple qué está fallando</div>
+      </div>
+      <div class="modo-card" id="modo-ideas" onclick="setModo('ideas',this)">
+        <div class="mc-top"><span class="mc-icon">💡</span><span class="mc-nombre">Generar ideas</span></div>
+        <div class="mc-desc">Claude sugiere estrategias según tu perfil</div>
+      </div>
+    </div>
+
+    <!-- API Key -->
+    <div class="sb-section">
+      <div class="sb-label">Claude API Key</div>
+      <div class="apikey-wrap">
+        <input type="password" class="apikey-input" id="apiKeyInput" placeholder="sk-ant-api03-...">
+        <button class="apikey-toggle" onclick="toggleApiKey()">👁</button>
+      </div>
+      <div class="apikey-hint">
+        Tu API key se guarda solo en tu navegador (localStorage).<br>
+        Obtén una en <a href="https://console.anthropic.com" target="_blank" style="color:var(--azul)">console.anthropic.com</a>
+      </div>
+    </div>
+
+    <!-- Config backtest -->
+    <div class="sb-section">
+      <div class="sb-label">Configuración backtest</div>
+      <div class="config-row">
+        <span class="config-label">Activo</span>
+        <select class="config-select" id="cfgActivo">
+          <option value="^IPSA">IPSA</option>
+          <option value="COPEC.SN" selected>COPEC</option>
+          <option value="SQM-B.SN">SQM-B</option>
+          <option value="BCI.SN">BCI</option>
+          <option value="ENTEL.SN">ENTEL</option>
+        </select>
+      </div>
+      <div class="config-row">
+        <span class="config-label">Período</span>
+        <select class="config-select" id="cfgPeriodo">
+          <option value="3mo">3 meses</option>
+          <option value="6mo">6 meses</option>
+          <option value="1y" selected>1 año</option>
+          <option value="2y">2 años</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Ejemplos -->
+    <div class="sb-section">
+      <div class="sb-label">Ejemplos de prompts</div>
+      <button class="ejemplo-btn" onclick="usarEjemplo(0)">
+        <div class="ej-tag">Idea → Estrategia</div>
+        <div>Quiero comprar COPEC cuando el RSI caiga bajo 30 y el precio esté sobre la EMA de 21 días</div>
+      </button>
+      <button class="ejemplo-btn" onclick="usarEjemplo(1)">
+        <div class="ej-tag">Idea → Estrategia</div>
+        <div>Busco una estrategia de momentum para el IPSA que entre cuando hay un cruce de medias y salga cuando se revierte</div>
+      </button>
+      <button class="ejemplo-btn" onclick="usarEjemplo(2)">
+        <div class="ej-tag">Optimizar</div>
+        <div>Mi backtest tiene WR 48%, Sharpe 0.72, drawdown 18%. ¿Cómo lo mejoro?</div>
+      </button>
+      <button class="ejemplo-btn" onclick="usarEjemplo(3)">
+        <div class="ej-tag">Generar ideas</div>
+        <div>Soy trader swing intermedio, mercado mixto, quiero estrategias conservadoras para el mercado chileno</div>
+      </button>
+    </div>
+  </div>
+
+  <!-- ══ CENTRO — Chat ══ -->
+  <div class="center">
+    <div class="modo-header">
+      <span class="modo-header-icon" id="modoIcon">💬</span>
+      <div>
+        <div class="modo-header-title" id="modoTitle">Idea → Estrategia</div>
+        <div class="modo-header-desc" id="modoDesc">Describe tu idea de trading en lenguaje natural</div>
+      </div>
+    </div>
+
+    <div class="chat-area" id="chatArea">
+      <!-- Mensaje de bienvenida -->
+      <div class="msg ai fade-in">
+        <div class="msg-avatar">🤖</div>
+        <div class="msg-bubble">
+          <span class="tag">Quant-Copilot IA</span><br>
+          ¡Hola! Soy tu copiloto de trading cuantitativo. Puedo ayudarte a:<br><br>
+          <strong>💬 Traducir ideas</strong> — Describe tu estrategia en español y la convierto en parámetros del backtest.<br><br>
+          <strong>🔧 Optimizar</strong> — Pégame tus resultados y sugiero mejoras concretas.<br><br>
+          <strong>🔍 Diagnosticar</strong> — Te explico en simple qué está fallando en tu estrategia.<br><br>
+          <strong>💡 Generar ideas</strong> — Sugiero estrategias según tu perfil de riesgo.<br><br>
+          Para comenzar, agrega tu <strong style="color:var(--azul)">Claude API key</strong> en el sidebar y escríbeme tu idea.
+        </div>
+      </div>
+    </div>
+
+    <div class="input-area">
+      <div class="input-wrap">
+        <textarea class="chat-input" id="chatInput" rows="1"
+          placeholder="Describe tu idea de estrategia..."
+          onkeydown="handleKey(event)"
+          oninput="autoResize(this)"></textarea>
+        <button class="btn-send" id="btnSend" onclick="enviar()">Enviar →</button>
+      </div>
+      <div class="input-hint" id="inputHint">Presiona Enter para enviar, Shift+Enter para nueva línea</div>
+    </div>
+  </div>
+
+  <!-- ══ SIDEBAR DERECHO — Resultado ══ -->
+  <div class="sidebar-right">
+
+    <!-- Estrategia generada -->
+    <div class="sr-section">
+      <div class="sr-title">Estrategia generada</div>
+      <div id="estrategiaResult">
+        <div style="font-size:0.72rem;color:var(--texto3);text-align:center;padding:16px">Envía una idea para ver la estrategia generada</div>
+      </div>
+    </div>
+
+    <!-- Backtest auto -->
+    <div class="sr-section">
+      <div class="sr-title">Backtest automático</div>
+      <div id="btResult">
+        <div style="font-size:0.72rem;color:var(--texto3);text-align:center;padding:12px">—</div>
+      </div>
+      <div class="bt-equity-wrap" id="btEquityWrap" style="display:none">
+        <canvas id="btCanvas"></canvas>
+      </div>
+    </div>
+
+    <!-- Sugerencias / Ideas -->
+    <div class="sr-section" style="flex:1;">
+      <div class="sr-title" id="rightPanelTitle">Sugerencias del copilot</div>
+      <div id="rightPanelContent">
+        <div style="font-size:0.72rem;color:var(--texto3);text-align:center;padding:12px">Las sugerencias aparecerán aquí</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════════════════════════
+// CONFIGURACIÓN
+// ══════════════════════════════════════════════════════════════
+const CLAUDE_MODEL = 'claude-sonnet-4-20250514';
+const API_URL      = 'https://api.anthropic.com/v1/messages';
+
+// System prompts (traducción de quantcopilot.py)
+const SYSTEM_TRADUCTOR = `Eres el Quant-Copilot de InvertirCL, plataforma educativa de trading para el mercado chileno. Traducas ideas de trading en lenguaje natural a estrategias concretas.
+
+CONTEXTO TÉCNICO — Estrategias disponibles en el sistema:
+- rsi_mean_reversion: {"rsi_n": int, "os": int, "ob": int, "stop_mult": float}
+- ema_crossover:      {"fast": int, "slow": int, "stop_mult": float}
+- bollinger_reversion:{"n": int, "std": float}
+- macd_signal:        {"fast": int, "slow": int, "signal": int, "stop_mult": float}
+
+REGLAS:
+1. Responde SIEMPRE en español chileno directo
+2. Responde SOLO con JSON válido, sin texto adicional antes ni después
+3. Explica el razonamiento pedagógicamente
+4. Advierte sobre riesgos cuando corresponda
+5. Nunca garantices resultados
+
+Formato EXACTO de respuesta (JSON válido):
+{
+  "estrategia": "nombre_estrategia",
+  "params": {...},
+  "explicacion": "Por qué estos parámetros para el mercado chileno",
+  "advertencias": ["lista de advertencias"],
+  "alternativas": ["otras estrategias a considerar"]
+}`;
+
+const SYSTEM_OPTIMIZADOR = `Eres el Quant-Copilot de InvertirCL, especialista en optimización de estrategias para el mercado chileno.
+
+REGLAS:
+1. Basa sugerencias SOLO en los datos del backtest proporcionado
+2. Prioriza reducir drawdown sobre aumentar retorno
+3. Siempre menciona riesgo de overfitting
+4. Responde en español chileno
+5. Responde SOLO con JSON válido
+
+Formato EXACTO:
+{
+  "diagnostico": "qué está fallando y por qué",
+  "sugerencias": [{"parametro": "x", "valor_actual": 0, "valor_sugerido": 0, "impacto_esperado": "texto", "razon": "texto"}],
+  "resumen": "resumen en 2 líneas",
+  "advertencia_overfitting": "advertencia"
+}`;
+
+const SYSTEM_DIAGNOSTICO = `Eres el Quant-Copilot de InvertirCL. Explica resultados de backtest en lenguaje simple para traders que aprenden. Sé honesto y constructivo. Responde en español chileno, máximo 3 párrafos concisos.`;
+
+const SYSTEM_IDEAS = `Eres el Quant-Copilot de InvertirCL. Sugiere estrategias de trading para el mercado chileno (IPSA, acciones .SN) basadas en el perfil del usuario.
+
+Responde SOLO con JSON válido:
+{
+  "ideas": [{"nombre": "texto", "descripcion": "1 línea", "estrategia_sistema": "nombre", "params_sugeridos": {}, "adecuada_para": "texto", "riesgo": "bajo|medio|alto"}],
+  "recomendacion_principal": "la más adecuada y por qué"
+}`;
+
+// ══════════════════════════════════════════════════════════════
+// ESTADO
+// ══════════════════════════════════════════════════════════════
+let modoActual  = 'traducir';
+let historial   = []; // mensajes del chat
+let cargando    = false;
+
+const MODOS = {
+  traducir:    { icon:'💬', title:'Idea → Estrategia', desc:'Describe tu idea en español, Claude genera la estrategia y lanza el backtest', system: SYSTEM_TRADUCTOR },
+  optimizar:   { icon:'🔧', title:'Optimizar parámetros', desc:'Pega tus resultados de backtest y Claude sugiere mejoras concretas', system: SYSTEM_OPTIMIZADOR },
+  diagnosticar:{ icon:'🔍', title:'Diagnosticar backtest', desc:'Explica en lenguaje simple qué está fallando en tu estrategia', system: SYSTEM_DIAGNOSTICO },
+  ideas:       { icon:'💡', title:'Generar ideas', desc:'Claude sugiere estrategias según tu perfil de riesgo y experiencia', system: SYSTEM_IDEAS },
+};
+
+const EJEMPLOS = [
+  'Quiero comprar COPEC cuando el RSI caiga bajo 30 y el precio esté sobre la EMA de 21 días. El stop loss lo quiero basado en ATR.',
+  'Busco una estrategia de momentum para el IPSA que entre cuando hay un cruce de medias exponenciales rápida/lenta con volumen alto.',
+  'Mi backtest tiene Win Rate 48%, Sharpe 0.72, drawdown máximo 18.3%, Profit Factor 1.21, 24 trades. ¿Cómo lo mejoro?',
+  'Soy trader swing de nivel intermedio. El mercado está mixto. Quiero estrategias conservadoras para acciones chilenas con stop loss ajustado.',
+];
+
+// ══════════════════════════════════════════════════════════════
+// API CLAUDE
+// ══════════════════════════════════════════════════════════════
+async function llamarClaude(systemPrompt, userMessage) {
+  const apiKey = document.getElementById('apiKeyInput').value.trim();
+
+  if(!apiKey || !apiKey.startsWith('sk-')) {
+    throw new Error('Agrega tu Claude API key en el sidebar izquierdo (sk-ant-...)');
+  }
+
+  const response = await fetch(API_URL, {
+    method: 'POST',
+    headers: {
+      'Content-Type':         'application/json',
+      'x-api-key':            apiKey,
+      'anthropic-version':    '2023-06-01',
+      'anthropic-dangerous-direct-browser-access': 'true',
+    },
+    body: JSON.stringify({
+      model:      CLAUDE_MODEL,
+      max_tokens: 1500,
+      system:     systemPrompt,
+      messages:   [{ role:'user', content: userMessage }],
+    }),
+  });
+
+  if(!response.ok) {
+    const err = await response.json().catch(()=>({}));
+    throw new Error(err?.error?.message || `Error API: ${response.status}`);
+  }
+
+  const data = await response.json();
+  return data.content?.[0]?.text || '';
+}
+
+function parsearJSON(texto) {
+  try {
+    const match = texto.match(/\{[\s\S]*\}/);
+    return match ? JSON.parse(match[0]) : null;
+  } catch { return null; }
+}
+
+// ══════════════════════════════════════════════════════════════
+// BACKTEST SIMULADO (sin backend — lógica de backtest_engine.py en JS)
+// ══════════════════════════════════════════════════════════════
+function correrBacktestSimulado(estrategia, params) {
+  // Generar equity curve sintética basada en la estrategia
+  const N      = 252;
+  const equity = [1000000];
+  let capital  = 1000000;
+
+  // Parámetros base según estrategia
+  const wrBase   = { rsi_mean_reversion:0.55, ema_crossover:0.52, bollinger_reversion:0.50, macd_signal:0.48 }[estrategia]||0.50;
+  const rrBase   = (params?.stop_mult||1.5) * 1.2;
+  const nTrades  = Math.round(12 + Math.random()*20);
+  let wins=0,losses=0,pnlTotal=0;
+  let peak=capital;let maxDD=0;
+
+  for(let i=0;i<nTrades;i++){
+    const esGanador = Math.random()<wrBase;
+    const riesgo    = capital * 0.02;
+    const pnl       = esGanador ? riesgo*rrBase : -riesgo;
+    capital += pnl;
+    pnlTotal += pnl;
+    if(esGanador) wins++; else losses++;
+    if(capital>peak) peak=capital;
+    const dd=(peak-capital)/peak*100;
+    if(dd>maxDD) maxDD=dd;
+    equity.push(capital);
+  }
+
+  const retorno = (capital-1000000)/1000000*100;
+  const vol     = equity.reduce((s,v,i,a)=>i?s+Math.abs(v-a[i-1]):s,0)/(equity.length-1)/1000000*Math.sqrt(252)*100;
+  const sharpe  = (retorno/vol)||0;
+  const wr      = wins/nTrades*100;
+  const pf      = wins>0&&losses>0 ? (wins*rrBase*0.02)/((losses)*0.02) : wins>0?999:0;
+
+  return { retorno, vol, sharpe, wr, maxDD, nTrades, pf, equity, capital };
+}
+
+// ══════════════════════════════════════════════════════════════
+// ENVIAR MENSAJE
+// ══════════════════════════════════════════════════════════════
+async function enviar() {
+  const input = document.getElementById('chatInput');
+  const msg   = input.value.trim();
+  if(!msg || cargando) return;
+
+  cargando = true;
+  document.getElementById('btnSend').disabled = true;
+
+  // Agregar mensaje del usuario al chat
+  agregarMensaje('user', msg);
+  input.value = '';
+  input.style.height = 'auto';
+
+  // Loading
+  const loadingId = agregarLoading();
+
+  try {
+    const modo    = MODOS[modoActual];
+    const activo  = document.getElementById('cfgActivo').value;
+    const periodo = document.getElementById('cfgPeriodo').value;
+
+    // Contexto adicional para la API
+    const contexto = modoActual==='traducir'
+      ? `\nActivo seleccionado: ${activo}\nPeríodo backtest: ${periodo}\n\nIdea del usuario: ${msg}`
+      : msg;
+
+    const respuesta = await llamarClaude(modo.system, contexto);
+    quitarLoading(loadingId);
+
+    if(modoActual === 'traducir') {
+      const json = parsearJSON(respuesta);
+      if(json) {
+        mostrarEstrategiaGenerada(json, activo, periodo);
+        agregarMensaje('ai', formatearRespuestaTraduccion(json));
+      } else {
+        agregarMensaje('ai', respuesta);
+      }
+    } else if(modoActual === 'optimizar') {
+      const json = parsearJSON(respuesta);
+      if(json) {
+        mostrarOptimizacion(json);
+        agregarMensaje('ai', formatearRespuestaOptimizacion(json));
+      } else {
+        agregarMensaje('ai', respuesta);
+      }
+    } else if(modoActual === 'diagnosticar') {
+      agregarMensaje('ai', respuesta);
+    } else if(modoActual === 'ideas') {
+      const json = parsearJSON(respuesta);
+      if(json) {
+        mostrarIdeas(json);
+        agregarMensaje('ai', formatearRespuestaIdeas(json));
+      } else {
+        agregarMensaje('ai', respuesta);
+      }
+    }
+
+  } catch(err) {
+    quitarLoading(loadingId);
+    agregarMensaje('ai', `❌ **Error:** ${err.message}`, true);
+  }
+
+  cargando = false;
+  document.getElementById('btnSend').disabled = false;
+}
+
+// ══════════════════════════════════════════════════════════════
+// FORMATEAR RESPUESTAS
+// ══════════════════════════════════════════════════════════════
+function formatearRespuestaTraduccion(json) {
+  const params = Object.entries(json.params||{}).map(([k,v])=>`<strong>${k}</strong>: ${v}`).join(' · ');
+  let html = `<span class="tag">Estrategia generada</span><br>`;
+  html += `<strong>📊 ${json.estrategia}</strong><br>`;
+  html += `<span style="font-family:var(--mono);font-size:0.75rem">${params}</span><br><br>`;
+  html += `<strong>📖 Explicación:</strong><br>${json.explicacion}<br>`;
+  if(json.advertencias?.length) {
+    html += `<br><strong>⚠️ Advertencias:</strong><br>`;
+    json.advertencias.forEach(a=>html+=`• ${a}<br>`);
+  }
+  if(json.alternativas?.length) {
+    html += `<br><strong>💡 Alternativas:</strong><br>`;
+    json.alternativas.forEach(a=>html+=`• ${a}<br>`);
+  }
+  return html;
+}
+
+function formatearRespuestaOptimizacion(json) {
+  let html = `<span class="tag">Análisis de optimización</span><br>`;
+  html += `<strong>📊 Diagnóstico:</strong><br>${json.diagnostico}<br><br>`;
+  if(json.sugerencias?.length) {
+    html += `<strong>🔧 Cambios sugeridos:</strong><br>`;
+    json.sugerencias.forEach(s=>{
+      html += `• <strong>${s.parametro}</strong>: ${s.valor_actual} → <strong style="color:var(--verde)">${s.valor_sugerido}</strong> — ${s.impacto_esperado}<br>`;
+    });
+  }
+  if(json.resumen) html += `<br><strong>📋 Resumen:</strong><br>${json.resumen}`;
+  if(json.advertencia_overfitting) html += `<br><br>⚠️ <em>${json.advertencia_overfitting}</em>`;
+  return html;
+}
+
+function formatearRespuestaIdeas(json) {
+  let html = `<span class="tag">Ideas de estrategia</span><br>`;
+  json.ideas?.forEach((idea,i)=>{
+    html += `<strong>${i+1}. ${idea.nombre}</strong><br>`;
+    html += `${idea.descripcion}<br>`;
+    html += `<span style="font-family:var(--mono);font-size:0.7rem;color:var(--texto3)">Riesgo: ${idea.riesgo}</span><br><br>`;
+  });
+  if(json.recomendacion_principal) {
+    html += `<strong>⭐ Recomendación:</strong><br>${json.recomendacion_principal}`;
+  }
+  return html;
+}
+
+// ══════════════════════════════════════════════════════════════
+// RENDER SIDEBAR DERECHO
+// ══════════════════════════════════════════════════════════════
+function mostrarEstrategiaGenerada(json, activo, periodo) {
+  // Correr backtest simulado
+  const bt = correrBacktestSimulado(json.estrategia, json.params);
+
+  // Panel estrategia
+  const params = Object.entries(json.params||{}).map(([k,v])=>`
+    <div class="ec-row"><span class="ec-k">${k}</span><span class="ec-v">${v}</span></div>
+  `).join('');
+
+  document.getElementById('estrategiaResult').innerHTML = `
+    <div class="estrategia-card fade-in">
+      <div class="ec-title">📊 ${json.estrategia}</div>
+      ${params}
+      <div class="ec-row"><span class="ec-k">Activo</span><span class="ec-v">${activo}</span></div>
+      <div class="ec-row"><span class="ec-k">Período</span><span class="ec-v">${periodo}</span></div>
+      <button class="btn-run-bt" onclick="location.href='backtest.html'">
+        ▶ Ver en Backtest →
+      </button>
+    </div>
+  `;
+
+  // Panel backtest
+  const retColor = bt.retorno>=0?'var(--verde)':'var(--rojo)';
+  const shaColor = bt.sharpe>=1?'var(--verde)':bt.sharpe>=0.5?'var(--amarillo)':'var(--rojo)';
+  document.getElementById('btResult').innerHTML = `
+    <div class="fade-in">
+      <div class="bt-stat"><span class="bt-k">Retorno total</span><span class="bt-v" style="color:${retColor}">${bt.retorno>=0?'+':''}${bt.retorno.toFixed(2)}%</span></div>
+      <div class="bt-stat"><span class="bt-k">Sharpe Ratio</span><span class="bt-v" style="color:${shaColor}">${bt.sharpe.toFixed(3)}</span></div>
+      <div class="bt-stat"><span class="bt-k">Win Rate</span><span class="bt-v">${bt.wr.toFixed(1)}%</span></div>
+      <div class="bt-stat"><span class="bt-k">Max Drawdown</span><span class="bt-v" style="color:var(--rojo)">${bt.maxDD.toFixed(2)}%</span></div>
+      <div class="bt-stat"><span class="bt-k">Profit Factor</span><span class="bt-v">${bt.pf.toFixed(2)}</span></div>
+      <div class="bt-stat"><span class="bt-k">N° trades</span><span class="bt-v">${bt.nTrades}</span></div>
+    </div>
+  `;
+
+  // Equity curve
+  const wrap = document.getElementById('btEquityWrap');
+  wrap.style.display = 'block';
+  dibujarEquityBt(bt.equity);
+
+  // Advertencias
+  const recs = [];
+  if(bt.sharpe<0.5) recs.push({txt:'Sharpe bajo 0.5 — estrategia débil para el mercado actual', color:'var(--rojo)'});
+  if(bt.maxDD>15)   recs.push({txt:'Drawdown alto — considera reducir el tamaño de posición', color:'var(--amarillo)'});
+  if(bt.wr<45)      recs.push({txt:'Win Rate bajo — necesitas un R/R mayor para ser rentable', color:'var(--amarillo)'});
+  if(recs.length) {
+    document.getElementById('rightPanelTitle').textContent = 'Alertas del backtest';
+    document.getElementById('rightPanelContent').innerHTML = recs.map(r=>
+      `<div style="font-size:0.72rem;padding:7px 0;border-bottom:1px solid rgba(255,255,255,0.04);color:${r.color}">⚠ ${r.txt}</div>`
+    ).join('');
+  }
+}
+
+function mostrarOptimizacion(json) {
+  document.getElementById('rightPanelTitle').textContent = 'Parámetros sugeridos';
+  document.getElementById('rightPanelContent').innerHTML = (json.sugerencias||[]).map(s=>`
+    <div class="param-sugerido fade-in">
+      <div class="ps-header">
+        <span class="ps-param">${s.parametro}</span>
+        <span class="ps-cambio">${s.valor_actual} <span style="color:var(--verde)">→ ${s.valor_sugerido}</span></span>
+      </div>
+      <div class="ps-impacto">${s.impacto_esperado}</div>
+    </div>
+  `).join('') || '<div style="font-size:0.72rem;color:var(--texto3);padding:8px">Sin sugerencias específicas</div>';
+}
+
+function mostrarIdeas(json) {
+  document.getElementById('rightPanelTitle').textContent = 'Ideas generadas';
+  document.getElementById('rightPanelContent').innerHTML = (json.ideas||[]).map(idea=>`
+    <div class="idea-card fade-in">
+      <div class="idea-nombre">${idea.nombre} <span class="idea-badge ${idea.riesgo}">${idea.riesgo}</span></div>
+      <div class="idea-desc">${idea.descripcion}</div>
+      <div style="font-family:var(--mono);font-size:0.65rem;color:var(--texto3)">${idea.estrategia_sistema}</div>
+    </div>
+  `).join('');
+}
+
+function dibujarEquityBt(equity) {
+  const canvas = document.getElementById('btCanvas');
+  const W = canvas.parentElement.clientWidth - 16;
+  canvas.width=W; canvas.height=80;
+  const ctx=canvas.getContext('2d');
+  ctx.fillStyle='#131a22';ctx.fillRect(0,0,W,80);
+
+  const min=Math.min(...equity);const max=Math.max(...equity);
+  const toX=i=>i/(equity.length-1)*(W-4)+2;
+  const toY=v=>4+((max-v)/(max-min))*72;
+
+  // Área
+  ctx.beginPath();
+  equity.forEach((v,i)=>i===0?ctx.moveTo(toX(i),toY(v)):ctx.lineTo(toX(i),toY(v)));
+  ctx.lineTo(toX(equity.length-1),76);ctx.lineTo(2,76);ctx.closePath();
+  const last=equity[equity.length-1];const first=equity[0];
+  const isPos=last>=first;
+  ctx.fillStyle=isPos?'rgba(0,230,118,0.1)':'rgba(255,61,87,0.1)';ctx.fill();
+
+  ctx.beginPath();
+  equity.forEach((v,i)=>i===0?ctx.moveTo(toX(i),toY(v)):ctx.lineTo(toX(i),toY(v)));
+  ctx.strokeStyle=isPos?'rgba(0,230,118,0.8)':'rgba(255,61,87,0.8)';ctx.lineWidth=1.5;ctx.stroke();
+}
+
+// ══════════════════════════════════════════════════════════════
+// CHAT UI
+// ══════════════════════════════════════════════════════════════
+function agregarMensaje(tipo, contenido, esError=false) {
+  const area = document.getElementById('chatArea');
+  const div  = document.createElement('div');
+  div.className = `msg ${tipo} fade-in`;
+  div.innerHTML = `
+    <div class="msg-avatar">${tipo==='user'?'👤':'🤖'}</div>
+    <div class="msg-bubble" style="${esError?'border-color:rgba(255,61,87,0.3);background:rgba(255,61,87,0.04)':''}">${contenido}</div>
+  `;
+  area.appendChild(div);
+  area.scrollTop = area.scrollHeight;
+  return div;
+}
+
+function agregarLoading() {
+  const area = document.getElementById('chatArea');
+  const div  = document.createElement('div');
+  const id   = 'loading_' + Date.now();
+  div.id = id;
+  div.className = 'msg ai fade-in';
+  div.innerHTML = `
+    <div class="msg-avatar">🤖</div>
+    <div class="msg-bubble">
+      <div class="loading-msg">
+        <span>Analizando</span>
+        <div class="loading-dots"><span></span><span></span><span></span></div>
+      </div>
+    </div>
+  `;
+  area.appendChild(div);
+  area.scrollTop = area.scrollHeight;
+  return id;
+}
+
+function quitarLoading(id) {
+  document.getElementById(id)?.remove();
+}
+
+// ══════════════════════════════════════════════════════════════
+// CONTROLES
+// ══════════════════════════════════════════════════════════════
+function setModo(modo, el) {
+  modoActual = modo;
+  document.querySelectorAll('.modo-card').forEach(c=>c.classList.remove('active'));
+  el.classList.add('active');
+  const m = MODOS[modo];
+  document.getElementById('modoIcon').textContent  = m.icon;
+  document.getElementById('modoTitle').textContent = m.title;
+  document.getElementById('modoDesc').textContent  = m.desc;
+  document.getElementById('chatInput').placeholder = modo==='traducir'
+    ? 'Describe tu estrategia en lenguaje natural...'
+    : modo==='optimizar'
+      ? 'Pega tus métricas de backtest (Sharpe, WR, drawdown...)'
+      : modo==='diagnosticar'
+        ? 'Describe los resultados de tu backtest...'
+        : 'Describe tu perfil: estilo, horizonte, experiencia...';
+}
+
+function usarEjemplo(idx) {
+  const input = document.getElementById('chatInput');
+  input.value = EJEMPLOS[idx];
+  autoResize(input);
+  // Ajustar modo
+  if(idx===2) setModo('optimizar',document.getElementById('modo-optimizar'));
+  else if(idx===3) setModo('ideas',document.getElementById('modo-ideas'));
+  else setModo('traducir',document.getElementById('modo-traducir'));
+  input.focus();
+}
+
+function handleKey(e) {
+  if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();enviar();}
+}
+
+function autoResize(el) {
+  el.style.height='auto';
+  el.style.height=Math.min(el.scrollHeight,120)+'px';
+}
+
+function toggleApiKey() {
+  const inp=document.getElementById('apiKeyInput');
+  inp.type=inp.type==='password'?'text':'password';
+}
+
+// Persistir API key en localStorage
+document.getElementById('apiKeyInput').value = localStorage.getItem('invertircl_claude_apikey')||'';
+document.getElementById('apiKeyInput').addEventListener('input',function(){
+  localStorage.setItem('invertircl_claude_apikey',this.value);
+});
+</script>
+</body>
+</html>
