@@ -1,0 +1,363 @@
+/**
+ * InvertirCL — Responsive CSS v1.0
+ * ==================================
+ * J5 del Roadmap: Responsividad móvil en todas las páginas
+ *
+ * Breakpoints:
+ *   768px  → tablet  (iPad)
+ *   480px  → móvil   (iPhone)
+ *
+ * Estrategia:
+ *   - Sidebar colapsable con menú hamburguesa
+ *   - Topbar comprimido con nav oculta en móvil
+ *   - Grids de N columnas → 1 o 2 columnas
+ *   - Tablas con scroll horizontal
+ *   - KPIs 4×1 → 2×2 en tablet → 1×4 en móvil
+ *   - Panels fijos (order-panel, right-panel) → drawers deslizables
+ *
+ * USO: <link rel="stylesheet" href="../css/responsive.css">
+ * O inline: <link rel="stylesheet" href="responsive.css">
+ */
+
+/* ══════════════════════════════════════════════════════════════
+   BOTÓN HAMBURGUESA (oculto en desktop)
+   ══════════════════════════════════════════════════════════════ */
+.hamburger-btn {
+  display: none;
+  flex-direction: column;
+  justify-content: center;
+  gap: 4px;
+  width: 32px;
+  height: 32px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 6px;
+  flex-shrink: 0;
+}
+.hamburger-btn:hover { background: rgba(255,255,255,0.06); }
+.hamburger-btn span {
+  display: block;
+  width: 18px;
+  height: 2px;
+  background: var(--texto2);
+  border-radius: 1px;
+  transition: all 0.25s ease;
+}
+.hamburger-btn.open span:nth-child(1) { transform: translateY(6px) rotate(45deg); }
+.hamburger-btn.open span:nth-child(2) { opacity: 0; transform: scaleX(0); }
+.hamburger-btn.open span:nth-child(3) { transform: translateY(-6px) rotate(-45deg); }
+
+/* Overlay oscuro cuando el sidebar está abierto */
+.sidebar-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.5);
+  z-index: 50;
+  backdrop-filter: blur(2px);
+}
+.sidebar-overlay.active { display: block; }
+
+/* ══════════════════════════════════════════════════════════════
+   TABLET — 768px
+   ══════════════════════════════════════════════════════════════ */
+@media (max-width: 768px) {
+
+  /* ── TOPBAR ── */
+  .topbar, nav {
+    padding: 0 14px !important;
+    gap: 8px !important;
+  }
+
+  /* Mostrar hamburguesa */
+  .hamburger-btn { display: flex; }
+
+  /* Ocultar nav de tabs en tablet */
+  .tnav-wrap, .top-nav {
+    display: none !important;
+  }
+
+  /* Ticker del topbar: solo mostrar 3 items */
+  .top-ticker .tick-item:nth-child(n+4) { display: none; }
+  .tick-sym  { font-size: 0.65rem; }
+  .tick-price{ font-size: 0.8rem;  }
+
+  /* ── DASHBOARD LAYOUT ── */
+  .layout {
+    grid-template-columns: 1fr !important;
+    position: relative;
+  }
+
+  /* Sidebar se convierte en drawer lateral */
+  .sidebar {
+    position: fixed !important;
+    top: 52px;
+    left: -100%;
+    height: calc(100% - 52px);
+    width: 260px !important;
+    z-index: 60;
+    transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 4px 0 24px rgba(0,0,0,0.4);
+  }
+  .sidebar.open { left: 0; }
+
+  /* Settings nav sidebar también */
+  .settings-nav {
+    position: fixed !important;
+    top: 52px;
+    left: -100%;
+    height: calc(100% - 52px);
+    width: 240px !important;
+    z-index: 60;
+    transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 4px 0 24px rgba(0,0,0,0.4);
+  }
+  .settings-nav.open { left: 0; }
+
+  /* Main ocupa todo el ancho */
+  .main { overflow-y: auto; }
+
+  /* ── KPIs: 4×1 → 2×2 ── */
+  .kpi-row {
+    grid-template-columns: 1fr 1fr !important;
+    gap: 10px !important;
+  }
+
+  /* ── MID ROW: gráfico + posiciones → columna ── */
+  .mid-row {
+    grid-template-columns: 1fr !important;
+    gap: 10px !important;
+  }
+  .chart-panel { min-height: 260px; }
+  .positions-panel { max-height: 280px; }
+
+  /* ── BOTTOM ROW → 2 columnas ── */
+  .bottom-row {
+    grid-template-columns: 1fr 1fr !important;
+    gap: 10px !important;
+  }
+  .learn-panel { grid-column: 1 / -1; }
+
+  /* ── SCANNER: 3 col → 1 col ── */
+  .scanner-body {
+    grid-template-columns: 1fr !important;
+  }
+  .corr-signal { border-right: none !important; border-bottom: 1px solid var(--linea); }
+  .corr-signal:last-child { border-bottom: none; }
+
+  /* ── SIMULATOR LAYOUT ── */
+  .layout.sim-layout,
+  body > .layout {
+    flex-direction: column !important;
+  }
+
+  /* Order panel → top drawer colapsable */
+  .order-panel {
+    width: 100% !important;
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.35s ease;
+    border-right: none !important;
+    border-bottom: 1px solid var(--linea);
+  }
+  .order-panel.open { max-height: 600px; }
+
+  /* Right panel → bottom drawer */
+  .right-panel {
+    width: 100% !important;
+    max-height: 240px;
+    border-left: none !important;
+    border-top: 1px solid var(--linea);
+  }
+
+  /* ── SIMULATOR: botón para abrir order panel ── */
+  .sim-toggle-bar {
+    display: flex !important;
+  }
+
+  /* ── TABLAS: scroll horizontal ── */
+  .table-panel, .ranking-wrap {
+    overflow-x: auto;
+  }
+  .mkt-table, .ranking-table {
+    min-width: 500px;
+  }
+
+  /* ── HEATMAP: layout 3col → column ── */
+  .main-layout {
+    grid-template-columns: 1fr !important;
+    height: auto !important;
+    overflow: visible !important;
+  }
+  .sidebar-left, .sidebar-right {
+    position: fixed !important;
+    top: 52px;
+    height: calc(100% - 52px);
+    z-index: 60;
+    transition: left 0.3s ease, right 0.3s ease;
+    overflow-y: auto;
+  }
+  .sidebar-left  { left: -280px; width: 280px !important; }
+  .sidebar-right { right: -320px; width: 320px !important; }
+  .sidebar-left.open  { left: 0; box-shadow: 4px 0 24px rgba(0,0,0,0.4); }
+  .sidebar-right.open { right: 0; box-shadow: -4px 0 24px rgba(0,0,0,0.4); }
+  .center-panel { height: calc(100vh - 52px); }
+
+  /* ── RANKING: podio comprimido ── */
+  .ranking-hero {
+    flex-direction: column !important;
+    gap: 16px;
+  }
+  .podio { gap: 4px; }
+  .podio-item { min-width: 80px !important; padding: 8px 10px !important; }
+
+  /* ── AJUSTES: layout 2col → 1col ── */
+  .layout.settings-layout,
+  .layout:has(.settings-nav) {
+    grid-template-columns: 1fr !important;
+  }
+  .settings-content { padding: 20px 16px !important; }
+
+  /* ── ICEBERG: layout flex → column ── */
+  .layout:has(.sidebar) .center {
+    overflow-y: auto;
+  }
+  .chart-zone {
+    grid-template-columns: 1fr !important;
+    flex-direction: column;
+  }
+  .analysis-panel {
+    max-height: 320px;
+    border-left: none !important;
+    border-top: 1px solid var(--linea);
+  }
+
+  /* ── EDUCATIVO: grid 3col → 1col ── */
+  .edu-row {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* ── ONBOARDING: tooltip más pequeño ── */
+  #ob-tooltip {
+    max-width: calc(100vw - 32px) !important;
+    width: calc(100vw - 32px) !important;
+    left: 16px !important;
+  }
+
+  /* ── MODAL: padding reducido ── */
+  .modal { padding: 20px !important; }
+}
+
+/* ══════════════════════════════════════════════════════════════
+   MÓVIL — 480px
+   ══════════════════════════════════════════════════════════════ */
+@media (max-width: 480px) {
+
+  /* ── TOPBAR: más comprimido ── */
+  .topbar, nav {
+    padding: 0 10px !important;
+    height: 48px !important;
+  }
+  .logo, .nav-logo { font-size: 0.9rem !important; }
+
+  /* Ocultar hora y elementos secundarios */
+  .hora, #horaEl, .live-label { display: none !important; }
+  .capital-badge:nth-child(2) { display: none !important; }
+
+  /* ── KPIs: 2×2 → 1 columna ── */
+  .kpi-row {
+    grid-template-columns: 1fr !important;
+  }
+  .kpi-card { padding: 12px !important; }
+  .kpi-price { font-size: 1.1rem !important; }
+
+  /* ── BOTTOM ROW → columna ── */
+  .bottom-row {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* ── SCANNER: descripción corta ── */
+  .corr-desc { font-size: 0.72rem !important; }
+  .scanner-header { flex-direction: column; align-items: flex-start; gap: 6px; }
+  .scanner-meta { font-size: 0.65rem !important; }
+
+  /* ── HERO RANKING → columna ── */
+  .ranking-hero { padding: 16px !important; }
+  .hero-title { font-size: 1.2rem !important; }
+  .podio-item { min-width: 70px !important; }
+
+  /* ── TABLA RANKING: ocultar columnas menos importantes ── */
+  .ranking-table th:nth-child(6),
+  .ranking-table td:nth-child(6),
+  .ranking-table th:nth-child(7),
+  .ranking-table td:nth-child(7),
+  .ranking-table th:nth-child(8),
+  .ranking-table td:nth-child(8) {
+    display: none !important;
+  }
+
+  /* ── PERFIL RESUMEN: 1 columna ── */
+  .perfil-resumen { grid-template-columns: 1fr !important; }
+
+  /* ── MI POSICIÓN: columna ── */
+  .mi-posicion { flex-direction: column; gap: 12px; }
+  .mp-stats { flex-wrap: wrap; gap: 12px; }
+
+  /* ── COMPLETADO OVERLAY ── */
+  .completado-stats { grid-template-columns: 1fr 1fr 1fr; }
+  .completado-modal { padding: 24px 16px !important; }
+
+  /* ── SETTINGS CARD ── */
+  .setting-row {
+    flex-direction: column !important;
+    gap: 10px !important;
+  }
+  .setting-right { min-width: unset !important; width: 100%; }
+
+  /* ── HORARIO GRID ── */
+  .horario-grid { grid-template-columns: repeat(4, 1fr) !important; }
+
+  /* ── PRICE CROSSHAIR LABEL más pequeño ── */
+  .price-crosshair-label { font-size: 0.6rem !important; }
+
+  /* ── EDUCATIVO DASHBOARD ── */
+  .edu-row { grid-template-columns: 1fr !important; }
+
+  /* ── FORM LANDING ── */
+  .hero-form, .cta-form {
+    flex-direction: column !important;
+  }
+  .hero-form input, .cta-form input { width: 100% !important; }
+}
+
+/* ══════════════════════════════════════════════════════════════
+   BARRA DE CONTROL SIMULADOR (visible solo en móvil)
+   ══════════════════════════════════════════════════════════════ */
+.sim-toggle-bar {
+  display: none;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 14px;
+  background: var(--bg2);
+  border-bottom: 1px solid var(--linea);
+  gap: 8px;
+  flex-shrink: 0;
+}
+.sim-toggle-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 6px;
+  border: 1px solid var(--linea2);
+  background: var(--bg3);
+  color: var(--texto2);
+  font-size: 0.75rem;
+  font-family: var(--sans, 'DM Sans', sans-serif);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.sim-toggle-btn:hover { border-color: var(--verde); color: var(--texto); }
+.sim-toggle-btn.active { background: rgba(0,230,118,0.08); border-color: rgba(0,230,118,0.3); color: var(--verde); }

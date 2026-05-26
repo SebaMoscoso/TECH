@@ -1,0 +1,1138 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>InvertirCL — Ajustes</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:#07090d; --bg2:#0d1117; --bg3:#131a22; --bg4:#1a222c;
+  --verde:#00e676; --rojo:#ff3d57; --azul:#4a9eff; --amarillo:#f5c518;
+  --purpura:#9b59b6; --naranja:#ff6b35;
+  --linea:rgba(255,255,255,0.06); --linea2:rgba(255,255,255,0.1);
+  --texto:#e2e8f0; --texto2:#8a9bb0; --texto3:#4a5568;
+  --mono:'DM Mono',monospace; --sans:'DM Sans',sans-serif; --display:'Syne',sans-serif;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html,body{height:100%;overflow:hidden;}
+body{font-family:var(--sans);background:var(--bg);color:var(--texto);display:flex;flex-direction:column;}
+
+/* ── TOPBAR ── */
+.topbar{height:52px;background:var(--bg2);border-bottom:1px solid var(--linea);display:flex;align-items:center;padding:0 20px;gap:14px;flex-shrink:0;}
+.logo{font-family:var(--display);font-weight:800;font-size:1rem;color:var(--verde);text-decoration:none;}
+.logo span{color:var(--texto2);font-weight:400;}
+.tnav-wrap{display:flex;gap:2px;margin-left:8px;}
+.tnav{padding:6px 13px;border-radius:6px;font-size:0.78rem;color:var(--texto2);cursor:pointer;transition:all 0.15s;text-decoration:none;}
+.tnav:hover{background:var(--bg3);color:var(--texto);}
+.tnav.active{background:rgba(255,255,255,0.06);color:var(--texto);}
+.topbar-right{margin-left:auto;display:flex;align-items:center;gap:10px;}
+.save-badge{font-size:0.65rem;padding:3px 10px;border-radius:100px;background:rgba(0,230,118,0.1);color:var(--verde);border:1px solid rgba(0,230,118,0.2);display:none;}
+.save-badge.visible{display:inline-flex;align-items:center;gap:4px;}
+
+/* ── LAYOUT ── */
+.layout{display:grid;grid-template-columns:240px 1fr;flex:1;overflow:hidden;}
+
+/* ── SIDEBAR NAV ── */
+.settings-nav{background:var(--bg2);border-right:1px solid var(--linea);padding:20px 12px;overflow-y:auto;}
+.settings-nav-section{margin-bottom:20px;}
+.settings-nav-label{font-size:0.62rem;text-transform:uppercase;letter-spacing:0.1em;color:var(--texto3);margin-bottom:6px;padding:0 8px;}
+.settings-nav-item{
+  display:flex;align-items:center;gap:10px;padding:9px 12px;
+  border-radius:8px;cursor:pointer;transition:all 0.15s;margin-bottom:2px;
+  font-size:0.82rem;color:var(--texto2);
+}
+.settings-nav-item:hover{background:var(--bg3);color:var(--texto);}
+.settings-nav-item.active{background:rgba(0,230,118,0.08);color:var(--verde);}
+.settings-nav-item .nav-icon{font-size:0.95rem;width:18px;text-align:center;}
+
+/* ── CONTENIDO ── */
+.settings-content{overflow-y:auto;padding:28px 32px;}
+
+/* Sección */
+.settings-section{display:none;max-width:680px;}
+.settings-section.active{display:block;}
+
+.section-header{margin-bottom:24px;}
+.section-title{font-family:var(--display);font-size:1.2rem;font-weight:800;letter-spacing:-0.02em;margin-bottom:4px;}
+.section-sub{font-size:0.82rem;color:var(--texto2);}
+
+/* Card de ajuste */
+.settings-card{
+  background:var(--bg2);border:1px solid var(--linea);
+  border-radius:12px;overflow:hidden;margin-bottom:16px;
+}
+.card-header{
+  padding:14px 18px;border-bottom:1px solid var(--linea);
+  display:flex;align-items:center;justify-content:space-between;
+}
+.card-title{font-family:var(--display);font-size:0.88rem;font-weight:700;}
+.card-badge{font-size:0.6rem;padding:2px 7px;border-radius:3px;text-transform:uppercase;letter-spacing:0.05em;}
+.card-badge.local{background:rgba(74,158,255,0.1);color:var(--azul);border:1px solid rgba(74,158,255,0.2);}
+.card-badge.afecta{background:rgba(245,197,24,0.08);color:var(--amarillo);border:1px solid rgba(245,197,24,0.15);}
+.card-body{padding:16px 18px;}
+
+/* Fila de ajuste */
+.setting-row{
+  display:flex;align-items:flex-start;justify-content:space-between;
+  padding:12px 0;border-bottom:1px solid rgba(255,255,255,0.03);gap:20px;
+}
+.setting-row:last-child{border-bottom:none;padding-bottom:0;}
+.setting-left{flex:1;}
+.setting-label{font-size:0.82rem;font-weight:500;margin-bottom:3px;}
+.setting-desc{font-size:0.72rem;color:var(--texto2);line-height:1.5;}
+.setting-desc strong{color:var(--texto);}
+.setting-right{flex-shrink:0;min-width:180px;}
+
+/* Inputs */
+.s-input{
+  width:100%;background:var(--bg3);border:1px solid var(--linea2);
+  border-radius:8px;padding:9px 12px;font-family:var(--mono);
+  font-size:0.88rem;color:var(--texto);outline:none;
+  transition:border-color 0.2s;
+}
+.s-input:focus{border-color:var(--verde);}
+.s-input-wrap{position:relative;}
+.s-input-prefix{
+  position:absolute;left:12px;top:50%;transform:translateY(-50%);
+  font-family:var(--mono);font-size:0.82rem;color:var(--texto3);
+  pointer-events:none;
+}
+.s-input.with-prefix{padding-left:24px;}
+.s-input-hint{font-size:0.65rem;color:var(--texto3);margin-top:4px;}
+
+/* Slider */
+.s-slider-wrap{display:flex;align-items:center;gap:10px;}
+.s-slider{
+  flex:1;-webkit-appearance:none;background:var(--bg3);
+  height:4px;border-radius:2px;outline:none;cursor:pointer;
+}
+.s-slider::-webkit-slider-thumb{
+  -webkit-appearance:none;width:14px;height:14px;border-radius:50%;
+  background:var(--verde);cursor:pointer;border:2px solid var(--bg2);
+}
+.s-slider-val{
+  font-family:var(--mono);font-size:0.82rem;color:var(--verde);
+  width:40px;text-align:right;flex-shrink:0;
+}
+
+/* Select */
+.s-select{
+  width:100%;background:var(--bg3);border:1px solid var(--linea2);
+  border-radius:8px;padding:9px 12px;font-family:var(--sans);
+  font-size:0.82rem;color:var(--texto);outline:none;cursor:pointer;
+  transition:border-color 0.2s;
+}
+.s-select:focus{border-color:var(--verde);}
+
+/* Toggle */
+.s-toggle{
+  position:relative;width:42px;height:24px;flex-shrink:0;
+}
+.s-toggle input{opacity:0;width:0;height:0;}
+.s-toggle-track{
+  position:absolute;inset:0;border-radius:12px;
+  background:var(--bg3);border:1px solid var(--linea2);
+  cursor:pointer;transition:all 0.25s;
+}
+.s-toggle input:checked + .s-toggle-track{
+  background:rgba(0,230,118,0.2);border-color:rgba(0,230,118,0.4);
+}
+.s-toggle-track::after{
+  content:'';position:absolute;left:3px;top:50%;transform:translateY(-50%);
+  width:16px;height:16px;border-radius:50%;background:var(--texto3);
+  transition:all 0.25s;
+}
+.s-toggle input:checked + .s-toggle-track::after{
+  left:calc(100% - 19px);background:var(--verde);
+}
+
+/* Checkbox grupo */
+.s-check-group{display:flex;flex-direction:column;gap:6px;}
+.s-check-item{
+  display:flex;align-items:center;gap:8px;padding:7px 10px;
+  border-radius:6px;cursor:pointer;transition:background 0.12s;
+  font-size:0.78rem;
+}
+.s-check-item:hover{background:var(--bg3);}
+.s-check-item input{accent-color:var(--verde);width:14px;height:14px;flex-shrink:0;}
+
+/* Horario picker */
+.horario-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;}
+.horario-btn{
+  padding:6px 4px;border-radius:6px;border:1px solid var(--linea);
+  background:var(--bg3);color:var(--texto2);font-family:var(--mono);
+  font-size:0.7rem;cursor:pointer;text-align:center;transition:all 0.15s;
+}
+.horario-btn:hover{border-color:var(--linea2);color:var(--texto);}
+.horario-btn.active{background:rgba(0,230,118,0.08);border-color:rgba(0,230,118,0.3);color:var(--verde);}
+
+/* Avatar picker */
+.avatar-section{display:flex;align-items:center;gap:16px;margin-bottom:16px;}
+.avatar-preview{
+  width:56px;height:56px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  font-family:var(--display);font-size:1.1rem;font-weight:700;
+  border:2px solid var(--linea2);flex-shrink:0;
+  transition:all 0.2s;
+}
+.avatar-colors{display:flex;gap:6px;flex-wrap:wrap;}
+.avatar-color{
+  width:22px;height:22px;border-radius:50%;cursor:pointer;
+  border:2px solid transparent;transition:all 0.15s;
+}
+.avatar-color:hover{transform:scale(1.15);}
+.avatar-color.active{border-color:#fff;transform:scale(1.1);}
+
+/* Resumen del perfil */
+.perfil-resumen{
+  background:var(--bg3);border-radius:10px;padding:16px;
+  display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:6px;
+}
+.resumen-item{}
+.resumen-label{font-size:0.62rem;text-transform:uppercase;letter-spacing:0.06em;color:var(--texto3);margin-bottom:3px;}
+.resumen-val{font-family:var(--mono);font-size:0.88rem;color:var(--texto);}
+
+/* Botón guardar */
+.btn-guardar{
+  width:100%;padding:12px;border-radius:10px;border:none;
+  background:var(--verde);color:#000;font-family:var(--display);
+  font-size:0.9rem;font-weight:700;cursor:pointer;transition:all 0.2s;
+  margin-top:16px;
+}
+.btn-guardar:hover{background:#fff;box-shadow:0 4px 20px rgba(0,230,118,0.3);}
+
+/* Zona peligrosa */
+.danger-zone{
+  border:1px solid rgba(255,61,87,0.2);border-radius:10px;
+  padding:16px 18px;background:rgba(255,61,87,0.03);margin-top:8px;
+}
+.danger-title{font-size:0.78rem;color:var(--rojo);font-weight:500;margin-bottom:8px;}
+.danger-desc{font-size:0.72rem;color:var(--texto2);margin-bottom:12px;line-height:1.5;}
+.btn-danger{
+  padding:8px 16px;border-radius:7px;border:1px solid rgba(255,61,87,0.3);
+  background:transparent;color:var(--rojo);font-family:var(--sans);
+  font-size:0.78rem;cursor:pointer;transition:all 0.2s;
+}
+.btn-danger:hover{background:rgba(255,61,87,0.08);}
+
+/* Toast */
+.toast{
+  position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(60px);
+  background:var(--bg3);border:1px solid rgba(0,230,118,0.3);
+  border-radius:10px;padding:11px 20px;font-size:0.82rem;
+  display:flex;align-items:center;gap:8px;z-index:200;
+  transition:transform 0.3s ease,opacity 0.3s;opacity:0;
+}
+.toast.show{transform:translateX(-50%) translateY(0);opacity:1;}
+
+/* Scrollbar */
+::-webkit-scrollbar{width:4px;}
+::-webkit-scrollbar-track{background:transparent;}
+::-webkit-scrollbar-thumb{background:var(--bg4);border-radius:2px;}
+</style>
+</head>
+<body>
+
+<!-- TOPBAR -->
+<div class="topbar">
+  <a href="dashboard.html" class="logo">Invertir<span>CL</span></a>
+  <nav class="tnav-wrap">
+    <a href="dashboard.html" class="tnav">Dashboard</a>
+    <a href="simulator.html" class="tnav">Simulador</a>
+    <a href="backtest.html"  class="tnav">Backtest</a>
+    <a href="risk.html"      class="tnav">Riesgo</a>
+    <a href="learn.html"     class="tnav">Aprender</a>
+    <a href="ranking.html"   class="tnav">Ranking</a>
+    <a href="ajustes.html"   class="tnav active">⚙️ Ajustes</a>
+  </nav>
+  <div class="topbar-right">
+    <span class="save-badge" id="saveBadge">✓ Guardado</span>
+  </div>
+</div>
+
+<div class="layout">
+
+  <!-- ── NAV LATERAL DE SECCIONES ── -->
+  <div class="settings-nav">
+    <div class="settings-nav-section">
+      <div class="settings-nav-label">Perfil</div>
+      <div class="settings-nav-item active" onclick="irSeccion('perfil',this)">
+        <span class="nav-icon">👤</span> Mi perfil
+      </div>
+      <div class="settings-nav-item" onclick="irSeccion('simulador',this)">
+        <span class="nav-icon">🎮</span> Simulador
+      </div>
+    </div>
+    <div class="settings-nav-section">
+      <div class="settings-nav-label">Trading</div>
+      <div class="settings-nav-item" onclick="irSeccion('riesgo',this)">
+        <span class="nav-icon">🛡️</span> Gestión de riesgo
+      </div>
+      <div class="settings-nav-item" onclick="irSeccion('estrategia',this)">
+        <span class="nav-icon">📊</span> Estrategia
+      </div>
+      <div class="settings-nav-item" onclick="irSeccion('horario',this)">
+        <span class="nav-icon">🕐</span> Horario
+      </div>
+    </div>
+    <div class="settings-nav-section">
+      <div class="settings-nav-label">Sistema</div>
+      <div class="settings-nav-item" onclick="irSeccion('notificaciones',this)">
+        <span class="nav-icon">🔔</span> Notificaciones
+      </div>
+      <div class="settings-nav-item" onclick="irSeccion('cuenta',this)">
+        <span class="nav-icon">🔐</span> Cuenta
+      </div>
+    </div>
+  </div>
+
+  <!-- ── CONTENIDO ── -->
+  <div class="settings-content">
+
+    <!-- ══ PERFIL ══ -->
+    <div class="settings-section active" id="sec-perfil">
+      <div class="section-header">
+        <div class="section-title">Mi perfil</div>
+        <div class="section-sub">Tu identidad dentro de InvertirCL. El nickname aparece en el ranking de disciplina.</div>
+      </div>
+
+      <div class="settings-card">
+        <div class="card-header">
+          <div class="card-title">Identidad</div>
+          <span class="card-badge local">Local</span>
+        </div>
+        <div class="card-body">
+          <!-- Avatar -->
+          <div class="avatar-section">
+            <div class="avatar-preview" id="avatarPreview">JO</div>
+            <div>
+              <div style="font-size:0.75rem;color:var(--texto2);margin-bottom:8px;">Color del avatar</div>
+              <div class="avatar-colors" id="avatarColors"></div>
+            </div>
+          </div>
+
+          <div class="setting-row">
+            <div class="setting-left">
+              <div class="setting-label">Nickname</div>
+              <div class="setting-desc">Aparece en el ranking. Máx 20 caracteres, sin espacios.</div>
+            </div>
+            <div class="setting-right">
+              <input type="text" class="s-input" id="cfg-nick" maxlength="20" placeholder="tu_nick">
+              <div class="s-input-hint" id="nickHint">Letras, números y guión bajo</div>
+            </div>
+          </div>
+
+          <div class="setting-row">
+            <div class="setting-left">
+              <div class="setting-label">Nombre visible</div>
+              <div class="setting-desc">Solo para ti. No aparece en el ranking.</div>
+            </div>
+            <div class="setting-right">
+              <input type="text" class="s-input" id="cfg-nombre" placeholder="Tu nombre">
+            </div>
+          </div>
+
+          <div class="setting-row">
+            <div class="setting-left">
+              <div class="setting-label">Nivel de experiencia</div>
+              <div class="setting-desc">Afecta los módulos educativos recomendados.</div>
+            </div>
+            <div class="setting-right">
+              <select class="s-select" id="cfg-nivel">
+                <option value="novato">🌱 Novato — nunca he invertido</option>
+                <option value="basico">📈 Básico — sé qué es una acción</option>
+                <option value="intermedio">⚡ Intermedio — opero ocasionalmente</option>
+                <option value="avanzado">🔥 Avanzado — análisis técnico</option>
+                <option value="elite">💎 Elite — trader activo</option>
+              </select>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Resumen del perfil calculado -->
+      <div class="settings-card">
+        <div class="card-header">
+          <div class="card-title">Resumen de tu perfil actual</div>
+        </div>
+        <div class="card-body">
+          <div class="perfil-resumen" id="perfilResumen"></div>
+        </div>
+      </div>
+
+      <button class="btn-guardar" onclick="guardar('perfil')">Guardar perfil</button>
+    </div>
+
+    <!-- ══ SIMULADOR ══ -->
+    <div class="settings-section" id="sec-simulador">
+      <div class="section-header">
+        <div class="section-title">Configuración del simulador</div>
+        <div class="section-sub">Parámetros de tu cuenta de trading simulado. Se aplican al reiniciar la cuenta.</div>
+      </div>
+
+      <div class="settings-card">
+        <div class="card-header">
+          <div class="card-title">Capital simulado</div>
+          <span class="card-badge afecta">Afecta al simulador</span>
+        </div>
+        <div class="card-body">
+          <div class="setting-row">
+            <div class="setting-left">
+              <div class="setting-label">Capital inicial</div>
+              <div class="setting-desc">Cuántos pesos chilenos virtuales quieres empezar. Default: <strong>$10.000.000</strong></div>
+            </div>
+            <div class="setting-right">
+              <div class="s-input-wrap">
+                <span class="s-input-prefix">$</span>
+                <input type="number" class="s-input with-prefix" id="cfg-capital" min="1000000" max="100000000" step="1000000">
+              </div>
+              <div class="s-input-hint">Entre $1M y $100M CLP</div>
+            </div>
+          </div>
+
+          <div class="setting-row">
+            <div class="setting-left">
+              <div class="setting-label">Reiniciar cuenta</div>
+              <div class="setting-desc">Vuelve a <strong>$0 trades</strong> y al capital inicial configurado arriba.</div>
+            </div>
+            <div class="setting-right">
+              <button class="btn-danger" onclick="confirmarReset()">Reiniciar cuenta simulada</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="settings-card">
+        <div class="card-header">
+          <div class="card-title">Costos transaccionales</div>
+          <span class="card-badge afecta">Afecta al simulador</span>
+        </div>
+        <div class="card-body">
+          <div class="setting-row">
+            <div class="setting-left">
+              <div class="setting-label">Comisión corredor</div>
+              <div class="setting-desc">Porcentaje cobrado por el broker en cada operación. Valor real en Chile: ~0.1%.</div>
+            </div>
+            <div class="setting-right">
+              <div class="s-slider-wrap">
+                <input type="range" class="s-slider" id="cfg-comision" min="0" max="0.5" step="0.01"
+                  oninput="document.getElementById('val-comision').textContent=parseFloat(this.value).toFixed(2)+'%'">
+                <span class="s-slider-val" id="val-comision">0.10%</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="setting-row">
+            <div class="setting-left">
+              <div class="setting-label">Slippage</div>
+              <div class="setting-desc">Diferencia entre precio solicitado y ejecutado. Simula mercados reales.</div>
+            </div>
+            <div class="setting-right">
+              <div class="s-slider-wrap">
+                <input type="range" class="s-slider" id="cfg-slippage" min="0" max="20" step="1"
+                  oninput="document.getElementById('val-slippage').textContent=this.value+'bps'">
+                <span class="s-slider-val" id="val-slippage">5bps</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <button class="btn-guardar" onclick="guardar('simulador')">Guardar configuración</button>
+    </div>
+
+    <!-- ══ RIESGO ══ -->
+    <div class="settings-section" id="sec-riesgo">
+      <div class="section-header">
+        <div class="section-title">Gestión de riesgo personal</div>
+        <div class="section-sub">Estos parámetros alimentan al <strong>AntiTilt</strong> y al <strong>DisciplineScore</strong> para personalizar las alertas según tu perfil.</div>
+      </div>
+
+      <div class="settings-card">
+        <div class="card-header">
+          <div class="card-title">Reglas de riesgo</div>
+          <span class="card-badge afecta">Afecta a AntiTilt + DisciplineScore</span>
+        </div>
+        <div class="card-body">
+          <div class="setting-row">
+            <div class="setting-left">
+              <div class="setting-label">Riesgo máximo por trade</div>
+              <div class="setting-desc">La <strong>Regla del 2%</strong>: nunca arriesgar más del 2% del capital en una operación. Puedes ajustarlo según tu perfil.</div>
+            </div>
+            <div class="setting-right">
+              <div class="s-slider-wrap">
+                <input type="range" class="s-slider" id="cfg-riesgo-trade" min="0.5" max="5" step="0.5"
+                  oninput="document.getElementById('val-riesgo-trade').textContent=parseFloat(this.value).toFixed(1)+'%'">
+                <span class="s-slider-val" id="val-riesgo-trade">2.0%</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="setting-row">
+            <div class="setting-left">
+              <div class="setting-label">Pérdida máxima diaria</div>
+              <div class="setting-desc">Si pierdes este porcentaje del capital en un día, el AntiTilt bloquea nuevas operaciones por 24h.</div>
+            </div>
+            <div class="setting-right">
+              <div class="s-slider-wrap">
+                <input type="range" class="s-slider" id="cfg-perdida-diaria" min="2" max="15" step="1"
+                  oninput="document.getElementById('val-perdida-diaria').textContent=this.value+'%'">
+                <span class="s-slider-val" id="val-perdida-diaria">6%</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="setting-row">
+            <div class="setting-left">
+              <div class="setting-label">Máximo de trades por día</div>
+              <div class="setting-desc">Superar este límite activa alerta de <strong>overtrading</strong> en el AntiTilt.</div>
+            </div>
+            <div class="setting-right">
+              <div class="s-slider-wrap">
+                <input type="range" class="s-slider" id="cfg-max-trades" min="2" max="20" step="1"
+                  oninput="document.getElementById('val-max-trades').textContent=this.value+' trades'">
+                <span class="s-slider-val" id="val-max-trades">8 trades</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="setting-row">
+            <div class="setting-left">
+              <div class="setting-label">R/R mínimo aceptable</div>
+              <div class="setting-desc">Operaciones con R/R menor a este valor bajan tu DisciplineScore.</div>
+            </div>
+            <div class="setting-right">
+              <div class="s-slider-wrap">
+                <input type="range" class="s-slider" id="cfg-rr-min" min="1" max="4" step="0.5"
+                  oninput="document.getElementById('val-rr-min').textContent=parseFloat(this.value).toFixed(1)+':1'">
+                <span class="s-slider-val" id="val-rr-min">2.0:1</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <button class="btn-guardar" onclick="guardar('riesgo')">Guardar reglas de riesgo</button>
+    </div>
+
+    <!-- ══ ESTRATEGIA ══ -->
+    <div class="settings-section" id="sec-estrategia">
+      <div class="section-header">
+        <div class="section-title">Mi estrategia de trading</div>
+        <div class="section-sub">Define tu estilo. El DisciplineScore te penaliza si operas fuera de tu estrategia declarada.</div>
+      </div>
+
+      <div class="settings-card">
+        <div class="card-header">
+          <div class="card-title">Estilo de trading</div>
+          <span class="card-badge afecta">Afecta a DisciplineScore</span>
+        </div>
+        <div class="card-body">
+          <div class="setting-row">
+            <div class="setting-left">
+              <div class="setting-label">Tipo de trader</div>
+              <div class="setting-desc">Define en qué tipo de operaciones te especializas.</div>
+            </div>
+            <div class="setting-right">
+              <select class="s-select" id="cfg-tipo-trader">
+                <option value="scalper">⚡ Scalper — operaciones de minutos</option>
+                <option value="intraday">📈 Intraday — abro y cierro el mismo día</option>
+                <option value="swing" selected>🔄 Swing — posiciones de 2–10 días</option>
+                <option value="position">📊 Position — semanas o meses</option>
+                <option value="mixto">🎯 Mixto — depende de la oportunidad</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="setting-row">
+            <div class="setting-left">
+              <div class="setting-label">Análisis principal</div>
+              <div class="setting-desc">¿Qué método usas para tomar decisiones?</div>
+            </div>
+            <div class="setting-right">
+              <select class="s-select" id="cfg-analisis">
+                <option value="tecnico">📉 Análisis técnico (RSI, EMA, velas)</option>
+                <option value="fundamental">📋 Análisis fundamental</option>
+                <option value="cuantitativo">🤖 Cuantitativo / algorítmico</option>
+                <option value="mixto">🔀 Mixto técnico + fundamental</option>
+                <option value="aprendiendo">🌱 Todavía aprendiendo</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="setting-row">
+            <div class="setting-left">
+              <div class="setting-label">Activos favoritos</div>
+              <div class="setting-desc">Marca los que operas habitualmente.</div>
+            </div>
+            <div class="setting-right">
+              <div class="s-check-group">
+                <label class="s-check-item"><input type="checkbox" id="act-ipsa" checked> Acciones IPSA</label>
+                <label class="s-check-item"><input type="checkbox" id="act-usd"> USD/CLP</label>
+                <label class="s-check-item"><input type="checkbox" id="act-etf"> ETFs</label>
+                <label class="s-check-item"><input type="checkbox" id="act-crypto"> Crypto</label>
+              </div>
+            </div>
+          </div>
+
+          <div class="setting-row">
+            <div class="setting-left">
+              <div class="setting-label">Meta de rentabilidad mensual</div>
+              <div class="setting-desc">Objetivo realista. El AntiTilt te avisa si estás sobreoperando para llegar a la meta.</div>
+            </div>
+            <div class="setting-right">
+              <div class="s-slider-wrap">
+                <input type="range" class="s-slider" id="cfg-meta-rentabilidad" min="1" max="20" step="1"
+                  oninput="document.getElementById('val-meta').textContent=this.value+'%'">
+                <span class="s-slider-val" id="val-meta">5%</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <button class="btn-guardar" onclick="guardar('estrategia')">Guardar estrategia</button>
+    </div>
+
+    <!-- ══ HORARIO ══ -->
+    <div class="settings-section" id="sec-horario">
+      <div class="section-header">
+        <div class="section-title">Horario de operación</div>
+        <div class="section-sub">El AntiTilt detecta si operas fuera de tu horario habitual — señal de tilt o FOMO. La Bolsa de Santiago opera de <strong>09:30 a 16:00</strong>.</div>
+      </div>
+
+      <div class="settings-card">
+        <div class="card-header">
+          <div class="card-title">Ventana horaria</div>
+          <span class="card-badge afecta">Afecta a AntiTilt</span>
+        </div>
+        <div class="card-body">
+          <div class="setting-row">
+            <div class="setting-left">
+              <div class="setting-label">Horario de inicio</div>
+              <div class="setting-desc">La apertura de la Bolsa de Santiago es a las 09:30.</div>
+            </div>
+            <div class="setting-right">
+              <select class="s-select" id="cfg-hora-inicio">
+                <option value="9:30">09:30 — Apertura mercado</option>
+                <option value="10:00" selected>10:00</option>
+                <option value="10:30">10:30</option>
+                <option value="11:00">11:00</option>
+                <option value="11:30">11:30</option>
+                <option value="12:00">12:00</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="setting-row">
+            <div class="setting-left">
+              <div class="setting-label">Horario de cierre</div>
+              <div class="setting-desc">El cierre oficial es a las 16:00. Evita operar en los últimos 30 minutos.</div>
+            </div>
+            <div class="setting-right">
+              <select class="s-select" id="cfg-hora-cierre">
+                <option value="13:00">13:00</option>
+                <option value="14:00">14:00</option>
+                <option value="15:00" selected>15:00 — Recomendado</option>
+                <option value="15:30">15:30</option>
+                <option value="16:00">16:00 — Cierre mercado</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="setting-row">
+            <div class="setting-left">
+              <div class="setting-label">Días de operación</div>
+              <div class="setting-desc">¿Qué días de la semana operas habitualmente?</div>
+            </div>
+            <div class="setting-right">
+              <div class="horario-grid" id="diasGrid">
+                <button class="horario-btn" onclick="toggleDia(this,'lun')">Lun</button>
+                <button class="horario-btn active" onclick="toggleDia(this,'mar')">Mar</button>
+                <button class="horario-btn active" onclick="toggleDia(this,'mie')">Mié</button>
+                <button class="horario-btn active" onclick="toggleDia(this,'jue')">Jue</button>
+                <button class="horario-btn active" onclick="toggleDia(this,'vie')">Vie</button>
+                <button class="horario-btn" onclick="toggleDia(this,'sab')">Sáb</button>
+                <button class="horario-btn" onclick="toggleDia(this,'dom')">Dom</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="setting-row">
+            <div class="setting-left">
+              <div class="setting-label">Bloqueo automático fuera de horario</div>
+              <div class="setting-desc">AntiTilt rechaza nuevas operaciones si intentas operar fuera de tu ventana definida.</div>
+            </div>
+            <div class="setting-right">
+              <label class="s-toggle">
+                <input type="checkbox" id="cfg-bloqueo-horario" checked>
+                <div class="s-toggle-track"></div>
+              </label>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <button class="btn-guardar" onclick="guardar('horario')">Guardar horario</button>
+    </div>
+
+    <!-- ══ NOTIFICACIONES ══ -->
+    <div class="settings-section" id="sec-notificaciones">
+      <div class="section-header">
+        <div class="section-title">Notificaciones</div>
+        <div class="section-sub">Controla qué alertas recibes dentro de la plataforma.</div>
+      </div>
+
+      <div class="settings-card">
+        <div class="card-header"><div class="card-title">Alertas del sistema</div></div>
+        <div class="card-body">
+          <div class="setting-row">
+            <div class="setting-left">
+              <div class="setting-label">Alerta de tilt detectado</div>
+              <div class="setting-desc">Aviso cuando el AntiTilt detecta que estás operando emocionalmente.</div>
+            </div>
+            <div class="setting-right">
+              <label class="s-toggle"><input type="checkbox" id="cfg-alerta-tilt" checked><div class="s-toggle-track"></div></label>
+            </div>
+          </div>
+          <div class="setting-row">
+            <div class="setting-left">
+              <div class="setting-label">Caída del DisciplineScore</div>
+              <div class="setting-desc">Notificación cuando tu score baja más de 10 puntos en un día.</div>
+            </div>
+            <div class="setting-right">
+              <label class="s-toggle"><input type="checkbox" id="cfg-alerta-score" checked><div class="s-toggle-track"></div></label>
+            </div>
+          </div>
+          <div class="setting-row">
+            <div class="setting-left">
+              <div class="setting-label">Stop loss ejecutado</div>
+              <div class="setting-desc">Toast de confirmación cuando un stop loss se activa automáticamente.</div>
+            </div>
+            <div class="setting-right">
+              <label class="s-toggle"><input type="checkbox" id="cfg-alerta-sl" checked><div class="s-toggle-track"></div></label>
+            </div>
+          </div>
+          <div class="setting-row">
+            <div class="setting-left">
+              <div class="setting-label">Correlaciones detectadas</div>
+              <div class="setting-desc">Aviso cuando el Scanner detecta una correlación oculta relevante.</div>
+            </div>
+            <div class="setting-right">
+              <label class="s-toggle"><input type="checkbox" id="cfg-alerta-scanner"><div class="s-toggle-track"></div></label>
+            </div>
+          </div>
+          <div class="setting-row">
+            <div class="setting-left">
+              <div class="setting-label">Recordatorio módulos educativos</div>
+              <div class="setting-desc">Sugerencia de completar un módulo al iniciar sesión.</div>
+            </div>
+            <div class="setting-right">
+              <label class="s-toggle"><input type="checkbox" id="cfg-alerta-edu" checked><div class="s-toggle-track"></div></label>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <button class="btn-guardar" onclick="guardar('notificaciones')">Guardar preferencias</button>
+    </div>
+
+    <!-- ══ CUENTA ══ -->
+    <div class="settings-section" id="sec-cuenta">
+      <div class="section-header">
+        <div class="section-title">Cuenta</div>
+        <div class="section-sub">Gestión de datos y acceso. Sin Supabase los datos se guardan en este navegador.</div>
+      </div>
+
+      <div class="settings-card">
+        <div class="card-header"><div class="card-title">Datos locales</div><span class="card-badge local">localStorage</span></div>
+        <div class="card-body">
+          <div class="setting-row">
+            <div class="setting-left">
+              <div class="setting-label">Exportar mi configuración</div>
+              <div class="setting-desc">Descarga un archivo JSON con todos tus ajustes para hacer un backup.</div>
+            </div>
+            <div class="setting-right">
+              <button class="btn-danger" style="border-color:rgba(74,158,255,0.3);color:var(--azul)" onclick="exportarConfig()">Exportar JSON</button>
+            </div>
+          </div>
+          <div class="setting-row">
+            <div class="setting-left">
+              <div class="setting-label">Importar configuración</div>
+              <div class="setting-desc">Restaura desde un archivo JSON exportado anteriormente.</div>
+            </div>
+            <div class="setting-right">
+              <input type="file" id="importFile" accept=".json" onchange="importarConfig(this)" style="display:none">
+              <button class="btn-danger" style="border-color:rgba(74,158,255,0.3);color:var(--azul)" onclick="document.getElementById('importFile').click()">Importar JSON</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="danger-zone">
+        <div class="danger-title">⚠️ Zona de peligro</div>
+        <div class="danger-desc">Estas acciones son irreversibles. Borran permanentemente tus datos del navegador.</div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;">
+          <button class="btn-danger" onclick="borrarHistorial()">Borrar historial de trades</button>
+          <button class="btn-danger" onclick="borrarTodo()">Borrar todo y empezar de cero</button>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /settings-content -->
+</div><!-- /layout -->
+
+<!-- Toast -->
+<div class="toast" id="toast">
+  <span id="toastIcon">✅</span>
+  <span id="toastMsg">Guardado correctamente</span>
+</div>
+
+<script>
+// ══════════════════════════════════════════════════════════════
+// J3 — AJUSTES Y PERFIL DE USUARIO
+// Persistencia: localStorage
+// Clave: 'invertircl_config' (objeto JSON completo)
+// ══════════════════════════════════════════════════════════════
+
+// ── DEFAULTS ────────────────────────────────────────────────
+const DEFAULTS = {
+  // Perfil
+  nick:              'trader_cl',
+  nombre:            '',
+  nivel:             'basico',
+  avatarColor:       '#00e676',
+
+  // Simulador
+  capital:           10000000,
+  comision:          0.10,
+  slippage:          5,
+
+  // Riesgo — alimenta AntiTilt + DisciplineScore
+  riesgoTrade:       2.0,
+  perdidaDiaria:     6,
+  maxTrades:         8,
+  rrMin:             2.0,
+
+  // Estrategia
+  tipoTrader:        'swing',
+  analisis:          'tecnico',
+  activosIPSA:       true,
+  activosUSD:        false,
+  activosETF:        false,
+  activosCrypto:     false,
+  metaRentabilidad:  5,
+
+  // Horario
+  horaInicio:        '10:00',
+  horaCierre:        '15:00',
+  dias:              ['mar','mie','jue','vie'],
+  bloqueoHorario:    true,
+
+  // Notificaciones
+  alertaTilt:        true,
+  alertaScore:       true,
+  alertaSL:          true,
+  alertaScanner:     false,
+  alertaEdu:         true,
+};
+
+// ── COLORES DISPONIBLES ──────────────────────────────────────
+const COLORES = ['#00e676','#4a9eff','#9b59b6','#ff6b35','#f5c518','#00bcd4','#ff3d57','#2ecc71'];
+
+// ── CARGAR CONFIG ────────────────────────────────────────────
+function cargarConfig() {
+  try {
+    const guardado = localStorage.getItem('invertircl_config');
+    return guardado ? { ...DEFAULTS, ...JSON.parse(guardado) } : { ...DEFAULTS };
+  } catch(e) {
+    return { ...DEFAULTS };
+  }
+}
+
+function guardarConfig(cfg) {
+  localStorage.setItem('invertircl_config', JSON.stringify(cfg));
+  // También guardar claves individuales que usan otros módulos
+  localStorage.setItem('invertircl_nick',    cfg.nick);
+  localStorage.setItem('invertircl_capital', cfg.capital);
+  localStorage.setItem('invertircl_score',   localStorage.getItem('invertircl_score') || '67');
+}
+
+// ── POBLAR FORMULARIOS ────────────────────────────────────────
+function poblarFormularios(cfg) {
+  // Perfil
+  setVal('cfg-nick',    cfg.nick);
+  setVal('cfg-nombre',  cfg.nombre);
+  setVal('cfg-nivel',   cfg.nivel);
+  renderAvatarColors(cfg.avatarColor);
+  renderAvatarPreview(cfg.nick, cfg.avatarColor);
+
+  // Simulador
+  setVal('cfg-capital',  cfg.capital);
+  setSlider('cfg-comision',  'val-comision',  cfg.comision, v => v.toFixed(2)+'%');
+  setSlider('cfg-slippage',  'val-slippage',  cfg.slippage, v => v+'bps');
+
+  // Riesgo
+  setSlider('cfg-riesgo-trade',   'val-riesgo-trade',   cfg.riesgoTrade,   v => parseFloat(v).toFixed(1)+'%');
+  setSlider('cfg-perdida-diaria', 'val-perdida-diaria', cfg.perdidaDiaria, v => v+'%');
+  setSlider('cfg-max-trades',     'val-max-trades',     cfg.maxTrades,     v => v+' trades');
+  setSlider('cfg-rr-min',         'val-rr-min',         cfg.rrMin,         v => parseFloat(v).toFixed(1)+':1');
+
+  // Estrategia
+  setVal('cfg-tipo-trader', cfg.tipoTrader);
+  setVal('cfg-analisis',    cfg.analisis);
+  setCheck('act-ipsa',   cfg.activosIPSA);
+  setCheck('act-usd',    cfg.activosUSD);
+  setCheck('act-etf',    cfg.activosETF);
+  setCheck('act-crypto', cfg.activosCrypto);
+  setSlider('cfg-meta-rentabilidad','val-meta', cfg.metaRentabilidad, v => v+'%');
+
+  // Horario
+  setVal('cfg-hora-inicio',  cfg.horaInicio);
+  setVal('cfg-hora-cierre',  cfg.horaCierre);
+  setCheck('cfg-bloqueo-horario', cfg.bloqueoHorario);
+  // Días
+  document.querySelectorAll('.horario-btn').forEach(btn => {
+    const dia = btn.getAttribute('onclick').match(/'([^']+)'/)[1];
+    btn.classList.toggle('active', cfg.dias.includes(dia));
+  });
+
+  // Notificaciones
+  setCheck('cfg-alerta-tilt',    cfg.alertaTilt);
+  setCheck('cfg-alerta-score',   cfg.alertaScore);
+  setCheck('cfg-alerta-sl',      cfg.alertaSL);
+  setCheck('cfg-alerta-scanner', cfg.alertaScanner);
+  setCheck('cfg-alerta-edu',     cfg.alertaEdu);
+
+  renderPerfilResumen(cfg);
+}
+
+function setVal(id, val) {
+  const el = document.getElementById(id);
+  if (el) el.value = val;
+}
+function setSlider(sliderId, valId, val, fmt) {
+  const sl = document.getElementById(sliderId);
+  const vl = document.getElementById(valId);
+  if (sl) sl.value = val;
+  if (vl) vl.textContent = fmt(val);
+}
+function setCheck(id, val) {
+  const el = document.getElementById(id);
+  if (el) el.checked = !!val;
+}
+
+// ── AVATAR ───────────────────────────────────────────────────
+let colorActual = DEFAULTS.avatarColor;
+
+function renderAvatarColors(seleccionado) {
+  colorActual = seleccionado;
+  const wrap = document.getElementById('avatarColors');
+  wrap.innerHTML = COLORES.map(c => `
+    <div class="avatar-color ${c===seleccionado?'active':''}"
+      style="background:${c}"
+      onclick="seleccionarColor('${c}')">
+    </div>
+  `).join('');
+}
+
+function seleccionarColor(color) {
+  colorActual = color;
+  renderAvatarColors(color);
+  const nick = document.getElementById('cfg-nick')?.value || 'JO';
+  renderAvatarPreview(nick, color);
+}
+
+function renderAvatarPreview(nick, color) {
+  const el = document.getElementById('avatarPreview');
+  if (!el) return;
+  const iniciales = nick.replace(/[^a-zA-Z]/g,'').slice(0,2).toUpperCase() || 'TU';
+  el.textContent        = iniciales;
+  el.style.background   = color + '22';
+  el.style.borderColor  = color + '55';
+  el.style.color        = color;
+}
+
+// Actualizar preview al escribir nick
+document.getElementById('cfg-nick')?.addEventListener('input', function() {
+  renderAvatarPreview(this.value, colorActual);
+  // Validar
+  const hint = document.getElementById('nickHint');
+  const valido = /^[a-zA-Z0-9_]{1,20}$/.test(this.value);
+  if (hint) {
+    hint.textContent = valido ? '✓ Nick válido' : 'Solo letras, números y guión bajo';
+    hint.style.color = valido ? 'var(--verde)' : 'var(--rojo)';
+  }
+});
+
+// ── RESUMEN DE PERFIL ─────────────────────────────────────────
+function renderPerfilResumen(cfg) {
+  const el = document.getElementById('perfilResumen');
+  if (!el) return;
+  const score = localStorage.getItem('invertircl_score') || '—';
+  const trades = localStorage.getItem('invertircl_trades') || '0';
+  const capital = parseInt(cfg.capital).toLocaleString('es-CL');
+  el.innerHTML = `
+    <div class="resumen-item">
+      <div class="resumen-label">Nick</div>
+      <div class="resumen-val" style="color:var(--verde)">@${cfg.nick}</div>
+    </div>
+    <div class="resumen-item">
+      <div class="resumen-label">Score Disciplina</div>
+      <div class="resumen-val">${score}/100</div>
+    </div>
+    <div class="resumen-item">
+      <div class="resumen-label">Capital simulado</div>
+      <div class="resumen-val">$${capital}</div>
+    </div>
+    <div class="resumen-item">
+      <div class="resumen-label">Trades totales</div>
+      <div class="resumen-val">${trades}</div>
+    </div>
+    <div class="resumen-item">
+      <div class="resumen-label">Riesgo/trade</div>
+      <div class="resumen-val">${cfg.riesgoTrade}%</div>
+    </div>
+    <div class="resumen-item">
+      <div class="resumen-label">Estrategia</div>
+      <div class="resumen-val">${cfg.tipoTrader}</div>
+    </div>
+  `;
+}
+
+// ── LEER CONFIG DESDE FORMULARIOS ────────────────────────────
+function leerFormulario() {
+  const dias = [];
+  document.querySelectorAll('.horario-btn.active').forEach(btn => {
+    const dia = btn.getAttribute('onclick').match(/'([^']+)'/)[1];
+    dias.push(dia);
+  });
+
+  return {
+    nick:             document.getElementById('cfg-nick')?.value.trim()     || DEFAULTS.nick,
+    nombre:           document.getElementById('cfg-nombre')?.value.trim()   || '',
+    nivel:            document.getElementById('cfg-nivel')?.value            || DEFAULTS.nivel,
+    avatarColor:      colorActual,
+    capital:          parseInt(document.getElementById('cfg-capital')?.value) || DEFAULTS.capital,
+    comision:         parseFloat(document.getElementById('cfg-comision')?.value) || DEFAULTS.comision,
+    slippage:         parseInt(document.getElementById('cfg-slippage')?.value)   || DEFAULTS.slippage,
+    riesgoTrade:      parseFloat(document.getElementById('cfg-riesgo-trade')?.value)   || DEFAULTS.riesgoTrade,
+    perdidaDiaria:    parseInt(document.getElementById('cfg-perdida-diaria')?.value)   || DEFAULTS.perdidaDiaria,
+    maxTrades:        parseInt(document.getElementById('cfg-max-trades')?.value)       || DEFAULTS.maxTrades,
+    rrMin:            parseFloat(document.getElementById('cfg-rr-min')?.value)         || DEFAULTS.rrMin,
+    tipoTrader:       document.getElementById('cfg-tipo-trader')?.value    || DEFAULTS.tipoTrader,
+    analisis:         document.getElementById('cfg-analisis')?.value       || DEFAULTS.analisis,
+    activosIPSA:      document.getElementById('act-ipsa')?.checked         ?? true,
+    activosUSD:       document.getElementById('act-usd')?.checked          ?? false,
+    activosETF:       document.getElementById('act-etf')?.checked          ?? false,
+    activosCrypto:    document.getElementById('act-crypto')?.checked       ?? false,
+    metaRentabilidad: parseInt(document.getElementById('cfg-meta-rentabilidad')?.value) || DEFAULTS.metaRentabilidad,
+    horaInicio:       document.getElementById('cfg-hora-inicio')?.value    || DEFAULTS.horaInicio,
+    horaCierre:       document.getElementById('cfg-hora-cierre')?.value    || DEFAULTS.horaCierre,
+    dias,
+    bloqueoHorario:   document.getElementById('cfg-bloqueo-horario')?.checked ?? true,
+    alertaTilt:       document.getElementById('cfg-alerta-tilt')?.checked    ?? true,
+    alertaScore:      document.getElementById('cfg-alerta-score')?.checked   ?? true,
+    alertaSL:         document.getElementById('cfg-alerta-sl')?.checked      ?? true,
+    alertaScanner:    document.getElementById('cfg-alerta-scanner')?.checked ?? false,
+    alertaEdu:        document.getElementById('cfg-alerta-edu')?.checked     ?? true,
+  };
+}
+
+// ── GUARDAR ───────────────────────────────────────────────────
+function guardar(seccion) {
+  const cfg = leerFormulario();
+  guardarConfig(cfg);
+  renderPerfilResumen(cfg);
+  mostrarToast('✅', 'Configuración guardada correctamente');
+  const badge = document.getElementById('saveBadge');
+  badge.classList.add('visible');
+  setTimeout(() => badge.classList.remove('visible'), 3000);
+}
+
+// ── NAVEGACIÓN ────────────────────────────────────────────────
+function irSeccion(id, el) {
+  document.querySelectorAll('.settings-section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.settings-nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('sec-'+id)?.classList.add('active');
+  el?.classList.add('active');
+}
+
+// ── HORARIO ───────────────────────────────────────────────────
+function toggleDia(btn) {
+  btn.classList.toggle('active');
+}
+
+// ── ACCIONES DE CUENTA ────────────────────────────────────────
+function confirmarReset() {
+  if (confirm('¿Reiniciar tu cuenta simulada? Perderás todo el historial de trades. Esta acción no se puede deshacer.')) {
+    localStorage.removeItem('invertircl_trades_data');
+    localStorage.removeItem('invertircl_trades');
+    localStorage.removeItem('invertircl_leads');
+    localStorage.setItem('invertircl_score', '50');
+    mostrarToast('🔄', 'Cuenta reiniciada. Capital restaurado.');
+  }
+}
+
+function borrarHistorial() {
+  if (confirm('¿Borrar el historial de trades? Solo se borrará el historial, no tu configuración.')) {
+    localStorage.removeItem('invertircl_trades_data');
+    mostrarToast('🗑️', 'Historial de trades borrado.');
+  }
+}
+
+function borrarTodo() {
+  if (confirm('¿Borrar TODOS los datos de InvertirCL en este navegador? Esto incluye configuración, historial y progreso educativo. No se puede deshacer.')) {
+    const keys = Object.keys(localStorage).filter(k => k.startsWith('invertircl_'));
+    keys.forEach(k => localStorage.removeItem(k));
+    mostrarToast('💥', 'Todos los datos borrados. Recargando...');
+    setTimeout(() => location.reload(), 1500);
+  }
+}
+
+function exportarConfig() {
+  const cfg = leerFormulario();
+  const blob = new Blob([JSON.stringify(cfg, null, 2)], {type:'application/json'});
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href     = url;
+  a.download = `invertircl_config_${new Date().toISOString().slice(0,10)}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+  mostrarToast('📥', 'Configuración exportada correctamente.');
+}
+
+function importarConfig(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const cfg = JSON.parse(e.target.result);
+      guardarConfig({ ...DEFAULTS, ...cfg });
+      poblarFormularios({ ...DEFAULTS, ...cfg });
+      mostrarToast('📤', 'Configuración importada correctamente.');
+    } catch {
+      mostrarToast('❌', 'Archivo inválido — no se pudo importar.');
+    }
+  };
+  reader.readAsText(file);
+}
+
+// ── TOAST ─────────────────────────────────────────────────────
+function mostrarToast(icon, msg) {
+  document.getElementById('toastIcon').textContent = icon;
+  document.getElementById('toastMsg').textContent  = msg;
+  const t = document.getElementById('toast');
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+// ── INIT ─────────────────────────────────────────────────────
+const cfg = cargarConfig();
+poblarFormularios(cfg);
+</script>
+</body>
+</html>
