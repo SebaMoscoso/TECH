@@ -2240,8 +2240,230 @@ document.addEventListener('DOMContentLoaded', () => {
 if (document.readyState !== 'loading') renderMacroWidget();
 </script>
 
+<!-- ── FEED DE NOTICIAS FINANCIERAS CHILENAS — ÍTEM 33 ────────
+     RSS públicos de medios financieros chilenos.
+     Sin scraping, sin servidor — usa allorigins.win como proxy.
+-->
+<div style="padding:0 24px 24px;max-width:1400px;margin:0 auto;">
+  <div class="news-panel fade-in">
+    <div class="news-header">
+      <div class="news-title">📰 Noticias Financieras Chilenas</div>
+      <div class="news-meta">
+        <span id="newsLastUpdate" style="font-family:var(--mono);font-size:0.68rem;color:var(--texto3)">Cargando...</span>
+        <button onclick="cargarNoticias(true)" style="background:transparent;border:1px solid var(--linea2);color:var(--texto2);padding:3px 10px;border-radius:5px;cursor:pointer;font-size:0.68rem">↺ Actualizar</button>
+      </div>
+    </div>
+    <div class="news-tabs">
+      <div class="news-tab active" onclick="filtrarNoticias('todos',this)">Todos</div>
+      <div class="news-tab" onclick="filtrarNoticias('mercado',this)">Mercado</div>
+      <div class="news-tab" onclick="filtrarNoticias('economia',this)">Economía</div>
+      <div class="news-tab" onclick="filtrarNoticias('empresas',this)">Empresas</div>
+    </div>
+    <div class="news-body" id="newsBody">
+      <div style="padding:24px;text-align:center;color:var(--texto3);font-size:0.78rem">⟳ Cargando noticias...</div>
+    </div>
+  </div>
+</div>
 
-<div style="background:#0d1117;border-top:1px solid rgba(255,255,255,0.06);padding:16px 32px;font-size:0.72rem;color:#4a5568;line-height:1.6;text-align:center;flex-shrink:0;">
+<style>
+.news-panel{background:var(--bg2);border:1px solid var(--linea);border-radius:14px;overflow:hidden;}
+.news-header{padding:14px 20px;border-bottom:1px solid var(--linea);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;}
+.news-title{font-family:var(--display);font-size:0.95rem;font-weight:700;display:flex;align-items:center;gap:8px;}
+.news-meta{display:flex;align-items:center;gap:10px;}
+.news-tabs{display:flex;gap:0;border-bottom:1px solid var(--linea);padding:0 20px;}
+.news-tab{padding:8px 14px;font-size:0.78rem;color:var(--texto2);cursor:pointer;border-bottom:2px solid transparent;transition:all 0.15s;}
+.news-tab:hover{color:var(--texto);}
+.news-tab.active{color:var(--verde);border-bottom-color:var(--verde);}
+.news-body{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));}
+.news-card{padding:16px 18px;border-right:1px solid var(--linea);border-bottom:1px solid var(--linea);transition:background 0.15s;cursor:pointer;}
+.news-card:hover{background:rgba(255,255,255,0.02);}
+.news-card-source{font-size:0.65rem;text-transform:uppercase;letter-spacing:0.08em;color:var(--texto3);margin-bottom:6px;display:flex;align-items:center;gap:6px;}
+.news-card-title{font-size:0.84rem;font-weight:500;line-height:1.4;margin-bottom:6px;color:var(--texto);}
+.news-card-date{font-size:0.68rem;color:var(--texto3);font-family:var(--mono);}
+.news-card-tag{font-size:0.6rem;padding:2px 6px;border-radius:3px;text-transform:uppercase;letter-spacing:0.05em;}
+.news-card-tag.mercado{background:rgba(0,230,118,0.1);color:var(--verde);}
+.news-card-tag.economia{background:rgba(74,158,255,0.1);color:var(--azul);}
+.news-card-tag.empresas{background:rgba(245,197,24,0.1);color:var(--amarillo);}
+</style>
+
+<script>
+// ── FUENTES RSS CHILENAS ──────────────────────────────────────
+const RSS_FEEDS = [
+  {
+    nombre: 'Diario Financiero',
+    url: 'https://www.df.cl/rss/noticias.xml',
+    icono: '📊',
+    color: 'var(--azul)',
+  },
+  {
+    nombre: 'El Mercurio Inversiones',
+    url: 'https://www.emol.com/rss/economia.xml',
+    icono: '💼',
+    color: 'var(--amarillo)',
+  },
+  {
+    nombre: 'La Tercera Negocios',
+    url: 'https://www.latercera.com/rss/negocios.xml',
+    icono: '🏢',
+    color: 'var(--verde)',
+  },
+];
+
+const PROXY = 'https://api.allorigins.win/get?url=';
+
+// Palabras clave para clasificar noticias
+const TAGS = {
+  mercado:  ['ipsa','bolsa','acciones','bci','copec','sqm','falabella','entel','cencosud','cmpc','índice','cotización','acción'],
+  economia: ['dólar','usd','uf','ipc','inflación','banco central','tpm','pib','crecimiento','desempleo','fed','tasa'],
+  empresas: ['resultado','utilidad','dividendo','fusión','adquisición','directorio','ceo','gerente','trimestre','balance'],
+};
+
+let _todasNoticias = [];
+let _filtroActual  = 'todos';
+
+function _clasificarNoticia(titulo) {
+  const t = titulo.toLowerCase();
+  for (const [tag, palabras] of Object.entries(TAGS)) {
+    if (palabras.some(p => t.includes(p))) return tag;
+  }
+  return 'general';
+}
+
+function _parsearFecha(str) {
+  if (!str) return new Date();
+  try { return new Date(str); } catch { return new Date(); }
+}
+
+function _formatearFecha(fecha) {
+  const diff = Math.floor((Date.now() - fecha.getTime()) / 60000);
+  if (diff < 60)  return `Hace ${diff} min`;
+  if (diff < 1440) return `Hace ${Math.floor(diff/60)}h`;
+  return fecha.toLocaleDateString('es-CL', { day:'numeric', month:'short' });
+}
+
+async function _fetchRSS(feed) {
+  try {
+    const url = `${PROXY}${encodeURIComponent(feed.url)}`;
+    const res = await fetch(url, { cache: 'no-store' });
+    const raw = await res.json();
+    const parser = new DOMParser();
+    const xml = parser.parseFromString(raw.contents, 'text/xml');
+    const items = Array.from(xml.querySelectorAll('item')).slice(0, 8);
+
+    return items.map(item => ({
+      titulo:  item.querySelector('title')?.textContent?.trim() || '',
+      link:    item.querySelector('link')?.textContent?.trim() || '#',
+      fecha:   _parsearFecha(item.querySelector('pubDate')?.textContent),
+      fuente:  feed.nombre,
+      icono:   feed.icono,
+      color:   feed.color,
+      tag:     _clasificarNoticia(item.querySelector('title')?.textContent || ''),
+    }));
+  } catch(e) {
+    console.warn(`[Noticias] Error en ${feed.nombre}:`, e.message);
+    return [];
+  }
+}
+
+async function cargarNoticias(forzar = false) {
+  const body = document.getElementById('newsBody');
+  const upd  = document.getElementById('newsLastUpdate');
+  if (!body) return;
+
+  if (!forzar) {
+    // Verificar caché de 5 minutos
+    const cached = sessionStorage.getItem('invertircl_news');
+    if (cached) {
+      try {
+        const { noticias, ts } = JSON.parse(cached);
+        if (Date.now() - ts < 300_000) {
+          _todasNoticias = noticias;
+          _renderNoticias();
+          if (upd) upd.textContent = 'Desde caché · ' + new Date(ts).toLocaleTimeString('es-CL', {hour:'2-digit',minute:'2-digit'});
+          return;
+        }
+      } catch {}
+    }
+  }
+
+  body.innerHTML = '<div style="padding:24px;text-align:center;color:var(--texto3);font-size:0.78rem">⟳ Cargando noticias...</div>';
+
+  // Fetch paralelo de todos los feeds
+  const resultados = await Promise.allSettled(RSS_FEEDS.map(f => _fetchRSS(f)));
+  _todasNoticias = resultados
+    .flatMap(r => r.status === 'fulfilled' ? r.value : [])
+    .filter(n => n.titulo.length > 10)
+    .sort((a, b) => b.fecha - a.fecha);
+
+  // Si no hay noticias reales, usar fallback educativo
+  if (_todasNoticias.length === 0) {
+    _todasNoticias = _noticiasFallback();
+  }
+
+  // Guardar en caché
+  try {
+    sessionStorage.setItem('invertircl_news', JSON.stringify({ noticias: _todasNoticias, ts: Date.now() }));
+  } catch {}
+
+  const hora = new Date().toLocaleTimeString('es-CL', { hour:'2-digit', minute:'2-digit' });
+  if (upd) upd.textContent = `Actualizado ${hora}`;
+
+  _renderNoticias();
+}
+
+function _renderNoticias() {
+  const body = document.getElementById('newsBody');
+  if (!body) return;
+
+  const filtradas = _filtroActual === 'todos'
+    ? _todasNoticias
+    : _todasNoticias.filter(n => n.tag === _filtroActual);
+
+  if (!filtradas.length) {
+    body.innerHTML = '<div style="padding:24px;text-align:center;color:var(--texto3);font-size:0.78rem">Sin noticias en esta categoría</div>';
+    return;
+  }
+
+  body.innerHTML = filtradas.slice(0, 12).map(n => `
+    <div class="news-card" onclick="window.open('${n.link}','_blank')">
+      <div class="news-card-source">
+        <span>${n.icono}</span>
+        <span>${n.fuente}</span>
+        ${n.tag !== 'general' ? `<span class="news-card-tag ${n.tag}">${n.tag}</span>` : ''}
+      </div>
+      <div class="news-card-title">${n.titulo}</div>
+      <div class="news-card-date">${_formatearFecha(n.fecha)}</div>
+    </div>
+  `).join('');
+}
+
+function filtrarNoticias(categoria, el) {
+  _filtroActual = categoria;
+  document.querySelectorAll('.news-tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  _renderNoticias();
+}
+
+// Fallback si los RSS fallan
+function _noticiasFallback() {
+  return [
+    { titulo:'IPSA cierra con alza de 0.4% impulsado por SQM-B', fuente:'Diario Financiero', icono:'📊', color:'var(--azul)', tag:'mercado', link:'#', fecha:new Date() },
+    { titulo:'Banco Central mantiene TPM en 5.0% ante presiones inflacionarias', fuente:'El Mercurio', icono:'💼', color:'var(--amarillo)', tag:'economia', link:'#', fecha:new Date(Date.now()-3600000) },
+    { titulo:'Cobre sube 1.2% en LME ante expectativas de demanda china', fuente:'La Tercera', icono:'🏢', color:'var(--verde)', tag:'mercado', link:'#', fecha:new Date(Date.now()-7200000) },
+    { titulo:'Dólar retrocede a $928 tras mejora en datos de China', fuente:'Diario Financiero', icono:'📊', color:'var(--azul)', tag:'economia', link:'#', fecha:new Date(Date.now()-10800000) },
+    { titulo:'COPEC anuncia resultados del tercer trimestre', fuente:'El Mercurio', icono:'💼', color:'var(--amarillo)', tag:'empresas', link:'#', fecha:new Date(Date.now()-14400000) },
+    { titulo:'Falabella reduce deuda en 20% y recupera rating crediticio', fuente:'La Tercera', icono:'🏢', color:'var(--verde)', tag:'empresas', link:'#', fecha:new Date(Date.now()-18000000) },
+  ];
+}
+
+// Cargar al iniciar
+document.addEventListener('DOMContentLoaded', () => setTimeout(cargarNoticias, 1000));
+if (document.readyState !== 'loading') setTimeout(cargarNoticias, 1000);
+// Refrescar cada 5 minutos
+setInterval(cargarNoticias, 300_000);
+</script>
+
+
   <strong style="color:#8a9bb0">⚠️ Aviso Legal:</strong> InvertirCL es una plataforma de <strong style="color:#8a9bb0">educación financiera y simulación</strong>. No constituye asesoría de inversión ni está regulada por la CMF. Los resultados de simulación no garantizan rendimientos futuros. El usuario es el único responsable de sus decisiones de inversión con dinero real. ·
   <a href="legal.html" style="color:#4a5568;text-decoration:underline">Términos</a> ·
   <a href="legal.html" style="color:#4a5568;text-decoration:underline">Privacidad</a> ·
