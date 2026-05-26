@@ -1,0 +1,951 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>InvertirCL — Replay de Mercado</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#07090d;--bg2:#0d1117;--bg3:#131a22;--bg4:#1a222c;
+  --verde:#00e676;--rojo:#ff3d57;--azul:#4a9eff;--amarillo:#f5c518;
+  --purpura:#9b59b6;--naranja:#ff6b35;
+  --linea:rgba(255,255,255,0.06);--linea2:rgba(255,255,255,0.1);
+  --texto:#e2e8f0;--texto2:#8a9bb0;--texto3:#4a5568;
+  --mono:'DM Mono',monospace;--sans:'DM Sans',sans-serif;--display:'Syne',sans-serif;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html,body{height:100%;overflow:hidden;}
+body{font-family:var(--sans);background:var(--bg);color:var(--texto);display:flex;flex-direction:column;}
+
+/* TOPBAR */
+.topbar{height:52px;background:var(--bg2);border-bottom:1px solid var(--linea);display:flex;align-items:center;padding:0 20px;gap:14px;flex-shrink:0;}
+.logo{font-family:var(--display);font-weight:800;font-size:1rem;color:var(--verde);text-decoration:none;}
+.logo span{color:var(--texto2);font-weight:400;}
+.tnav-wrap{display:flex;gap:2px;margin-left:8px;}
+.tnav{padding:6px 13px;border-radius:6px;font-size:0.78rem;color:var(--texto2);cursor:pointer;transition:all 0.15s;text-decoration:none;white-space:nowrap;}
+.tnav:hover{background:var(--bg3);color:var(--texto);}
+.tnav.active{background:rgba(0,230,118,0.1);color:var(--verde);}
+.topbar-right{margin-left:auto;display:flex;align-items:center;gap:8px;}
+.replay-badge{font-size:0.65rem;padding:3px 10px;border-radius:100px;background:rgba(0,230,118,0.08);color:var(--verde);border:1px solid rgba(0,230,118,0.2);letter-spacing:0.06em;text-transform:uppercase;}
+
+/* LAYOUT */
+.layout{display:grid;grid-template-columns:260px 1fr 300px;flex:1;overflow:hidden;}
+
+/* ══ SIDEBAR IZQUIERDO ══ */
+.sidebar-left{background:var(--bg2);border-right:1px solid var(--linea);display:flex;flex-direction:column;overflow-y:auto;}
+.sb-section{padding:14px 18px;border-bottom:1px solid var(--linea);}
+.sb-title{font-family:var(--display);font-size:0.9rem;font-weight:700;margin-bottom:4px;}
+.sb-sub{font-size:0.7rem;color:var(--texto2);line-height:1.5;}
+.sb-label{font-size:0.65rem;text-transform:uppercase;letter-spacing:0.08em;color:var(--texto3);margin-bottom:8px;}
+
+/* Selector activo */
+.activo-grid{display:grid;grid-template-columns:1fr 1fr;gap:5px;}
+.activo-btn{padding:8px;border-radius:7px;border:1px solid var(--linea2);background:var(--bg3);cursor:pointer;text-align:center;transition:all 0.15s;}
+.activo-btn:hover{border-color:var(--linea2);background:var(--bg4);}
+.activo-btn.active{background:rgba(0,230,118,0.08);border-color:rgba(0,230,118,0.3);}
+.activo-ticker{font-family:var(--display);font-size:0.8rem;font-weight:700;}
+.activo-btn.active .activo-ticker{color:var(--verde);}
+.activo-precio{font-family:var(--mono);font-size:0.62rem;color:var(--texto2);margin-top:2px;}
+
+/* Selector fecha */
+.fecha-grid{display:flex;flex-direction:column;gap:4px;}
+.fecha-btn{padding:8px 12px;border-radius:7px;border:1px solid var(--linea2);background:var(--bg3);cursor:pointer;transition:all 0.15s;display:flex;align-items:center;justify-content:space-between;}
+.fecha-btn:hover{border-color:var(--azul);}
+.fecha-btn.active{background:rgba(74,158,255,0.08);border-color:rgba(74,158,255,0.3);}
+.fecha-txt{font-family:var(--mono);font-size:0.75rem;}
+.fecha-btn.active .fecha-txt{color:var(--azul);}
+.fecha-ret{font-family:var(--mono);font-size:0.68rem;}
+.fecha-ret.pos{color:var(--verde);}
+.fecha-ret.neg{color:var(--rojo);}
+
+/* Controles velocidad */
+.speed-tabs{display:flex;gap:3px;background:var(--bg3);border:1px solid var(--linea);border-radius:8px;padding:3px;}
+.speed-tab{flex:1;padding:5px;border-radius:6px;border:none;background:transparent;color:var(--texto2);font-size:0.72rem;cursor:pointer;transition:all 0.15s;font-family:var(--sans);}
+.speed-tab.active{background:var(--bg4);color:var(--texto);}
+
+/* Botones control */
+.ctrl-row{display:flex;gap:6px;margin-top:10px;}
+.btn-ctrl{flex:1;padding:10px;border-radius:8px;border:none;font-family:var(--display);font-size:0.8rem;font-weight:700;cursor:pointer;transition:all 0.2s;}
+.btn-play{background:var(--verde);color:#000;}
+.btn-play:hover{background:#fff;}
+.btn-play.running{background:var(--amarillo);color:#000;}
+.btn-reset{background:var(--bg3);border:1px solid var(--linea2);color:var(--texto2);}
+.btn-reset:hover{border-color:var(--rojo);color:var(--rojo);}
+
+/* Stats del día */
+.dia-stats{display:grid;grid-template-columns:1fr 1fr;gap:6px;}
+.dia-stat{background:var(--bg3);border-radius:6px;padding:8px 10px;}
+.dia-stat-label{font-size:0.6rem;color:var(--texto3);text-transform:uppercase;letter-spacing:0.05em;}
+.dia-stat-val{font-family:var(--mono);font-size:0.85rem;margin-top:2px;}
+
+/* ══ CENTRO — Canvas principal ══ */
+.center{display:flex;flex-direction:column;overflow:hidden;}
+
+/* Barra de tiempo */
+.time-bar{padding:10px 20px;background:var(--bg2);border-bottom:1px solid var(--linea);flex-shrink:0;display:flex;align-items:center;justify-content:space-between;}
+.time-left{display:flex;align-items:center;gap:16px;}
+.time-clock{font-family:var(--display);font-size:1.4rem;font-weight:800;letter-spacing:0.04em;}
+.time-meta{font-size:0.72rem;color:var(--texto2);}
+.time-progress-wrap{flex:1;margin:0 20px;}
+.time-progress-track{height:4px;background:var(--bg3);border-radius:2px;overflow:hidden;}
+.time-progress-fill{height:100%;background:var(--verde);border-radius:2px;transition:width 0.3s ease;}
+.time-labels{display:flex;justify-content:space-between;font-family:var(--mono);font-size:0.6rem;color:var(--texto3);margin-top:3px;}
+.price-display{text-align:right;}
+.price-big{font-family:var(--display);font-size:1.2rem;font-weight:800;}
+.price-ret{font-family:var(--mono);font-size:0.75rem;margin-top:1px;}
+
+/* Canvas */
+.chart-wrap{flex:1;position:relative;overflow:hidden;padding:10px 16px 4px;}
+#replayCanvas{width:100%;height:100%;display:block;}
+
+/* Barra operaciones rápidas */
+.trade-bar{padding:10px 20px;background:var(--bg2);border-top:1px solid var(--linea);flex-shrink:0;display:flex;align-items:center;gap:10px;}
+.trade-bar-label{font-size:0.72rem;color:var(--texto2);}
+.trade-qty{background:var(--bg3);border:1px solid var(--linea2);border-radius:6px;padding:6px 10px;font-family:var(--mono);font-size:0.82rem;color:var(--texto);outline:none;width:90px;}
+.trade-qty:focus{border-color:var(--verde);}
+.btn-buy{padding:8px 20px;border-radius:7px;border:none;background:var(--verde);color:#000;font-family:var(--display);font-size:0.8rem;font-weight:700;cursor:pointer;transition:all 0.15s;}
+.btn-buy:hover{background:#fff;}
+.btn-buy:disabled{background:var(--bg3);color:var(--texto3);cursor:not-allowed;}
+.btn-sell{padding:8px 20px;border-radius:7px;border:none;background:var(--rojo);color:#fff;font-family:var(--display);font-size:0.8rem;font-weight:700;cursor:pointer;transition:all 0.15s;}
+.btn-sell:hover{background:#ff1a35;}
+.btn-sell:disabled{background:var(--bg3);color:var(--texto3);cursor:not-allowed;}
+.btn-cerrar{padding:8px 16px;border-radius:7px;border:1px solid rgba(245,197,24,0.3);background:rgba(245,197,24,0.06);color:var(--amarillo);font-family:var(--sans);font-size:0.78rem;cursor:pointer;display:none;}
+.btn-cerrar.visible{display:block;}
+.pos-info{font-family:var(--mono);font-size:0.75rem;color:var(--texto2);}
+.pos-pnl{font-weight:500;}
+
+/* ══ SIDEBAR DERECHO ══ */
+.sidebar-right{background:var(--bg2);border-left:1px solid var(--linea);display:flex;flex-direction:column;overflow-y:auto;}
+.sr-section{padding:14px 16px;border-bottom:1px solid var(--linea);}
+.sr-title{font-size:0.68rem;text-transform:uppercase;letter-spacing:0.08em;color:var(--texto3);margin-bottom:10px;}
+
+/* Resultado sesión */
+.resultado-card{border-radius:10px;padding:14px;border:1px solid;}
+.resultado-card.ganancia{background:rgba(0,230,118,0.04);border-color:rgba(0,230,118,0.2);}
+.resultado-card.perdida{background:rgba(255,61,87,0.04);border-color:rgba(255,61,87,0.15);}
+.resultado-card.neutro{background:var(--bg3);border-color:var(--linea2);}
+.res-pnl{font-family:var(--display);font-size:1.4rem;font-weight:800;margin-bottom:6px;}
+.res-row{display:flex;justify-content:space-between;font-size:0.72rem;padding:3px 0;border-bottom:1px solid rgba(255,255,255,0.04);}
+.res-row:last-child{border-bottom:none;}
+.res-k{color:var(--texto2);}
+.res-v{font-family:var(--mono);}
+
+/* Historial de trades */
+.trade-hist-item{display:flex;align-items:flex-start;gap:8px;padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.03);}
+.trade-hist-item:last-child{border-bottom:none;}
+.th-icon{font-size:0.85rem;flex-shrink:0;}
+.th-body{flex:1;}
+.th-tipo{font-size:0.7rem;font-weight:500;}
+.th-meta{font-family:var(--mono);font-size:0.65rem;color:var(--texto2);}
+.th-pnl{font-family:var(--mono);font-size:0.75rem;text-align:right;}
+.th-pnl.pos{color:var(--verde);}
+.th-pnl.neg{color:var(--rojo);}
+
+/* Tick feed */
+.tick-item{display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid rgba(255,255,255,0.03);font-size:0.7rem;}
+.tick-item:last-child{border-bottom:none;}
+.tick-time{font-family:var(--mono);font-size:0.65rem;color:var(--texto3);width:50px;flex-shrink:0;}
+.tick-precio{font-family:var(--mono);font-weight:500;width:70px;}
+.tick-ret{font-family:var(--mono);font-size:0.65rem;width:50px;}
+.tick-ret.pos{color:var(--verde);}
+.tick-ret.neg{color:var(--rojo);}
+.tick-vol{font-size:0.65rem;color:var(--texto3);}
+
+/* Resultado final overlay */
+.resultado-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.8);backdrop-filter:blur(8px);z-index:200;display:none;align-items:center;justify-content:center;}
+.resultado-overlay.visible{display:flex;}
+.resultado-modal{background:var(--bg2);border:1px solid var(--linea2);border-radius:16px;padding:32px;max-width:440px;width:90%;text-align:center;animation:popIn 0.3s ease;}
+@keyframes popIn{from{transform:scale(0.93);opacity:0}to{transform:scale(1);opacity:1}}
+.rm-emoji{font-size:3rem;margin-bottom:10px;}
+.rm-titulo{font-family:var(--display);font-size:1.3rem;font-weight:800;margin-bottom:6px;}
+.rm-sub{font-size:0.82rem;color:var(--texto2);line-height:1.6;margin-bottom:20px;}
+.rm-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:24px;}
+.rm-stat{background:var(--bg3);border-radius:8px;padding:12px;}
+.rm-stat-val{font-family:var(--display);font-size:1.3rem;font-weight:800;}
+.rm-stat-label{font-size:0.62rem;color:var(--texto2);text-transform:uppercase;letter-spacing:0.05em;margin-top:2px;}
+.rm-lecciones{text-align:left;background:rgba(74,158,255,0.04);border:1px solid rgba(74,158,255,0.1);border-radius:8px;padding:12px;margin-bottom:20px;}
+.rm-lec-title{font-size:0.65rem;text-transform:uppercase;letter-spacing:0.06em;color:var(--azul);margin-bottom:8px;}
+.rm-lec-item{font-size:0.75rem;color:var(--texto2);line-height:1.6;padding:3px 0;}
+.btn-nuevo-replay{width:100%;padding:13px;border-radius:10px;border:none;background:var(--verde);color:#000;font-family:var(--display);font-size:0.9rem;font-weight:700;cursor:pointer;}
+.btn-nuevo-replay:hover{background:#fff;}
+
+/* Scrollbar */
+::-webkit-scrollbar{width:4px;}
+::-webkit-scrollbar-track{background:transparent;}
+::-webkit-scrollbar-thumb{background:var(--bg4);border-radius:2px;}
+@keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+.fade-in{animation:fadeIn 0.3s ease both;}
+</style>
+</head>
+<body>
+
+<!-- TOPBAR -->
+<div class="topbar">
+  <a href="dashboard.html" class="logo">Invertir<span>CL</span></a>
+  <nav class="tnav-wrap">
+    <a href="dashboard.html"    class="tnav">Dashboard</a>
+    <a href="simulator.html"    class="tnav">Simulador</a>
+    <a href="backtest.html"     class="tnav">Backtest</a>
+    <a href="risk.html"         class="tnav">Riesgo</a>
+    <a href="learn.html"        class="tnav">Aprender</a>
+    <a href="blackswan.html"    class="tnav">🦢 Black Swan</a>
+    <a href="replay.html"       class="tnav active">🎬 Replay</a>
+  </nav>
+  <div class="topbar-right">
+    <span class="replay-badge">🎬 Modo Replay</span>
+  </div>
+</div>
+
+<div class="layout">
+
+  <!-- ══ SIDEBAR IZQUIERDO ══ -->
+  <div class="sidebar-left">
+    <div class="sb-section">
+      <div class="sb-title">🎬 Replay de Mercado</div>
+      <div class="sb-sub">Opera días históricos reales tick a tick. Practica sin riesgo, repite días clave, testea tus reacciones emocionales.</div>
+    </div>
+
+    <!-- Selector activo -->
+    <div class="sb-section">
+      <div class="sb-label">Activo</div>
+      <div class="activo-grid">
+        <div class="activo-btn active" onclick="selActivo('COPEC','COPEC.SN',8420)">
+          <div class="activo-ticker">COPEC</div>
+          <div class="activo-precio">~$8.420</div>
+        </div>
+        <div class="activo-btn" onclick="selActivo('SQM-B','SQM-B.SN',38200)">
+          <div class="activo-ticker">SQM-B</div>
+          <div class="activo-precio">~$38.200</div>
+        </div>
+        <div class="activo-btn" onclick="selActivo('BCI','BCI.SN',28500)">
+          <div class="activo-ticker">BCI</div>
+          <div class="activo-precio">~$28.500</div>
+        </div>
+        <div class="activo-btn" onclick="selActivo('ENTEL','ENTEL.SN',4210)">
+          <div class="activo-ticker">ENTEL</div>
+          <div class="activo-precio">~$4.210</div>
+        </div>
+        <div class="activo-btn" onclick="selActivo('IPSA','^IPSA',7200)">
+          <div class="activo-ticker">IPSA</div>
+          <div class="activo-precio">~$7.200</div>
+        </div>
+        <div class="activo-btn" onclick="selActivo('FALABELLA','FALABELLA.SN',980)">
+          <div class="activo-ticker">FALA</div>
+          <div class="activo-precio">~$980</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Selector fecha -->
+    <div class="sb-section">
+      <div class="sb-label">Día a reproducir</div>
+      <div class="fecha-grid" id="fechaGrid"></div>
+    </div>
+
+    <!-- Velocidad -->
+    <div class="sb-section">
+      <div class="sb-label">Velocidad</div>
+      <div class="speed-tabs">
+        <button class="speed-tab" onclick="setSpeed(1,this)">1×</button>
+        <button class="speed-tab" onclick="setSpeed(2,this)">2×</button>
+        <button class="speed-tab active" onclick="setSpeed(5,this)">5×</button>
+        <button class="speed-tab" onclick="setSpeed(10,this)">10×</button>
+        <button class="speed-tab" onclick="setSpeed(0,this)">MAX</button>
+      </div>
+      <div class="ctrl-row">
+        <button class="btn-ctrl btn-play" id="btnPlay" onclick="togglePlay()">▶ Iniciar</button>
+        <button class="btn-ctrl btn-reset" onclick="resetReplay()">↺</button>
+      </div>
+    </div>
+
+    <!-- Stats del día seleccionado -->
+    <div class="sb-section">
+      <div class="sb-label">Estadísticas del día</div>
+      <div class="dia-stats">
+        <div class="dia-stat">
+          <div class="dia-stat-label">Apertura</div>
+          <div class="dia-stat-val" id="statOpen">—</div>
+        </div>
+        <div class="dia-stat">
+          <div class="dia-stat-label">Cierre</div>
+          <div class="dia-stat-val" id="statClose">—</div>
+        </div>
+        <div class="dia-stat">
+          <div class="dia-stat-label">Máximo</div>
+          <div class="dia-stat-val" style="color:var(--verde)" id="statHigh">—</div>
+        </div>
+        <div class="dia-stat">
+          <div class="dia-stat-label">Mínimo</div>
+          <div class="dia-stat-val" style="color:var(--rojo)" id="statLow">—</div>
+        </div>
+        <div class="dia-stat" style="grid-column:1/-1">
+          <div class="dia-stat-label">Retorno del día</div>
+          <div class="dia-stat-val" id="statRet">—</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Nota educativa -->
+    <div class="sb-section">
+      <div style="font-size:0.7rem;color:var(--texto2);line-height:1.6;background:rgba(74,158,255,0.04);border-left:2px solid rgba(74,158,255,0.3);padding:8px 10px;border-radius:0 6px 6px 0;">
+        💡 <b style="color:var(--azul)">Tip:</b> Opera el día sin saber el resultado final. Cuando termine, verás si tu criterio fue correcto. Los profesionales repiten días históricos semanalmente.
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ CENTRO ══ -->
+  <div class="center">
+
+    <!-- Barra de tiempo -->
+    <div class="time-bar">
+      <div class="time-left">
+        <div>
+          <div class="time-clock" id="timeClock">09:30</div>
+          <div class="time-meta" id="timeMeta">Bolsa de Santiago · Minuto 0/390</div>
+        </div>
+      </div>
+      <div class="time-progress-wrap">
+        <div class="time-progress-track">
+          <div class="time-progress-fill" id="timeProgress" style="width:0%"></div>
+        </div>
+        <div class="time-labels"><span>09:30</span><span>13:00</span><span>16:00</span></div>
+      </div>
+      <div class="price-display">
+        <div class="price-big" id="priceBig">—</div>
+        <div class="price-ret" id="priceRet" style="color:var(--texto3)">—</div>
+      </div>
+    </div>
+
+    <!-- Canvas -->
+    <div class="chart-wrap" id="chartWrap">
+      <canvas id="replayCanvas"></canvas>
+    </div>
+
+    <!-- Barra de operaciones -->
+    <div class="trade-bar">
+      <span class="trade-bar-label">Cantidad:</span>
+      <input type="number" class="trade-qty" id="tradeQty" value="100" min="10" max="10000" step="10">
+      <button class="btn-buy" id="btnBuy" onclick="operar('buy')" disabled>▲ Comprar</button>
+      <button class="btn-sell" id="btnSell" onclick="operar('sell')" disabled>▼ Vender</button>
+      <button class="btn-cerrar" id="btnCerrar" onclick="cerrarPosicion()">✕ Cerrar posición</button>
+      <span class="pos-info" id="posInfo"></span>
+    </div>
+  </div>
+
+  <!-- ══ SIDEBAR DERECHO ══ -->
+  <div class="sidebar-right">
+
+    <!-- Resultado de sesión -->
+    <div class="sr-section">
+      <div class="sr-title">Resultado sesión</div>
+      <div id="resultadoSesion">
+        <div style="text-align:center;padding:16px;font-size:0.75rem;color:var(--texto3)">
+          Inicia el replay para ver tus resultados
+        </div>
+      </div>
+    </div>
+
+    <!-- Historial de trades -->
+    <div class="sr-section">
+      <div class="sr-title">Mis operaciones</div>
+      <div id="tradeHistorial">
+        <div style="font-size:0.72rem;color:var(--texto3);text-align:center;padding:12px">Sin operaciones aún</div>
+      </div>
+    </div>
+
+    <!-- Feed de ticks -->
+    <div class="sr-section" style="flex:1;">
+      <div class="sr-title">Feed de precios</div>
+      <div id="tickFeed">
+        <div style="font-size:0.72rem;color:var(--texto3);text-align:center;padding:12px">Esperando inicio...</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- RESULTADO FINAL OVERLAY -->
+<div class="resultado-overlay" id="resultadoOverlay">
+  <div class="resultado-modal">
+    <div class="rm-emoji" id="rmEmoji">📊</div>
+    <div class="rm-titulo" id="rmTitulo">Sesión completada</div>
+    <div class="rm-sub" id="rmSub">Aquí están tus resultados del día</div>
+    <div class="rm-stats" id="rmStats"></div>
+    <div class="rm-lecciones" id="rmLecciones"></div>
+    <button class="btn-nuevo-replay" onclick="cerrarResultado()">↺ Nuevo replay</button>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════════════════════════
+// ESTADO
+// ══════════════════════════════════════════════════════════════
+let activoActual  = { nombre:'COPEC', sym:'COPEC.SN', precioBase:8420 };
+let fechaActual   = null;
+let ticks         = [];          // 390 ticks del día
+let tickActual    = 0;
+let playing       = false;
+let speed         = 5;
+let intervalId    = null;
+let posicion      = null;        // { side, precio, cantidad, tiempo }
+let operaciones   = [];
+let ticksFeed     = [];
+
+// ══════════════════════════════════════════════════════════════
+// GENERACIÓN DE TICKS (lógica de replay.py _datos_sinteticos)
+// ══════════════════════════════════════════════════════════════
+function generarTicks(precioBase, fechaStr) {
+  const N          = 390;        // 6.5 horas × 60 min
+  const retornoDia = gaussRand(0.002, 0.018);
+  const precioFin  = precioBase * (1 + retornoDia);
+  const horaIni    = 9*60+30;    // 09:30 en minutos
+
+  let precio  = precioBase;
+  let volAcum = 0;
+  const resultado = [];
+
+  for(let i=0; i<N; i++) {
+    // Curva U de volatilidad intraday
+    const t   = i/N;
+    const vol = 0.0008 + 0.0012 * Math.pow(Math.abs(t-0.5)*2, 2);
+
+    // Drift hacia precio final
+    const drift = (precioFin - precio) / (N-i) * 0.3;
+    const ruido = gaussRand(0, vol);
+    const ret   = ruido + drift/precio;
+
+    const open_  = precio;
+    const close  = Math.max(precio*(1+ret), precio*0.8);
+    const high   = Math.max(open_,close) * (1+Math.abs(ruido)*0.3);
+    const low    = Math.min(open_,close) * (1-Math.abs(ruido)*0.3);
+    const volTick= Math.round((1000+Math.random()*15000)*(1+Math.abs(ruido)*10));
+    volAcum += volTick;
+
+    const minTotal = horaIni + i;
+    const hh = Math.floor(minTotal/60);
+    const mm  = minTotal%60;
+    const tiempo = `${String(hh).padStart(2,'0')}:${String(mm).padStart(2,'0')}`;
+
+    resultado.push({
+      minuto: i,
+      tiempo,
+      open: open_,
+      high, low,
+      close,
+      volume: volTick,
+      volAcum,
+      retorno: (close-precioBase)/precioBase*100,
+    });
+
+    precio = close;
+  }
+  return resultado;
+}
+
+function gaussRand(mean=0, std=1) {
+  const u1 = Math.random()+1e-10;
+  const u2 = Math.random();
+  return mean + std * Math.sqrt(-2*Math.log(u1)) * Math.cos(2*Math.PI*u2);
+}
+
+// ══════════════════════════════════════════════════════════════
+// GENERAR FECHAS DISPONIBLES (últimos 20 días hábiles)
+// ══════════════════════════════════════════════════════════════
+function generarFechas() {
+  const fechas = [];
+  let d = new Date();
+  d.setDate(d.getDate()-1);
+  while(fechas.length < 12) {
+    if(d.getDay() !== 0 && d.getDay() !== 6) {
+      const ret = gaussRand(0.001, 0.012);
+      fechas.push({
+        fecha: d.toISOString().slice(0,10),
+        label: d.toLocaleDateString('es-CL',{day:'2-digit',month:'short',year:'numeric'}),
+        retorno: parseFloat((ret*100).toFixed(2)),
+      });
+    }
+    d.setDate(d.getDate()-1);
+  }
+  return fechas;
+}
+
+// ══════════════════════════════════════════════════════════════
+// RENDER FECHAS
+// ══════════════════════════════════════════════════════════════
+let fechasDisp = [];
+
+function renderFechas() {
+  fechasDisp = generarFechas();
+  const grid = document.getElementById('fechaGrid');
+  grid.innerHTML = fechasDisp.map((f,i) => `
+    <div class="fecha-btn ${i===0?'active':''}" onclick="selFecha('${f.fecha}',this)">
+      <span class="fecha-txt">${f.label}</span>
+      <span class="fecha-ret ${f.retorno>=0?'pos':'neg'}">${f.retorno>=0?'+':''}${f.retorno}%</span>
+    </div>
+  `).join('');
+  selFecha(fechasDisp[0].fecha, grid.firstChild);
+}
+
+function selFecha(fecha, btn) {
+  fechaActual = fecha;
+  document.querySelectorAll('.fecha-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  cargarDia();
+}
+
+// ══════════════════════════════════════════════════════════════
+// CARGAR DÍA
+// ══════════════════════════════════════════════════════════════
+function cargarDia() {
+  pararReplay();
+  tickActual  = 0;
+  posicion    = null;
+  operaciones = [];
+  ticksFeed   = [];
+  ticks       = generarTicks(activoActual.precioBase, fechaActual);
+
+  // Stats del día (se revelan al final en producción; aquí las mostramos para el UX)
+  const ultimoTick = ticks[ticks.length-1];
+  const fmt = v => '$'+Math.round(v).toLocaleString('es-CL');
+  document.getElementById('statOpen').textContent  = fmt(ticks[0].open);
+  document.getElementById('statClose').textContent = '???'; // oculto hasta el final
+  document.getElementById('statHigh').textContent  = '???';
+  document.getElementById('statLow').textContent   = '???';
+  const retEl = document.getElementById('statRet');
+  retEl.textContent = '???';
+  retEl.style.color = 'var(--texto3)';
+
+  actualizarUI();
+  dibujarCanvas();
+  document.getElementById('btnBuy').disabled  = true;
+  document.getElementById('btnSell').disabled = true;
+  document.getElementById('btnPlay').textContent = '▶ Iniciar';
+  document.getElementById('btnPlay').classList.remove('running');
+  document.getElementById('resultadoSesion').innerHTML = '<div style="text-align:center;padding:16px;font-size:0.75rem;color:var(--texto3)">Inicia el replay para ver tus resultados</div>';
+  document.getElementById('tradeHistorial').innerHTML   = '<div style="font-size:0.72rem;color:var(--texto3);text-align:center;padding:12px">Sin operaciones aún</div>';
+  document.getElementById('tickFeed').innerHTML         = '<div style="font-size:0.72rem;color:var(--texto3);text-align:center;padding:12px">Esperando inicio...</div>';
+}
+
+// ══════════════════════════════════════════════════════════════
+// PLAY / PAUSE
+// ══════════════════════════════════════════════════════════════
+function togglePlay() {
+  if(playing) { pararReplay(); }
+  else        { iniciarReplay(); }
+}
+
+function iniciarReplay() {
+  if(tickActual >= ticks.length) { tickActual=0; posicion=null; operaciones=[]; }
+  playing = true;
+  document.getElementById('btnPlay').textContent = '⏸ Pausar';
+  document.getElementById('btnPlay').classList.add('running');
+  document.getElementById('btnBuy').disabled  = false;
+  document.getElementById('btnSell').disabled = false;
+
+  // Ms por tick según velocidad
+  const msMap = {0:0, 1:2000, 2:1000, 5:400, 10:200};
+  const ms    = msMap[speed] ?? 400;
+
+  if(ms === 0) {
+    // MAX: ejecutar todos los ticks sin pausa
+    while(tickActual < ticks.length) procesarTick();
+    finalizarReplay();
+  } else {
+    intervalId = setInterval(() => {
+      if(tickActual < ticks.length) {
+        procesarTick();
+      } else {
+        pararReplay();
+        finalizarReplay();
+      }
+    }, ms);
+  }
+}
+
+function pararReplay() {
+  playing = false;
+  clearInterval(intervalId);
+  const btn = document.getElementById('btnPlay');
+  if(btn) {
+    btn.textContent = tickActual >= ticks.length ? '↺ Reiniciar' : '▶ Continuar';
+    btn.classList.remove('running');
+  }
+}
+
+function resetReplay() {
+  pararReplay();
+  cargarDia();
+}
+
+function setSpeed(s, btn) {
+  speed = s;
+  document.querySelectorAll('.speed-tab').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  if(playing) { pararReplay(); iniciarReplay(); }
+}
+
+// ══════════════════════════════════════════════════════════════
+// PROCESAR TICK
+// ══════════════════════════════════════════════════════════════
+function procesarTick() {
+  const tick = ticks[tickActual];
+  tickActual++;
+
+  // Verificar si la posición fue cerrada automáticamente (SL/TP)
+  if(posicion) {
+    const pnlActual = posicion.side==='buy'
+      ? (tick.close-posicion.precio)*posicion.cantidad
+      : (posicion.precio-tick.close)*posicion.cantidad;
+    document.getElementById('posInfo').textContent =
+      `${posicion.side==='buy'?'▲':'▼'} ${posicion.cantidad} @ $${Math.round(posicion.precio).toLocaleString('es-CL')} · P&L: ${pnlActual>=0?'+':''}$${Math.round(pnlActual).toLocaleString('es-CL')}`;
+    document.getElementById('posInfo').style.color = pnlActual>=0?'var(--verde)':'var(--rojo)';
+  }
+
+  // Feed
+  ticksFeed.unshift(tick);
+  if(ticksFeed.length>30) ticksFeed.pop();
+  renderTickFeed();
+
+  dibujarCanvas();
+  actualizarUI();
+}
+
+// ══════════════════════════════════════════════════════════════
+// OPERACIONES
+// ══════════════════════════════════════════════════════════════
+function operar(side) {
+  if(!ticks.length || tickActual===0) return;
+  const tick     = ticks[Math.min(tickActual-1, ticks.length-1)];
+  const cantidad = parseInt(document.getElementById('tradeQty').value)||100;
+  const slippage = tick.close * 0.0001;
+  const precio   = side==='buy' ? tick.close+slippage : tick.close-slippage;
+
+  // Si había posición contraria → cerrar primero
+  if(posicion && posicion.side !== side) {
+    cerrarPosicion();
+  }
+
+  if(!posicion) {
+    posicion = { side, precio:Math.round(precio*100)/100, cantidad, tiempo:tick.tiempo, tickEntrada:tickActual };
+    document.getElementById('btnCerrar').classList.add('visible');
+    document.getElementById('posInfo').textContent = `Posición abierta: ${side==='buy'?'▲ LONG':'▼ SHORT'}`;
+  }
+}
+
+function cerrarPosicion() {
+  if(!posicion || !ticks.length) return;
+  const tick = ticks[Math.min(tickActual-1, ticks.length-1)];
+  const pnl  = posicion.side==='buy'
+    ? (tick.close-posicion.precio)*posicion.cantidad
+    : (posicion.precio-tick.close)*posicion.cantidad;
+
+  operaciones.push({
+    side:      posicion.side,
+    entrada:   posicion.precio,
+    salida:    tick.close,
+    cantidad:  posicion.cantidad,
+    tiempoEnt: posicion.tiempo,
+    tiempoSal: tick.tiempo,
+    pnl:       Math.round(pnl),
+  });
+
+  posicion = null;
+  document.getElementById('btnCerrar').classList.remove('visible');
+  document.getElementById('posInfo').textContent = '';
+
+  renderTradeHistorial();
+  actualizarResultadoSesion();
+}
+
+// ══════════════════════════════════════════════════════════════
+// CANVAS
+// ══════════════════════════════════════════════════════════════
+function dibujarCanvas() {
+  const canvas = document.getElementById('replayCanvas');
+  const wrap   = document.getElementById('chartWrap');
+  const W = wrap.clientWidth - 32;
+  const H = wrap.clientHeight - 16;
+  if(W<=0||H<=0) return;
+  canvas.width=W; canvas.height=H;
+  const ctx=canvas.getContext('2d');
+
+  ctx.fillStyle='#07090d'; ctx.fillRect(0,0,W,H);
+  if(!ticks.length) return;
+
+  const visibles = ticks.slice(0, Math.max(1, tickActual));
+  if(!visibles.length) return;
+
+  const VOLH=Math.round(H*0.18); const CHARTH=H-VOLH-10;
+  const PADL=52; const PADR=12;
+  const N=ticks.length;
+  const cw=(W-PADL-PADR)/N;
+  const bw=Math.max(1.5, cw*0.6);
+
+  const prices = visibles.flatMap(d=>[d.high,d.low]);
+  const minP   = Math.min(...prices)*0.999;
+  const maxP   = Math.max(...prices)*1.001;
+  const rangeP = maxP-minP||1;
+  const maxVol = Math.max(...visibles.map(d=>d.volume));
+
+  const toY  = v => 6+(1-(v-minP)/rangeP)*(CHARTH-12);
+  const toVH = v => VOLH*(v/maxVol);
+  const toX  = i => PADL+i*cw+cw/2;
+
+  // Grid
+  ctx.strokeStyle='rgba(255,255,255,0.04)';ctx.lineWidth=1;
+  for(let i=1;i<=4;i++){
+    const y=6+(CHARTH-12)*i/4;
+    ctx.beginPath();ctx.moveTo(PADL,y);ctx.lineTo(W-PADR,y);ctx.stroke();
+    const p=maxP-(maxP-minP)*i/4;
+    ctx.fillStyle='rgba(255,255,255,0.2)';ctx.font='9px "DM Mono"';ctx.textAlign='right';
+    ctx.fillText('$'+Math.round(p).toLocaleString('es-CL'),PADL-4,y+3);
+  }
+
+  // Separador vol
+  ctx.strokeStyle='rgba(255,255,255,0.05)';ctx.setLineDash([3,3]);
+  ctx.beginPath();ctx.moveTo(PADL,CHARTH+5);ctx.lineTo(W-PADR,CHARTH+5);ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Ticks de tiempo en el eje X
+  [0, 60, 120, 195, 255, 330, 389].forEach(i => {
+    if(i >= N) return;
+    const x = toX(i);
+    ctx.fillStyle='rgba(255,255,255,0.15)';ctx.font='8px "DM Mono"';ctx.textAlign='center';
+    ctx.fillText(ticks[i].tiempo, x, H-2);
+  });
+
+  // Velas
+  visibles.forEach((d,i)=>{
+    const x   = toX(i);
+    const isP = d.close>=d.open;
+    const col = isP?'#00e676':'#ff3d57';
+    ctx.strokeStyle=col;ctx.lineWidth=0.8;ctx.globalAlpha=0.7;
+    ctx.beginPath();ctx.moveTo(x,toY(d.high));ctx.lineTo(x,toY(d.low));ctx.stroke();
+    ctx.fillStyle=col;ctx.globalAlpha=0.85;
+    const yO=toY(Math.max(d.open,d.close));
+    const bH=Math.max(1.5,Math.abs(toY(d.open)-toY(d.close)));
+    ctx.fillRect(x-bw/2,yO,bw,bH);
+    ctx.globalAlpha=1;
+    // Volumen
+    ctx.fillStyle=isP?'rgba(0,230,118,0.18)':'rgba(255,61,87,0.18)';
+    ctx.fillRect(x-bw/2,H-toVH(d.volume),bw,toVH(d.volume));
+  });
+
+  // Zona futura (derecha del cursor) oscurecida
+  if(tickActual < N) {
+    const xFut = toX(tickActual);
+    ctx.fillStyle='rgba(0,0,0,0.45)';
+    ctx.fillRect(xFut, 0, W-PADR-xFut, H);
+    // Línea del cursor
+    ctx.strokeStyle='rgba(245,197,24,0.6)';ctx.lineWidth=1;ctx.setLineDash([4,4]);
+    ctx.beginPath();ctx.moveTo(xFut,0);ctx.lineTo(xFut,CHARTH);ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
+  // Precio actual
+  if(visibles.length>0){
+    const last = visibles[visibles.length-1];
+    const yAct = toY(last.close);
+    ctx.shadowColor='rgba(245,197,24,0.5)';ctx.shadowBlur=6;
+    ctx.strokeStyle='rgba(245,197,24,0.9)';ctx.lineWidth=1.5;ctx.setLineDash([]);
+    ctx.beginPath();ctx.moveTo(W-PADR-60,yAct);ctx.lineTo(W-PADR,yAct);ctx.stroke();
+    ctx.shadowBlur=0;
+    const lbl='$'+Math.round(last.close).toLocaleString('es-CL');
+    const lw=ctx.measureText(lbl).width+10;
+    ctx.fillStyle='rgba(245,197,24,1)';
+    ctx.fillRect(W-PADR-lw-2,yAct-8,lw+4,14);
+    ctx.fillStyle='#000';ctx.font='bold 9px "DM Mono"';ctx.textAlign='left';
+    ctx.fillText(lbl,W-PADR-lw,yAct+3);
+  }
+
+  // Líneas de posición abierta
+  if(posicion){
+    const yEnt=toY(posicion.precio);
+    ctx.strokeStyle=posicion.side==='buy'?'rgba(0,230,118,0.7)':'rgba(255,61,87,0.7)';
+    ctx.lineWidth=1.5;ctx.setLineDash([5,4]);
+    ctx.beginPath();ctx.moveTo(PADL,yEnt);ctx.lineTo(W-PADR,yEnt);ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle=posicion.side==='buy'?'rgba(0,230,118,0.85)':'rgba(255,61,87,0.85)';
+    ctx.font='bold 9px "DM Mono"';ctx.textAlign='left';
+    ctx.fillText((posicion.side==='buy'?'▲ LONG':'▼ SHORT')+' $'+Math.round(posicion.precio).toLocaleString('es-CL'),PADL+4,yEnt-3);
+  }
+
+  // Marcas de operaciones cerradas
+  operaciones.forEach(op=>{
+    const iEnt = Math.min(op.tickEntrada||0, visibles.length-1);
+    const xEnt = toX(iEnt);
+    const yEnt = toY(op.entrada);
+    ctx.beginPath();ctx.arc(xEnt,yEnt,5,0,Math.PI*2);
+    ctx.fillStyle=op.side==='buy'?'rgba(0,230,118,0.9)':'rgba(255,61,87,0.9)';
+    ctx.fill();
+  });
+}
+
+// ══════════════════════════════════════════════════════════════
+// ACTUALIZAR UI
+// ══════════════════════════════════════════════════════════════
+function actualizarUI() {
+  if(!ticks.length) return;
+  const idx   = Math.max(0,Math.min(tickActual-1,ticks.length-1));
+  const tick  = ticks[idx]||ticks[0];
+  const prog  = (tickActual/ticks.length*100).toFixed(1);
+
+  document.getElementById('timeClock').textContent   = tick.tiempo;
+  document.getElementById('timeMeta').textContent    = `${activoActual.nombre} · Minuto ${tickActual}/${ticks.length}`;
+  document.getElementById('timeProgress').style.width= prog+'%';
+
+  document.getElementById('priceBig').textContent = '$'+Math.round(tick.close).toLocaleString('es-CL');
+  const retEl = document.getElementById('priceRet');
+  retEl.textContent = (tick.retorno>=0?'+':'')+tick.retorno.toFixed(2)+'% vs apertura';
+  retEl.style.color = tick.retorno>=0?'var(--verde)':'var(--rojo)';
+}
+
+function renderTickFeed() {
+  const el = document.getElementById('tickFeed');
+  el.innerHTML = ticksFeed.slice(0,20).map(t=>`
+    <div class="tick-item">
+      <span class="tick-time">${t.tiempo}</span>
+      <span class="tick-precio" style="color:${t.close>=t.open?'var(--verde)':'var(--rojo)'}">
+        $${Math.round(t.close).toLocaleString('es-CL')}
+      </span>
+      <span class="tick-ret ${t.retorno>=0?'pos':'neg'}">${t.retorno>=0?'+':''}${t.retorno.toFixed(2)}%</span>
+      <span class="tick-vol">${Math.round(t.volume/1000)}K</span>
+    </div>
+  `).join('');
+}
+
+function renderTradeHistorial() {
+  const el = document.getElementById('tradeHistorial');
+  if(!operaciones.length){
+    el.innerHTML='<div style="font-size:0.72rem;color:var(--texto3);text-align:center;padding:12px">Sin operaciones aún</div>';
+    return;
+  }
+  el.innerHTML = operaciones.slice().reverse().map(op=>`
+    <div class="trade-hist-item">
+      <span class="th-icon">${op.pnl>=0?'✅':'🔴'}</span>
+      <div class="th-body">
+        <div class="th-tipo">${op.side==='buy'?'▲ LONG':'▼ SHORT'} · ${op.cantidad} acc.</div>
+        <div class="th-meta">${op.tiempoEnt} → ${op.tiempoSal} · $${Math.round(op.entrada).toLocaleString('es-CL')} → $${Math.round(op.salida).toLocaleString('es-CL')}</div>
+      </div>
+      <div class="th-pnl ${op.pnl>=0?'pos':'neg'}">${op.pnl>=0?'+':''}$${Math.abs(op.pnl).toLocaleString('es-CL')}</div>
+    </div>
+  `).join('');
+}
+
+function actualizarResultadoSesion() {
+  const pnlTotal = operaciones.reduce((s,o)=>s+o.pnl,0);
+  const wins     = operaciones.filter(o=>o.pnl>0).length;
+  const wr       = operaciones.length>0?(wins/operaciones.length*100).toFixed(0):0;
+  const fmt      = v=>'$'+Math.abs(Math.round(v)).toLocaleString('es-CL');
+
+  const el = document.getElementById('resultadoSesion');
+  const clase = pnlTotal>0?'ganancia':pnlTotal<0?'perdida':'neutro';
+  el.innerHTML = `
+    <div class="resultado-card ${clase} fade-in">
+      <div class="res-pnl" style="color:${pnlTotal>=0?'var(--verde)':'var(--rojo)'}">
+        ${pnlTotal>=0?'+':'−'}${fmt(pnlTotal)}
+      </div>
+      <div class="res-row"><span class="res-k">Trades</span><span class="res-v">${operaciones.length}</span></div>
+      <div class="res-row"><span class="res-k">Win Rate</span><span class="res-v">${wr}%</span></div>
+      <div class="res-row"><span class="res-k">Mejor trade</span><span class="res-v" style="color:var(--verde)">+${fmt(Math.max(0,...operaciones.map(o=>o.pnl)))}</span></div>
+      <div class="res-row"><span class="res-k">Peor trade</span><span class="res-v" style="color:var(--rojo)">−${fmt(Math.abs(Math.min(0,...operaciones.map(o=>o.pnl))))}</span></div>
+    </div>
+  `;
+}
+
+// ══════════════════════════════════════════════════════════════
+// FINALIZAR REPLAY
+// ══════════════════════════════════════════════════════════════
+function finalizarReplay() {
+  // Cerrar posición abierta automáticamente
+  if(posicion) cerrarPosicion();
+
+  const last    = ticks[ticks.length-1];
+  const first   = ticks[0];
+  const retDia  = ((last.close-first.open)/first.open*100);
+  const pnlTotal= operaciones.reduce((s,o)=>s+o.pnl,0);
+  const wins    = operaciones.filter(o=>o.pnl>0).length;
+  const wr      = operaciones.length>0?(wins/operaciones.length*100).toFixed(0):0;
+  const fmt     = v=>'$'+Math.round(v).toLocaleString('es-CL');
+
+  // Revelar stats del día
+  document.getElementById('statClose').textContent = fmt(last.close);
+  document.getElementById('statHigh').textContent  = fmt(Math.max(...ticks.map(t=>t.high)));
+  document.getElementById('statLow').textContent   = fmt(Math.min(...ticks.map(t=>t.low)));
+  const retEl = document.getElementById('statRet');
+  retEl.textContent = (retDia>=0?'+':'')+retDia.toFixed(2)+'%';
+  retEl.style.color = retDia>=0?'var(--verde)':'var(--rojo)';
+
+  // Deshabilitar botones
+  document.getElementById('btnBuy').disabled  = true;
+  document.getElementById('btnSell').disabled = true;
+
+  // Lecciones
+  const lecciones = [];
+  if(operaciones.length===0) lecciones.push('No ejecutaste ninguna operación. La paciencia también es disciplina — a veces el mejor trade es no operar.');
+  if(pnlTotal>0) lecciones.push(`Ganaste ${fmt(pnlTotal)}. Analiza qué señales usaste para que puedas repetirlas.`);
+  if(pnlTotal<0) lecciones.push(`Perdiste ${fmt(Math.abs(pnlTotal))}. Identifica en qué momento entraste contra la tendencia.`);
+  if(retDia<-1) lecciones.push(`El mercado cayó ${Math.abs(retDia).toFixed(1)}% este día. ¿Operaste en corto o esperaste?`);
+  if(wins>0&&wins===operaciones.length) lecciones.push('100% de trades ganadores. Excelente lectura del mercado.');
+  lecciones.push('Repite este día hasta poder predecir los movimientos clave antes de que ocurran.');
+
+  // Modal resultado
+  const emoji = pnlTotal>0?'🎯':pnlTotal<0?'📉':'📊';
+  const titulo = pnlTotal>0?'¡Sesión positiva!':pnlTotal<0?'Sesión negativa':'Sesión neutral';
+  document.getElementById('rmEmoji').textContent  = emoji;
+  document.getElementById('rmTitulo').textContent = titulo;
+  document.getElementById('rmSub').textContent    = `${activoActual.nombre} · ${fechaActual} · Retorno del día: ${retDia>=0?'+':''}${retDia.toFixed(2)}%`;
+  document.getElementById('rmStats').innerHTML = `
+    <div class="rm-stat">
+      <div class="rm-stat-val" style="color:${pnlTotal>=0?'var(--verde)':'var(--rojo)'}">
+        ${pnlTotal>=0?'+':'−'}${fmt(Math.abs(pnlTotal))}
+      </div>
+      <div class="rm-stat-label">P&L Total</div>
+    </div>
+    <div class="rm-stat">
+      <div class="rm-stat-val">${operaciones.length}</div>
+      <div class="rm-stat-label">Trades</div>
+    </div>
+    <div class="rm-stat">
+      <div class="rm-stat-val">${wr}%</div>
+      <div class="rm-stat-label">Win Rate</div>
+    </div>
+  `;
+  document.getElementById('rmLecciones').innerHTML = `
+    <div class="rm-lec-title">💡 Lecciones de esta sesión</div>
+    ${lecciones.map(l=>`<div class="rm-lec-item">· ${l}</div>`).join('')}
+  `;
+  document.getElementById('resultadoOverlay').classList.add('visible');
+}
+
+function cerrarResultado() {
+  document.getElementById('resultadoOverlay').classList.remove('visible');
+  resetReplay();
+}
+
+// ══════════════════════════════════════════════════════════════
+// SELECTOR DE ACTIVO
+// ══════════════════════════════════════════════════════════════
+function selActivo(nombre, sym, precioBase) {
+  activoActual = { nombre, sym, precioBase };
+  document.querySelectorAll('.activo-btn').forEach(b=>b.classList.remove('active'));
+  event.currentTarget.classList.add('active');
+  renderFechas();
+}
+
+// ══════════════════════════════════════════════════════════════
+// RESIZE
+// ══════════════════════════════════════════════════════════════
+window.addEventListener('resize', dibujarCanvas);
+
+// ══════════════════════════════════════════════════════════════
+// INIT
+// ══════════════════════════════════════════════════════════════
+window.addEventListener('DOMContentLoaded', () => {
+  renderFechas();
+});
+</script>
+</body>
+</html>
