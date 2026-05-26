@@ -2463,8 +2463,202 @@ if (document.readyState !== 'loading') setTimeout(cargarNoticias, 1000);
 setInterval(cargarNoticias, 300_000);
 </script>
 
+<!-- ── CALENDARIO ECONÓMICO — ÍTEM 34 ────────────────────────
+     Eventos macro chilenos y globales con impacto esperado.
+     Sin servidor — datos estáticos actualizados mensualmente.
+-->
+<div style="padding:0 24px 24px;max-width:1400px;margin:0 auto;">
+  <div class="cal-panel fade-in">
+    <div class="cal-header">
+      <div class="cal-title">🗓️ Calendario Económico</div>
+      <div class="cal-meta">
+        <span id="calMes" style="font-family:var(--mono);font-size:0.72rem;color:var(--texto2)"></span>
+        <div class="cal-nav">
+          <button onclick="cambiarSemana(-1)" style="background:transparent;border:1px solid var(--linea2);color:var(--texto2);width:26px;height:26px;border-radius:5px;cursor:pointer;font-size:0.82rem">‹</button>
+          <button onclick="cambiarSemana(0)"  style="background:transparent;border:1px solid var(--linea2);color:var(--texto2);padding:0 10px;height:26px;border-radius:5px;cursor:pointer;font-size:0.72rem">Hoy</button>
+          <button onclick="cambiarSemana(+1)" style="background:transparent;border:1px solid var(--linea2);color:var(--texto2);width:26px;height:26px;border-radius:5px;cursor:pointer;font-size:0.82rem">›</button>
+        </div>
+      </div>
+    </div>
+    <div class="cal-legend">
+      <span class="cal-dot" style="background:#ff3d57"></span><span>Alto impacto</span>
+      <span class="cal-dot" style="background:#f5c518;margin-left:12px"></span><span>Medio impacto</span>
+      <span class="cal-dot" style="background:#4a9eff;margin-left:12px"></span><span>Bajo impacto</span>
+      <span style="margin-left:auto;font-size:0.68rem;color:var(--texto3)">CL = Chile · US = EE.UU. · CN = China</span>
+    </div>
+    <div class="cal-body" id="calBody"></div>
+  </div>
+</div>
 
-  <strong style="color:#8a9bb0">⚠️ Aviso Legal:</strong> InvertirCL es una plataforma de <strong style="color:#8a9bb0">educación financiera y simulación</strong>. No constituye asesoría de inversión ni está regulada por la CMF. Los resultados de simulación no garantizan rendimientos futuros. El usuario es el único responsable de sus decisiones de inversión con dinero real. ·
+<style>
+.cal-panel{background:var(--bg2);border:1px solid var(--linea);border-radius:14px;overflow:hidden;}
+.cal-header{padding:14px 20px;border-bottom:1px solid var(--linea);display:flex;align-items:center;justify-content:space-between;}
+.cal-title{font-family:var(--display);font-size:0.95rem;font-weight:700;display:flex;align-items:center;gap:8px;}
+.cal-meta{display:flex;align-items:center;gap:10px;}
+.cal-nav{display:flex;gap:4px;}
+.cal-legend{padding:8px 20px;border-bottom:1px solid var(--linea);display:flex;align-items:center;gap:6px;font-size:0.7rem;color:var(--texto2);}
+.cal-dot{display:inline-block;width:8px;height:8px;border-radius:50%;}
+.cal-body{display:flex;flex-direction:column;}
+.cal-day{border-bottom:1px solid var(--linea);}
+.cal-day-header{padding:8px 20px;background:var(--bg3);font-size:0.72rem;font-weight:600;color:var(--texto2);display:flex;align-items:center;gap:8px;}
+.cal-day-hoy{color:var(--verde);}
+.cal-evento{display:grid;grid-template-columns:90px 24px 1fr auto auto;align-items:center;gap:12px;padding:10px 20px;border-top:1px solid rgba(255,255,255,0.03);transition:background 0.15s;}
+.cal-evento:hover{background:rgba(255,255,255,0.02);}
+.cal-hora{font-family:var(--mono);font-size:0.72rem;color:var(--texto3);}
+.cal-pais{font-size:0.72rem;font-weight:600;font-family:var(--mono);}
+.cal-nombre{font-size:0.82rem;}
+.cal-prev{font-family:var(--mono);font-size:0.72rem;color:var(--texto3);text-align:right;}
+.cal-impacto{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+.cal-empty{padding:24px;text-align:center;color:var(--texto3);font-size:0.78rem;}
+.cal-pasado{opacity:0.45;}
+.cal-hoy-badge{background:rgba(0,230,118,0.1);color:var(--verde);border:1px solid rgba(0,230,118,0.2);font-size:0.6rem;padding:1px 6px;border-radius:3px;}
+</style>
+
+<script>
+// ── BASE DE DATOS DE EVENTOS MACRO ────────────────────────────
+// Eventos recurrentes del calendario económico chileno y global.
+// Se generan dinámicamente para las próximas 4 semanas.
+const EVENTOS_CALENDARIO = [
+  // Chile
+  { id:'cl_ipc',     nombre:'IPC Chile',                    pais:'CL', hora:'09:00', impacto:'alto',  descripcion:'Índice de Precios al Consumidor — INE', previo:'0.4%',  dia_mes:9,  periodicidad:'mensual' },
+  { id:'cl_desemp',  nombre:'Tasa de Desempleo Chile',       pais:'CL', hora:'09:00', impacto:'medio', descripcion:'Encuesta Nacional de Empleo — INE',     previo:'8.8%',  dia_mes:28, periodicidad:'mensual' },
+  { id:'cl_pib',     nombre:'PIB Chile',                     pais:'CL', hora:'09:00', impacto:'alto',  descripcion:'Imacec mensual — Banco Central',        previo:'+1.2%', dia_mes:4,  periodicidad:'mensual' },
+  { id:'cl_bcentral',nombre:'Reunión Banco Central Chile',   pais:'CL', hora:'18:00', impacto:'alto',  descripcion:'Decisión de política monetaria — TPM',  previo:'5.0%',  dia_mes:16, periodicidad:'6semanas' },
+  { id:'cl_balanza', nombre:'Balanza Comercial Chile',        pais:'CL', hora:'10:00', impacto:'bajo',  descripcion:'Exportaciones e importaciones — Aduanas', previo:'+$1.2B',dia_mes:20,periodicidad:'mensual' },
+  // EE.UU.
+  { id:'us_fed',     nombre:'Decisión Fed — Tasas de interés', pais:'US', hora:'19:00', impacto:'alto',  descripcion:'Federal Open Market Committee (FOMC)', previo:'5.25%', dia_mes:null, periodicidad:'6semanas', proximas:[3,21] },
+  { id:'us_ipc',     nombre:'IPC EE.UU. (CPI)',               pais:'US', hora:'09:30', impacto:'alto',  descripcion:'Consumer Price Index — Bureau of Labor Statistics', previo:'3.2%', dia_mes:12, periodicidad:'mensual' },
+  { id:'us_nfp',     nombre:'Nóminas no agrícolas EE.UU.',    pais:'US', hora:'09:30', impacto:'alto',  descripcion:'Non-Farm Payrolls — primer viernes de mes', previo:'+187K', dia_mes:null, periodicidad:'primer_viernes' },
+  { id:'us_gdp',     nombre:'PIB EE.UU. (GDP)',               pais:'US', hora:'09:30', impacto:'medio', descripcion:'Gross Domestic Product — BEA trimestral', previo:'+2.9%', dia_mes:25, periodicidad:'trimestral' },
+  { id:'us_pmi',     nombre:'PMI Manufacturero EE.UU.',       pais:'US', hora:'10:00', impacto:'bajo',  descripcion:'ISM Manufacturing Index', previo:'47.2', dia_mes:1, periodicidad:'mensual' },
+  // China
+  { id:'cn_pib',     nombre:'PIB China',                     pais:'CN', hora:'02:00', impacto:'alto',  descripcion:'GDP trimestral — National Bureau of Statistics', previo:'+5.2%', dia_mes:15, periodicidad:'trimestral' },
+  { id:'cn_pmi',     nombre:'PMI Manufacturero China',        pais:'CN', hora:'02:30', impacto:'medio', descripcion:'Caixin Manufacturing PMI — clave para el cobre', previo:'50.3', dia_mes:1, periodicidad:'mensual' },
+  { id:'cn_cobre',   nombre:'Inventarios Cobre LME',          pais:'LM', hora:'08:00', impacto:'medio', descripcion:'London Metal Exchange — inventarios semanales de cobre', previo:'175K t', dia_mes:null, periodicidad:'semanal_lunes' },
+];
+
+let _semanaOffset = 0;
+
+function _generarEventosSemana(offset) {
+  const hoy    = new Date();
+  const lunes  = new Date(hoy);
+  lunes.setDate(hoy.getDate() - hoy.getDay() + 1 + offset * 7);
+
+  const eventos = [];
+
+  for (let d = 0; d < 7; d++) {
+    const fecha = new Date(lunes);
+    fecha.setDate(lunes.getDate() + d);
+    const mes = fecha.getMonth() + 1;
+    const dia = fecha.getDate();
+    const dow = fecha.getDay(); // 0=dom, 1=lun...
+
+    EVENTOS_CALENDARIO.forEach(ev => {
+      let incluir = false;
+
+      if (ev.periodicidad === 'mensual' && ev.dia_mes === dia) incluir = true;
+      if (ev.periodicidad === 'semanal_lunes' && dow === 1) incluir = true;
+      if (ev.periodicidad === 'primer_viernes' && dow === 5 && dia <= 7) incluir = true;
+      if (ev.periodicidad === '6semanas' && ev.proximas) {
+        incluir = ev.proximas.includes(dia) && (dow >= 1 && dow <= 5);
+      }
+      if (ev.periodicidad === 'trimestral' && ev.dia_mes === dia && [1,4,7,10].includes(mes)) incluir = true;
+
+      if (incluir) {
+        eventos.push({ ...ev, fecha: new Date(fecha) });
+      }
+    });
+  }
+
+  return eventos.sort((a, b) => {
+    const da = a.fecha.getTime() + (parseInt(a.hora)*60 + parseInt(a.hora.split(':')[1]||0))*60000;
+    const db = b.fecha.getTime() + (parseInt(b.hora)*60 + parseInt(b.hora.split(':')[1]||0))*60000;
+    return da - db;
+  });
+}
+
+function _colorImpacto(impacto) {
+  return impacto === 'alto' ? '#ff3d57' : impacto === 'medio' ? '#f5c518' : '#4a9eff';
+}
+
+function _colorPais(pais) {
+  return pais === 'CL' ? 'var(--verde)' : pais === 'US' ? 'var(--azul)' : pais === 'CN' ? 'var(--rojo)' : 'var(--amarillo)';
+}
+
+function renderCalendario() {
+  const body = document.getElementById('calBody');
+  const mesEl = document.getElementById('calMes');
+  if (!body) return;
+
+  const hoy    = new Date();
+  const lunes  = new Date(hoy);
+  lunes.setDate(hoy.getDate() - hoy.getDay() + 1 + _semanaOffset * 7);
+  const viernes = new Date(lunes);
+  viernes.setDate(lunes.getDate() + 6);
+
+  if (mesEl) {
+    const optsL = { day:'numeric', month:'short' };
+    const optsV = { day:'numeric', month:'short', year:'numeric' };
+    mesEl.textContent = `${lunes.toLocaleDateString('es-CL', optsL)} — ${viernes.toLocaleDateString('es-CL', optsV)}`;
+  }
+
+  const eventos = _generarEventosSemana(_semanaOffset);
+
+  // Agrupar por día
+  const porDia = {};
+  eventos.forEach(ev => {
+    const key = ev.fecha.toDateString();
+    if (!porDia[key]) porDia[key] = { fecha: ev.fecha, eventos: [] };
+    porDia[key].eventos.push(ev);
+  });
+
+  if (!Object.keys(porDia).length) {
+    body.innerHTML = '<div class="cal-empty">Sin eventos económicos relevantes esta semana.</div>';
+    return;
+  }
+
+  const ahora = Date.now();
+
+  body.innerHTML = Object.values(porDia).map(({ fecha, eventos: evs }) => {
+    const esHoy = fecha.toDateString() === hoy.toDateString();
+    const diasSemana = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
+    const labelDia = `${diasSemana[fecha.getDay()]} ${fecha.getDate()} ${fecha.toLocaleDateString('es-CL',{month:'long'})}`;
+
+    return `<div class="cal-day">
+      <div class="cal-day-header ${esHoy?'cal-day-hoy':''}">
+        ${labelDia}
+        ${esHoy ? '<span class="cal-hoy-badge">HOY</span>' : ''}
+      </div>
+      ${evs.map(ev => {
+        const [h,m] = ev.hora.split(':').map(Number);
+        const tsEvento = new Date(fecha).setHours(h,m,0,0);
+        const pasado   = tsEvento < ahora && esHoy;
+        return `<div class="cal-evento ${pasado?'cal-pasado':''}" title="${ev.descripcion}">
+          <span class="cal-hora">${ev.hora} ${ev.pais==='CL'?'':'(hora CL)'}</span>
+          <div class="cal-impacto" style="background:${_colorImpacto(ev.impacto)}"></div>
+          <div>
+            <div class="cal-nombre">${ev.nombre}</div>
+            <div style="font-size:0.68rem;color:var(--texto3)">${ev.descripcion}</div>
+          </div>
+          <span class="cal-pais" style="color:${_colorPais(ev.pais)}">${ev.pais}</span>
+          <span class="cal-prev" title="Dato anterior">${ev.previo}</span>
+        </div>`;
+      }).join('')}
+    </div>`;
+  }).join('');
+}
+
+function cambiarSemana(delta) {
+  if (delta === 0) _semanaOffset = 0;
+  else _semanaOffset += delta;
+  renderCalendario();
+}
+
+document.addEventListener('DOMContentLoaded', () => setTimeout(renderCalendario, 800));
+if (document.readyState !== 'loading') setTimeout(renderCalendario, 800);
+</script>
+
+ InvertirCL es una plataforma de <strong style="color:#8a9bb0">educación financiera y simulación</strong>. No constituye asesoría de inversión ni está regulada por la CMF. Los resultados de simulación no garantizan rendimientos futuros. El usuario es el único responsable de sus decisiones de inversión con dinero real. ·
   <a href="legal.html" style="color:#4a5568;text-decoration:underline">Términos</a> ·
   <a href="legal.html" style="color:#4a5568;text-decoration:underline">Privacidad</a> ·
   <a href="legal.html" style="color:#4a5568;text-decoration:underline">Disclaimer</a>
