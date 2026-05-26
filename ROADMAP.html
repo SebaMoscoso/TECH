@@ -1071,9 +1071,9 @@ async function loadState() {
   _setStatus('⟳ Cargando...', '#4a9eff');
   try {
     const res  = await fetch(BIN_URL + '/latest', { headers: HEADERS });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
     const data = await res.json();
     const state = data?.record?.checks || {};
-
     document.querySelectorAll('.item-check').forEach((el, i) => {
       const isDone = state[i] === true;
       el.classList.toggle('done', isDone);
@@ -1081,7 +1081,7 @@ async function loadState() {
     });
     _setStatus('✓ Sincronizado', '#00e676');
   } catch(e) {
-    // Fallback a localStorage si JSONBin falla
+    console.error('[ROADMAP] loadState:', e.message);
     try {
       const state = JSON.parse(localStorage.getItem('invertircl_roadmap') || '{}');
       document.querySelectorAll('.item-check').forEach((el, i) => {
@@ -1091,7 +1091,7 @@ async function loadState() {
         }
       });
     } catch(_) {}
-    _setStatus('⚠ Sin conexión — modo local', '#f5c518');
+    _setStatus('⚠ ' + e.message, '#ff3d57');
   }
   updateProgress();
 }
@@ -1102,22 +1102,21 @@ function saveState() {
   document.querySelectorAll('.item-check').forEach((el, i) => {
     state[i] = el.classList.contains('done');
   });
-  // Guardar también en localStorage como fallback
   localStorage.setItem('invertircl_roadmap', JSON.stringify(state));
-
-  // Debounce — evitar múltiples requests seguidos
   clearTimeout(_syncTimeout);
   _setStatus('⟳ Guardando...', '#4a9eff');
   _syncTimeout = setTimeout(async () => {
     try {
-      await fetch(BIN_URL, {
+      const res = await fetch(BIN_URL, {
         method:  'PUT',
         headers: HEADERS,
         body:    JSON.stringify({ checks: state }),
       });
+      if (!res.ok) throw new Error('HTTP ' + res.status);
       _setStatus('✓ Guardado', '#00e676');
     } catch(e) {
-      _setStatus('⚠ Error al guardar', '#ff3d57');
+      console.error('[ROADMAP] saveState:', e.message);
+      _setStatus('⚠ ' + e.message, '#ff3d57');
     }
   }, 800);
 }
