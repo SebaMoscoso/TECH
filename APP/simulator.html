@@ -444,12 +444,15 @@ body { font-family: var(--sans); background: var(--bg); color: var(--texto); dis
   <div class="top-right">
     <div class="capital-badge">
       <span class="cap-label">Capital</span>
-      <span class="cap-val" id="capDisplay">$11.284.500</span>
+      <span class="cap-val" id="capDisplay">$10.000.000</span>
     </div>
     <div class="capital-badge">
       <span class="cap-label">P&L hoy</span>
-      <span class="cap-val pos" id="pnlDisplay">▲ +$284.500</span>
+      <span class="cap-val pos" id="pnlDisplay">▲ +$0</span>
     </div>
+    <button onclick="generarFactsheet()" title="Descargar Certificado de Trader PDF" style="background:rgba(74,158,255,0.1);border:1px solid rgba(74,158,255,0.3);color:var(--azul);padding:5px 12px;border-radius:6px;cursor:pointer;font-size:0.72rem;font-weight:600;display:flex;align-items:center;gap:4px">
+      📄 Factsheet
+    </button>
     <div class="hora" id="horaEl">09:31:42</div>
   </div>
 </div>
@@ -2055,7 +2058,252 @@ renderRightPanel = function(tab) {
 };
 </script>
 
-<!-- ── FOOTER DISCLAIMER LEGAL ── -->
+<!-- ── FACTSHEET PDF GENERATOR — ÍTEM 29 ─────────────────────
+     Genera un reporte profesional de la sesión de trading.
+     Usa window.print() con CSS @media print — sin librería externa.
+     El usuario imprime a PDF desde el diálogo del navegador.
+-->
+<script>
+function generarFactsheet() {
+  const CAPITAL_INI = 10_000_000;
+
+  // Recopilar datos
+  const tradesReales = trades.filter(t => !t.demo);
+  const cerrados     = tradesReales.filter(t => t.pnl !== null);
+  const disc         = Discipline.calcular();
+  const perf         = typeof Market !== 'undefined' && Market.Performance
+    ? Market.Performance.calcular(cerrados, CAPITAL_INI)
+    : null;
+
+  const wins    = cerrados.filter(t => t.pnl > 0);
+  const losses  = cerrados.filter(t => t.pnl <= 0);
+  const pnlTotal = cerrados.reduce((a,t) => a + (t.pnl||0), 0);
+  const retorno  = (pnlTotal / CAPITAL_INI * 100).toFixed(2);
+  const wr       = cerrados.length > 0 ? (wins.length/cerrados.length*100).toFixed(1) : '0.0';
+  const gW       = wins.reduce((a,t)=>a+t.pnl,0);
+  const gL       = Math.abs(losses.reduce((a,t)=>a+(t.pnl||0),0));
+  const pf       = gL > 0 ? (gW/gL).toFixed(2) : '∞';
+  const avgWin   = wins.length > 0   ? Math.round(gW/wins.length)   : 0;
+  const avgLoss  = losses.length > 0 ? Math.round(gL/losses.length) : 0;
+  const best     = cerrados.length > 0 ? Math.max(...cerrados.map(t=>t.pnl||0)) : 0;
+  const worst    = cerrados.length > 0 ? Math.min(...cerrados.map(t=>t.pnl||0)) : 0;
+
+  const sharpe   = perf?.sharpe ?? '—';
+  const sortino  = perf?.sortino ?? '—';
+  const maxDD    = perf?.maxDrawdown?.toFixed(1) ?? '—';
+
+  const fecha = new Date().toLocaleDateString('es-CL', { day:'numeric', month:'long', year:'numeric' });
+  const colorScore = disc.color || '#00e676';
+  const colorRet   = pnlTotal >= 0 ? '#00e676' : '#ff3d57';
+
+  // Top 5 trades
+  const top5 = [...cerrados]
+    .sort((a,b) => (b.pnl||0) - (a.pnl||0))
+    .slice(0,5);
+
+  // Análisis del diario
+  const conJournal = tradesReales.filter(t => t.journal?.entrada);
+  const fomos      = conJournal.filter(t => {
+    const txt = (t.journal.entrada||'').toLowerCase();
+    return ['creo','feeling','parece','intuición','todos','urgente'].some(w=>txt.includes(w));
+  }).length;
+  const tecnicos = conJournal.filter(t => {
+    const txt = (t.journal.entrada||'').toLowerCase();
+    return ['rsi','ema','soporte','volumen','macd','bollinger','tendencia'].some(w=>txt.includes(w));
+  }).length;
+
+  const html = `<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>InvertirCL — Factsheet · ${fecha}</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@400&display=swap');
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:'DM Sans',sans-serif;background:#fff;color:#1a1a2e;font-size:11pt;line-height:1.5;}
+  .page{max-width:800px;margin:0 auto;padding:32px;}
+
+  /* Header */
+  .header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:28px;padding-bottom:16px;border-bottom:3px solid #07090d;}
+  .logo{font-family:'Syne',sans-serif;font-size:22pt;font-weight:800;color:#07090d;}
+  .logo span{color:#00e676;}
+  .header-meta{text-align:right;font-size:9pt;color:#666;}
+  .header-meta .fecha{font-weight:600;color:#1a1a2e;}
+
+  /* Score central */
+  .score-hero{text-align:center;background:#07090d;color:#fff;border-radius:12px;padding:24px;margin-bottom:24px;}
+  .score-num{font-family:'Syne',sans-serif;font-size:48pt;font-weight:800;color:${colorScore};line-height:1;}
+  .score-label{font-size:10pt;color:#8a9bb0;text-transform:uppercase;letter-spacing:0.1em;margin-top:4px;}
+  .score-nivel{font-size:14pt;font-weight:500;margin-top:8px;color:${colorScore};}
+
+  /* Grid métricas */
+  .grid{display:grid;gap:12px;margin-bottom:20px;}
+  .grid-2{grid-template-columns:1fr 1fr;}
+  .grid-3{grid-template-columns:1fr 1fr 1fr;}
+  .metric-card{background:#f8f9fa;border-radius:8px;padding:14px 16px;border:1px solid #e9ecef;}
+  .metric-label{font-size:8pt;text-transform:uppercase;letter-spacing:0.08em;color:#666;margin-bottom:4px;}
+  .metric-val{font-family:'DM Mono',monospace;font-size:16pt;font-weight:500;}
+  .metric-sub{font-size:8pt;color:#888;margin-top:2px;}
+  .pos{color:#00c853;} .neg{color:#ff3d57;}
+
+  /* Sección */
+  .section-title{font-family:'Syne',sans-serif;font-size:11pt;font-weight:700;color:#07090d;margin:20px 0 10px;padding-bottom:6px;border-bottom:1px solid #e9ecef;text-transform:uppercase;letter-spacing:0.05em;}
+
+  /* Tabla trades */
+  table{width:100%;border-collapse:collapse;font-size:9pt;}
+  th{background:#07090d;color:#fff;padding:6px 10px;text-align:left;font-weight:500;}
+  td{padding:5px 10px;border-bottom:1px solid #e9ecef;}
+  tr:nth-child(even) td{background:#f8f9fa;}
+
+  /* Diario */
+  .diario-bar{height:8px;background:#e9ecef;border-radius:4px;overflow:hidden;margin:4px 0;}
+  .diario-fill{height:100%;border-radius:4px;}
+
+  /* Footer */
+  .footer{margin-top:28px;padding-top:14px;border-top:1px solid #e9ecef;font-size:8pt;color:#888;text-align:center;}
+
+  @media print {
+    body{-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+    .page{padding:16px;}
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <!-- HEADER -->
+  <div class="header">
+    <div>
+      <div class="logo">Invertir<span>CL</span></div>
+      <div style="font-size:9pt;color:#666;margin-top:2px">Plataforma de simulación educativa</div>
+    </div>
+    <div class="header-meta">
+      <div class="fecha">Reporte de Sesión</div>
+      <div>${fecha}</div>
+      <div style="margin-top:4px;color:#00c853;font-weight:600">✓ Certificado de Trader</div>
+    </div>
+  </div>
+
+  <!-- SCORE HERO -->
+  <div class="score-hero">
+    <div class="score-num">${disc.score}</div>
+    <div class="score-label">Score de Disciplina Institucional</div>
+    <div class="score-nivel">${disc.emoji} ${disc.nivel}</div>
+    <div style="font-size:9pt;color:#8a9bb0;margin-top:8px">${disc.resumen}</div>
+  </div>
+
+  <!-- MÉTRICAS PRINCIPALES -->
+  <div class="section-title">Performance de la sesión</div>
+  <div class="grid grid-3">
+    <div class="metric-card">
+      <div class="metric-label">Retorno total</div>
+      <div class="metric-val ${pnlTotal>=0?'pos':'neg'}">${pnlTotal>=0?'+':''}${retorno}%</div>
+      <div class="metric-sub">${pnlTotal>=0?'+':''}$${pnlTotal.toLocaleString('es-CL')}</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-label">Win Rate</div>
+      <div class="metric-val">${wr}%</div>
+      <div class="metric-sub">${wins.length}W / ${losses.length}L / ${cerrados.length} trades</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-label">Profit Factor</div>
+      <div class="metric-val ${parseFloat(pf)>=1.5?'pos':'neg'}">${pf}</div>
+      <div class="metric-sub">&gt;1.5 = bueno</div>
+    </div>
+  </div>
+
+  <div class="grid grid-3" style="margin-top:0">
+    <div class="metric-card">
+      <div class="metric-label">Sharpe Ratio</div>
+      <div class="metric-val">${sharpe}</div>
+      <div class="metric-sub">&gt;1 = bueno</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-label">Max Drawdown</div>
+      <div class="metric-val neg">-${maxDD}%</div>
+      <div class="metric-sub">caída máx. del capital</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-label">Capital final</div>
+      <div class="metric-val ${pnlTotal>=0?'pos':'neg'}">$${(capital/1e6).toFixed(2)}M</div>
+      <div class="metric-sub">inicio: $${(CAPITAL_INI/1e6).toFixed(0)}M</div>
+    </div>
+  </div>
+
+  <!-- TOP 5 TRADES -->
+  ${top5.length > 0 ? `
+  <div class="section-title">Top 5 trades</div>
+  <table>
+    <thead><tr><th>Acción</th><th>Tipo</th><th>Cantidad</th><th>Entrada</th><th>P&L</th><th>Razón</th></tr></thead>
+    <tbody>
+      ${top5.map(t => `<tr>
+        <td><strong>${t.sym}</strong></td>
+        <td>${t.tipo.toUpperCase()}</td>
+        <td>${(t.cant||0).toLocaleString('es-CL')}</td>
+        <td>$${(t.precio||0).toLocaleString('es-CL')}</td>
+        <td class="${(t.pnl||0)>=0?'pos':'neg'}">${(t.pnl||0)>=0?'+':''}$${Math.abs(t.pnl||0).toLocaleString('es-CL')}</td>
+        <td style="color:#666;font-size:8pt">${t.journal?.entrada?.slice(0,40)||'—'}${(t.journal?.entrada?.length||0)>40?'...':''}</td>
+      </tr>`).join('')}
+    </tbody>
+  </table>` : '<div style="color:#888;font-size:9pt;text-align:center;padding:12px">Sin trades cerrados en esta sesión</div>'}
+
+  <!-- ANÁLISIS DE DISCIPLINA -->
+  <div class="section-title">Análisis de disciplina</div>
+  <div class="grid grid-2">
+    <div class="metric-card">
+      <div class="metric-label">Penalizaciones recibidas</div>
+      <div class="metric-val neg">${disc.penalizaciones||0}</div>
+      <div class="metric-sub">${disc.recomendaciones?.slice(0,2).join(' · ')||'Sin penalizaciones'}</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-label">Promedio por trade</div>
+      <div class="metric-val">
+        <span class="pos">$${avgWin.toLocaleString('es-CL')}</span>
+        <span style="font-size:10pt;color:#888"> / </span>
+        <span class="neg">-$${avgLoss.toLocaleString('es-CL')}</span>
+      </div>
+      <div class="metric-sub">Win promedio / Loss promedio</div>
+    </div>
+  </div>
+
+  <!-- DIARIO DE TRADING -->
+  ${conJournal.length > 0 ? `
+  <div class="section-title">Análisis del diario de trading</div>
+  <div class="metric-card">
+    <div style="display:flex;gap:24px;margin-bottom:10px">
+      <div><strong style="color:#00c853">${tecnicos}</strong> <span style="font-size:9pt;color:#666">técnicos</span></div>
+      <div><strong style="color:#f5c518">${fomos}</strong> <span style="font-size:9pt;color:#666">FOMO</span></div>
+      <div><strong style="color:#ff3d57">${conJournal.length-tecnicos-fomos}</strong> <span style="font-size:9pt;color:#666">sin clasificar</span></div>
+    </div>
+    <div class="diario-bar">
+      <div class="diario-fill" style="width:${conJournal.length>0?Math.round(tecnicos/conJournal.length*100):0}%;background:#00c853"></div>
+    </div>
+    <div style="font-size:8pt;color:#888;margin-top:4px">${conJournal.length>0?Math.round(tecnicos/conJournal.length*100):0}% de entradas técnicas sobre ${conJournal.length} registradas</div>
+  </div>` : ''}
+
+  <!-- FOOTER -->
+  <div class="footer">
+    <strong>InvertirCL</strong> · Plataforma educativa de simulación · Este reporte no constituye asesoría financiera ni garantiza rendimientos futuros.<br>
+    Generado el ${fecha} · Datos simulados con capital ficticio de $10.000.000 CLP
+  </div>
+
+</div>
+</body>
+</html>`;
+
+  // Abrir en ventana nueva y disparar print
+  const win = window.open('', '_blank', 'width=900,height=700');
+  win.document.write(html);
+  win.document.close();
+  win.onload = () => {
+    setTimeout(() => {
+      win.print();
+    }, 500);
+  };
+}
+</script>
+
+
 <div style="background:#0d1117;border-top:1px solid rgba(255,255,255,0.06);padding:16px 32px;font-size:0.72rem;color:#4a5568;line-height:1.6;text-align:center;flex-shrink:0;">
   <strong style="color:#8a9bb0">⚠️ Aviso Legal:</strong> InvertirCL es una plataforma de <strong style="color:#8a9bb0">educación financiera y simulación</strong>. No constituye asesoría de inversión ni está regulada por la CMF. Los resultados de simulación no garantizan rendimientos futuros. El usuario es el único responsable de sus decisiones de inversión con dinero real. ·
   <a href="legal.html" style="color:#4a5568;text-decoration:underline">Términos</a> ·
