@@ -677,6 +677,7 @@ body { font-family: var(--sans); background: var(--bg); color: var(--texto); dis
     <div class="rtab active" onclick="switchTab('historial')">Historial</div>
     <div class="rtab" onclick="switchTab('posiciones')">Posiciones</div>
     <div class="rtab" onclick="switchTab('estadisticas')">Stats</div>
+    <div class="rtab" onclick="switchTab('disciplina')" title="Score de Disciplina Institucional">🎯</div>
     <div class="rtab" onclick="switchTab('imbalance')" title="Order Imbalance — Presión compradora/vendedora">⚖️</div>
   </div>
 
@@ -744,13 +745,295 @@ const acciones = [
 
 let accionSel = acciones[0];
 let accion = 'comprar'; // comprar o vender
-let capital = 11284500;
-let trades = [];
-let posiciones = [
-  { sym:'COPEC',  qty:100, entry:8183, current:8420 },
-  { sym:'SQM-B',  qty:50,  entry:38960, current:38200 },
-  { sym:'BCI',    qty:30,  entry:28100, current:28500 },
+
+// ── ESTADO PERSISTENTE — localStorage ───────────────────────
+const STORAGE_KEY    = 'invertircl_simulator_v1';
+const CAPITAL_INICIAL = 10_000_000;
+
+const TRADES_DEMO = [
+  { sym:'SQM-B',  tipo:'compra', cant:50,  precio:38960, hora:'09:32', pnl:-38000, stop:38200, tp:40000, demo:true },
+  { sym:'COPEC',  tipo:'compra', cant:100, precio:8183,  hora:'09:35', pnl:+23700, stop:8000,  tp:8600,  demo:true },
+  { sym:'BCI',    tipo:'compra', cant:30,  precio:28100, hora:'10:12', pnl:+12000, stop:27500, tp:29000, demo:true },
+  { sym:'ENTEL',  tipo:'venta',  cant:200, precio:4180,  hora:'11:04', pnl:+8400,  stop:4300,  tp:3900,  demo:true },
+  { sym:'CMPC',   tipo:'compra', cant:500, precio:1920,  hora:'11:47', pnl:-11000, stop:1880,  tp:2050,  demo:true },
 ];
+
+function _cargarEstado() {
+  try { const r = localStorage.getItem(STORAGE_KEY); return r ? JSON.parse(r) : null; } catch(e) { return null; }
+}
+function _guardarEstado() {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify({ capital, trades, posiciones, timestamp: Date.now() })); } catch(e) {}
+}
+function resetearSimulador() {
+  if (!confirm('¿Reiniciar simulador? Se borrarán todos tus trades y volverás a $10.000.000 de capital inicial.')) return;
+  localStorage.removeItem(STORAGE_KEY);
+  capital = CAPITAL_INICIAL; trades = []; posiciones = [];
+  Discipline.reset(); AntiTilt.reset();
+  document.getElementById('capDisplay').textContent = `$${capital.toLocaleString('es-CL')}`;
+  renderRightPanel('historial');
+  showToast('🔄', 'Simulador reiniciado — capital inicial $10.000.000');
+}
+
+const _estadoGuardado = _cargarEstado();
+let capital    = _estadoGuardado?.capital    ?? CAPITAL_INICIAL;
+let trades     = _estadoGuardado?.trades     ?? [];
+let posiciones = _estadoGuardado?.posiciones ?? [
+  { sym:'COPEC', qty:100, entry:8183,  current:8420  },
+  { sym:'SQM-B', qty:50,  entry:38960, current:38200 },
+  { sym:'BCI',   qty:30,  entry:28100, current:28500 },
+];
+
+// ── DISCIPLINE SCORE ENGINE (portado de discipline.py) ───────
+const Discipline = (() => {
+  const CONFIG = {
+    capital_inicial:  10_000_000,
+    riesgo_max_pct:   2.0,
+    max_trades_hora:  3,
+    min_rr_ratio:     1.5,
+    ventana_revenge:  30,
+  };
+
+  let _trades     = [];
+  let _penalties  = [];
+  let _tradeMap   = {};
+
+  function _tradesUltimaHora(ts) {
+    const limit = new Date(ts).getTime() - 3600_000;
+    return _trades.filter(t => new Date(t.timestamp_entrada).getTime() > limit).length;
+  }
+
+  function _esRevenge(ts) {
+    const limit = new Date(ts).getTime() - CONFIG.ventana_revenge * 60_000;
+    const recientes = _trades.filter(t => t.pnl !== null && t.pnl < 0 && new Date(t.timestamp_cierre || t.timestamp_entrada).getTime() > limit);
+    return recientes.length > 0;
+  }
+
+  function _penalizar(cat, desc, pts, id) {
+    _penalties.push({ categoria:cat, descripcion:desc, puntos:pts, trade_id:id, ts:new Date().toISOString() });
+  }
+
+  function registrar(trade) {
+    const ts  = trade.timestamp || new Date().toISOString();
+    const riesgo  = trade.stop  ? Math.abs(trade.precio - trade.stop) * trade.cant : 0;
+    const ganancia = trade.tp   ? Math.abs(trade.tp - trade.precio) * trade.cant   : 0;
+    const rr      = riesgo > 0 && ganancia > 0 ? ganancia / riesgo : 0;
+    const riesgoPct = riesgo / CONFIG.capital_inicial * 100;
+
+    if (!trade.stop || trade.stop === 0)        _penalizar('stop_loss',   'Trade sin stop loss definido', -15, trade.id);
+    if (rr > 0 && rr < CONFIG.min_rr_ratio)     _penalizar('rr_ratio',   `R/R ratio bajo (${rr.toFixed(1)}:1)`, -8, trade.id);
+    if (riesgoPct > CONFIG.riesgo_max_pct)       _penalizar('sizing',     `Riesgo por trade (${riesgoPct.toFixed(1)}%) supera máximo`, -10, trade.id);
+    if (_tradesUltimaHora(ts) >= CONFIG.max_trades_hora) _penalizar('overtrading', `Overtrading detectado`, -12, trade.id);
+    if (_esRevenge(ts))                          _penalizar('revenge',    'Revenge trading detectado', -20, trade.id);
+
+    const t = { ...trade, timestamp_entrada: ts, timestamp_cierre: null, pnl: null };
+    _trades.push(t);
+    _tradeMap[trade.id] = t;
+    return t;
+  }
+
+  function calcular() {
+    if (_trades.length === 0) return { score:100, nivel:'Sin trades', emoji:'⭐', color:'#8a9bb0', bloqueado:false, resumen:'Sin trades registrados.', recomendaciones:[] };
+
+    const n = _trades.length;
+    const totalPen = _penalties.filter(p => p.puntos < 0).reduce((a,p) => a + Math.abs(p.puntos), 0);
+    const totalBonus = _penalties.filter(p => p.puntos > 0).reduce((a,p) => a + p.puntos, 0);
+    const factor = Math.min(1.0, 1.0 + (n-1) * 0.02);
+    const raw = 100 - (totalPen / Math.max(n,1)) * factor + (totalBonus / Math.max(n,1));
+    const score = Math.max(0, Math.min(100, Math.round(raw * 10) / 10));
+
+    let nivel, emoji, color;
+    if (score >= 90)      { nivel='Institucional';  emoji='⭐'; color='#00e676'; }
+    else if (score >= 70) { nivel='Disciplinado';   emoji='✅'; color='#4a9eff'; }
+    else if (score >= 50) { nivel='Aceptable';      emoji='⚠️'; color='#f5c518'; }
+    else if (score >= 30) { nivel='En riesgo';      emoji='🟡'; color='#ff6b35'; }
+    else                  { nivel='Mesa bloqueada'; emoji='🔴'; color='#ff3d57'; }
+
+    const bloqueado = score < 30;
+    const cerrados  = _trades.filter(t => t.pnl !== null);
+    const wins      = cerrados.filter(t => t.pnl > 0).length;
+    const wr        = cerrados.length > 0 ? Math.round(wins/cerrados.length*100) : 0;
+    const ultimasPen = _penalties.slice(-3).map(p => p.descripcion);
+
+    return { score, nivel, emoji, color, bloqueado, wr,
+      resumen: `${score}/100 — ${nivel} ${emoji}. ${n} trades, WR ${wr}%.`,
+      recomendaciones: ultimasPen,
+      penalizaciones: _penalties.filter(p=>p.puntos<0).length,
+    };
+  }
+
+  function reset() { _trades=[]; _penalties=[]; _tradeMap={}; }
+
+  return { registrar, calcular, reset };
+})();
+
+// ── ANTITILT ENGINE (portado completo de antitilt.py) ────────
+// 7 patrones de tilt — idéntica lógica al módulo Python
+const AntiTilt = (() => {
+  const CONFIG = {
+    capital_inicial:          10_000_000,
+    perdida_max_diaria_pct:   3.0,
+    rachas_perdidas_alerta:   3,
+    rachas_perdidas_bloqueo:  5,
+    multiplicador_tamanio:    1.5,
+    ventana_frecuencia_min:   30,
+    max_trades_ventana:       4,
+    minutos_descanso_minimo:  10,
+    bloqueo_duracion_min:     60,
+    horario_habitual:         { inicio: 9, fin: 17 },
+  };
+
+  let _bloqueadoHasta = null;
+  let _ultimoScore    = 0;
+  let _ultimosPatrones = [];
+
+  function _hoy() { return new Date().toDateString(); }
+
+  function _tradesHoy(trades) {
+    return trades.filter(t => new Date(t.timestamp || t.hora || Date.now()).toDateString() === _hoy());
+  }
+
+  function _rachaActual(trades) {
+    let racha = 0;
+    for (let i = trades.length - 1; i >= 0; i--) {
+      const t = trades[i];
+      if (t.pnl === null || t.pnl === undefined) continue;
+      if (t.pnl < 0) racha++;
+      else break;
+    }
+    return racha;
+  }
+
+  function _pnlHoy(trades) {
+    return _tradesHoy(trades)
+      .filter(t => t.pnl !== null && t.pnl !== undefined)
+      .reduce((a, t) => a + (t.pnl || 0), 0);
+  }
+
+  function _detectarEscalamiento(tradesHoy) {
+    if (tradesHoy.length < 2) return { detectado: false };
+    const cantidades = tradesHoy.map(t => t.cant || t.cantidad || 0).filter(c => c > 0);
+    if (cantidades.length < 2) return { detectado: false };
+    const promedio = cantidades.slice(0, -1).reduce((a,b) => a+b, 0) / (cantidades.length - 1);
+    const ultimo   = cantidades[cantidades.length - 1];
+    const factor   = promedio > 0 ? ultimo / promedio : 1;
+    const ultimoPnl = tradesHoy[tradesHoy.length - 2]?.pnl;
+    if (factor >= CONFIG.multiplicador_tamanio && ultimoPnl !== null && ultimoPnl < 0) {
+      return { detectado: true, factor: +factor.toFixed(2) };
+    }
+    return { detectado: false };
+  }
+
+  function _detectarFrecuenciaAnormal(tradesHoy) {
+    const ahora  = Date.now();
+    const limite = ahora - CONFIG.ventana_frecuencia_min * 60_000;
+    const enVentana = tradesHoy.filter(t => new Date(t.timestamp || Date.now()).getTime() > limite);
+    return enVentana.length > CONFIG.max_trades_ventana
+      ? { anormal: true, trades_ventana: enVentana.length }
+      : { anormal: false };
+  }
+
+  function _detectarSinDescanso(tradesHoy) {
+    const cerrados = tradesHoy.filter(t => t.pnl !== null && t.pnl < 0);
+    if (cerrados.length === 0) return { detectado: false };
+    const ultimaPerdida = cerrados[cerrados.length - 1];
+    const todos = tradesHoy;
+    const idxPerdida = todos.indexOf(ultimaPerdida);
+    if (idxPerdida < todos.length - 1) {
+      const siguiente = todos[idxPerdida + 1];
+      const tsPerdida = new Date(ultimaPerdida.timestamp || Date.now()).getTime();
+      const tsSig     = new Date(siguiente.timestamp || Date.now()).getTime();
+      const mins      = (tsSig - tsPerdida) / 60_000;
+      if (mins < CONFIG.minutos_descanso_minimo) {
+        return { detectado: true, minutos: +mins.toFixed(1) };
+      }
+    }
+    return { detectado: false };
+  }
+
+  function _detectarFueraHorario() {
+    const h = new Date().getHours();
+    return h < CONFIG.horario_habitual.inicio || h >= CONFIG.horario_habitual.fin;
+  }
+
+  function evaluar(trades) {
+    if (!trades || trades.length === 0) return { tilt: false, score: 0, patrones: [] };
+
+    const tradesHoy  = _tradesHoy(trades);
+    const patrones   = [];
+    let score        = 0;
+
+    // Patrón 1: Racha de pérdidas
+    const racha = _rachaActual(trades.filter(t => t.pnl !== null));
+    if (racha >= CONFIG.rachas_perdidas_bloqueo)    { patrones.push({ tipo:'racha_perdidas', severidad:3, desc:`${racha} pérdidas consecutivas — BLOQUEO` }); score += 40; }
+    else if (racha >= CONFIG.rachas_perdidas_alerta) { patrones.push({ tipo:'racha_perdidas', severidad:2, desc:`${racha} pérdidas consecutivas` }); score += 20; }
+
+    // Patrón 2: Pérdida diaria máxima
+    const pnlHoy = _pnlHoy(trades);
+    const perdidaPct = pnlHoy < 0 ? Math.abs(pnlHoy) / CONFIG.capital_inicial * 100 : 0;
+    if (perdidaPct >= CONFIG.perdida_max_diaria_pct)        { patrones.push({ tipo:'perdida_diaria', severidad:3, desc:`Pérdida diaria ${perdidaPct.toFixed(1)}% — supera límite` }); score += 35; }
+    else if (perdidaPct >= CONFIG.perdida_max_diaria_pct * 0.7) { patrones.push({ tipo:'perdida_diaria', severidad:2, desc:`Pérdida diaria ${perdidaPct.toFixed(1)}% — cerca del límite` }); score += 15; }
+
+    // Patrón 3: Escalamiento de posición
+    const esc = _detectarEscalamiento(tradesHoy);
+    if (esc.detectado) {
+      const sev = esc.factor > 2.0 ? 3 : 2;
+      patrones.push({ tipo:'escalamiento', severidad:sev, desc:`Posición ${esc.factor}x mayor al promedio tras pérdida` });
+      score += sev === 3 ? 25 : 15;
+    }
+
+    // Patrón 4: Overtrading
+    const freq = _detectarFrecuenciaAnormal(tradesHoy);
+    if (freq.anormal) { patrones.push({ tipo:'overtrading', severidad:2, desc:`${freq.trades_ventana} trades en ${CONFIG.ventana_frecuencia_min} min` }); score += 15; }
+
+    // Patrón 5: Sin descanso tras pérdida
+    const sinDesc = _detectarSinDescanso(tradesHoy);
+    if (sinDesc.detectado) { patrones.push({ tipo:'sin_descanso', severidad:2, desc:`Entró ${sinDesc.minutos} min después de una pérdida (mín: ${CONFIG.minutos_descanso_minimo} min)` }); score += 10; }
+
+    // Patrón 6: Fuera de horario
+    if (_detectarFueraHorario()) { patrones.push({ tipo:'horario_inusual', severidad:1, desc:`Operando fuera del horario habitual` }); score += 5; }
+
+    // Patrón 7: Pérdida sin stop (aproximación)
+    const sinStop = tradesHoy.filter(t => !t.stop || t.stop === 0).length;
+    if (sinStop > 0) { patrones.push({ tipo:'sin_stop', severidad:1, desc:`${sinStop} trade(s) sin stop loss` }); score += sinStop * 8; }
+
+    score = Math.min(100, score);
+    _ultimoScore    = score;
+    _ultimosPatrones = patrones;
+
+    const debeBloquear = score >= 60 || racha >= CONFIG.rachas_perdidas_bloqueo || perdidaPct >= CONFIG.perdida_max_diaria_pct;
+
+    if (debeBloquear && !_bloqueadoHasta) {
+      _bloqueadoHasta = new Date(Date.now() + CONFIG.bloqueo_duracion_min * 60_000);
+    }
+
+    const motivo = patrones.filter(p => p.severidad >= 2).map(p => p.desc).join(' + ') || '';
+
+    return {
+      tilt:          debeBloquear,
+      score,
+      patrones,
+      motivo,
+      bloqueadoHasta: _bloqueadoHasta,
+    };
+  }
+
+  function estaBloqueado() {
+    if (!_bloqueadoHasta) return false;
+    if (new Date() >= _bloqueadoHasta) { _bloqueadoHasta = null; return false; }
+    return true;
+  }
+
+  function tiempoRestante() {
+    if (!_bloqueadoHasta) return 0;
+    return Math.max(0, Math.ceil((_bloqueadoHasta - Date.now()) / 60_000));
+  }
+
+  function getScore()    { return _ultimoScore; }
+  function getPatrones() { return _ultimosPatrones; }
+  function reset()       { _bloqueadoHasta = null; _ultimoScore = 0; _ultimosPatrones = []; }
+
+  return { evaluar, estaBloqueado, tiempoRestante, getScore, getPatrones, reset };
+})();
 
 // ── VELAS ────────────────────────────────────────────────────
 let candleData = [];
@@ -986,20 +1269,46 @@ function ejecutarOrden() {
   const tp    = parseFloat(document.getElementById('tpInput').value);
   const isCompra = accion === 'comprar';
 
+  // ── CHECK ANTITILT — bloquear si hay tilt ───────────────────
+  if (AntiTilt.estaBloqueado()) {
+    const mins = AntiTilt.tiempoRestante();
+    showToast('🔴', `Mesa bloqueada por tilt emocional — ${mins} min restantes`);
+    _mostrarModalTilt(mins, 'Mesa ya bloqueada');
+    return;
+  }
+
   // Registrar trade
   const now = new Date();
   const hora = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
-  trades.unshift({
-    sym: accionSel.sym, tipo: isCompra?'compra':'venta',
-    cant, precio: accionSel.precio, stop, tp, hora,
-    pnl: null,
-  });
+  const tradeId = `t_${Date.now()}`;
+  const tradeData = {
+    id: tradeId, sym: accionSel.sym, tipo: isCompra?'compra':'venta',
+    cant, precio: accionSel.precio, stop, tp, hora, pnl: null,
+    timestamp: now.toISOString(),
+  };
+  trades.unshift(tradeData);
+
+  // ── DISCIPLINE SCORE ─────────────────────────────────────────
+  Discipline.registrar({ id: tradeId, symbol: accionSel.sym, side: isCompra?'buy':'sell',
+    precio: accionSel.precio, stop, tp: tp, cant, timestamp: now.toISOString() });
+
+  // ── ANTITILT — evaluar con historial completo ────────────────
+  const tiltResult = AntiTilt.evaluar(trades);
+  if (tiltResult.tilt) {
+    _mostrarModalTilt(AntiTilt.tiempoRestante(), tiltResult.motivo);
+  }
 
   // Actualizar capital
   if (isCompra) capital -= cant * accionSel.precio;
   else capital += cant * accionSel.precio;
 
   document.getElementById('capDisplay').textContent = `$${capital.toLocaleString('es-CL')}`;
+
+  // Persistir estado
+  _guardarEstado();
+
+  // Actualizar score badge en tiempo real
+  _actualizarScoreBadge();
 
   renderRightPanel('historial');
   showToast(isCompra ? '✅' : '⛔', `${isCompra?'Compra':'Venta'} de ${cant} ${accionSel.sym} ejecutada a $${accionSel.precio.toLocaleString('es-CL')}`);
@@ -1056,6 +1365,69 @@ function renderRightPanel(tab) {
         </div>
       </div>`;
     }).join('');
+
+  } else if (tab === 'disciplina') {
+    const r = Discipline.calcular();
+    const tiltScore = AntiTilt.getScore();
+    const bloqMins  = AntiTilt.tiempoRestante();
+    el.innerHTML = `
+      <div style="padding:16px;display:flex;flex-direction:column;gap:12px;">
+
+        <!-- Score principal -->
+        <div style="text-align:center;padding:20px;background:var(--bg3);border-radius:10px;border:1px solid ${r.color}33">
+          <div style="font-family:var(--display);font-size:2.8rem;font-weight:800;color:${r.color};line-height:1">${r.score}</div>
+          <div style="font-size:0.72rem;color:var(--texto3);text-transform:uppercase;letter-spacing:0.08em;margin-top:4px">Score de Disciplina</div>
+          <div style="font-size:0.9rem;margin-top:8px">${r.emoji} ${r.nivel}</div>
+        </div>
+
+        <!-- Barra de progreso -->
+        <div>
+          <div style="display:flex;justify-content:space-between;font-size:0.68rem;color:var(--texto3);margin-bottom:6px">
+            <span>0 — Mesa bloqueada</span><span>100 — Institucional</span>
+          </div>
+          <div style="height:8px;background:var(--bg3);border-radius:4px;overflow:hidden">
+            <div style="height:100%;width:${r.score}%;background:${r.color};border-radius:4px;transition:width 0.5s ease"></div>
+          </div>
+        </div>
+
+        <!-- Stats rápidos -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          <div style="background:var(--bg3);border-radius:8px;padding:10px;text-align:center">
+            <div style="font-family:var(--mono);font-size:1.1rem;font-weight:500">${r.wr || 0}%</div>
+            <div style="font-size:0.65rem;color:var(--texto3);text-transform:uppercase;margin-top:2px">Win Rate</div>
+          </div>
+          <div style="background:var(--bg3);border-radius:8px;padding:10px;text-align:center">
+            <div style="font-family:var(--mono);font-size:1.1rem;font-weight:500;color:var(--rojo)">${r.penalizaciones || 0}</div>
+            <div style="font-size:0.65rem;color:var(--texto3);text-transform:uppercase;margin-top:2px">Penalizaciones</div>
+          </div>
+        </div>
+
+        <!-- AntiTilt -->
+        <div style="background:var(--bg3);border-radius:8px;padding:12px;border:1px solid ${tiltScore>40?'rgba(255,61,87,0.3)':'var(--linea)'}">
+          <div style="font-size:0.72rem;text-transform:uppercase;letter-spacing:0.06em;color:var(--texto3);margin-bottom:8px">🧠 Anti-Tilt</div>
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+            <span style="font-size:0.82rem">Score de tilt</span>
+            <span style="font-family:var(--mono);color:${tiltScore>60?'var(--rojo)':tiltScore>30?'var(--amarillo)':'var(--verde)'}">${tiltScore}/100</span>
+          </div>
+          <div style="height:5px;background:var(--bg4);border-radius:3px;overflow:hidden">
+            <div style="height:100%;width:${tiltScore}%;background:${tiltScore>60?'var(--rojo)':tiltScore>30?'var(--amarillo)':'var(--verde)'};border-radius:3px"></div>
+          </div>
+          ${bloqMins > 0 ? `<div style="margin-top:8px;font-size:0.75rem;color:var(--rojo)">🔴 Mesa bloqueada — ${bloqMins} min restantes</div>` : ''}
+        </div>
+
+        <!-- Últimas penalizaciones -->
+        ${r.recomendaciones && r.recomendaciones.length > 0 ? `
+        <div style="background:rgba(255,61,87,0.05);border:1px solid rgba(255,61,87,0.15);border-radius:8px;padding:12px">
+          <div style="font-size:0.7rem;text-transform:uppercase;letter-spacing:0.06em;color:var(--rojo);margin-bottom:8px">⚠️ Últimas penalizaciones</div>
+          ${r.recomendaciones.map(rec => `<div style="font-size:0.75rem;color:var(--texto2);padding:3px 0;border-bottom:1px solid rgba(255,255,255,0.04)">• ${rec}</div>`).join('')}
+        </div>` : ''}
+
+        <!-- Resumen -->
+        <div style="font-size:0.75rem;color:var(--texto2);text-align:center;padding:8px;background:var(--bg3);border-radius:8px">
+          ${r.resumen}
+        </div>
+      </div>`;
+
   } else {
     el.innerHTML = `
       <div style="padding:16px">
@@ -1075,6 +1447,56 @@ function renderRightPanel(tab) {
 }
 
 // ── TOAST ────────────────────────────────────────────────────
+// ── MODAL ANTITILT ───────────────────────────────────────────
+function _mostrarModalTilt(mins, motivo) {
+  const existing = document.getElementById('modalTilt');
+  if (existing) existing.remove();
+  const modal = document.createElement('div');
+  modal.id = 'modalTilt';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:9999;display:flex;align-items:center;justify-content:center;';
+  modal.innerHTML = `
+    <div style="background:var(--bg2);border:1px solid rgba(255,61,87,0.4);border-radius:16px;padding:32px;max-width:380px;text-align:center">
+      <div style="font-size:2.5rem;margin-bottom:12px">🔴</div>
+      <div style="font-family:var(--display);font-size:1.3rem;font-weight:800;color:var(--rojo);margin-bottom:8px">Mesa Bloqueada</div>
+      <div style="font-size:0.85rem;color:var(--texto2);margin-bottom:16px;line-height:1.6">
+        El sistema detectó patrones de tilt emocional:<br>
+        <strong style="color:var(--texto)">${motivo || 'comportamiento de riesgo detectado'}</strong>
+      </div>
+      <div style="font-family:var(--mono);font-size:1.8rem;font-weight:700;color:var(--rojo);margin-bottom:16px" id="tiltCountdown">${mins}:00</div>
+      <div style="font-size:0.75rem;color:var(--texto3);margin-bottom:20px">Un Risk Manager real te habría bloqueado. Usa este tiempo para revisar tu plan.</div>
+      <button onclick="document.getElementById('modalTilt').remove()" style="background:var(--bg3);border:1px solid var(--linea);color:var(--texto2);padding:10px 24px;border-radius:8px;cursor:pointer;font-size:0.82rem">Entendido — Volver al análisis</button>
+    </div>`;
+  document.body.appendChild(modal);
+
+  // Countdown
+  let secs = mins * 60;
+  const interval = setInterval(() => {
+    secs--;
+    const m = Math.floor(secs/60), s = secs % 60;
+    const el = document.getElementById('tiltCountdown');
+    if (el) el.textContent = `${m}:${String(s).padStart(2,'0')}`;
+    if (secs <= 0) clearInterval(interval);
+  }, 1000);
+}
+
+// ── SCORE BADGE EN TIEMPO REAL ───────────────────────────────
+function _actualizarScoreBadge() {
+  const r = Discipline.calcular();
+  let badge = document.getElementById('disciplineBadge');
+  if (!badge) {
+    badge = document.createElement('div');
+    badge.id = 'disciplineBadge';
+    badge.style.cssText = 'position:fixed;top:16px;right:16px;z-index:999;cursor:pointer;';
+    badge.onclick = () => { switchTab('disciplina'); renderRightPanel('disciplina'); };
+    document.body.appendChild(badge);
+  }
+  badge.innerHTML = `<div style="background:var(--bg2);border:1px solid ${r.color}44;border-radius:8px;padding:6px 12px;display:flex;align-items:center;gap:8px;font-size:0.75rem;box-shadow:0 2px 12px rgba(0,0,0,0.4)">
+    <span style="font-size:1rem">${r.emoji}</span>
+    <span style="font-family:var(--mono);font-weight:600;color:${r.color}">${r.score}</span>
+    <span style="color:var(--texto3)">disciplina</span>
+  </div>`;
+}
+
 function showToast(icon, msg) {
   const t = document.getElementById('toast');
   document.getElementById('toastIcon').textContent = icon;
@@ -1182,6 +1604,15 @@ animarPrecio();
 document.getElementById('stopInput').value = Math.round(accionSel.precio * 0.975);
 document.getElementById('tpInput').value   = Math.round(accionSel.precio * 1.05);
 actualizarOrden();
+
+// Mostrar capital guardado y score inicial
+document.getElementById('capDisplay').textContent = `$${capital.toLocaleString('es-CL')}`;
+_actualizarScoreBadge();
+
+if (_estadoGuardado && trades.length > 0) {
+  const fecha = new Date(_estadoGuardado.timestamp).toLocaleDateString('es-CL');
+  showToast('💾', `Sesión restaurada — ${trades.length} trade${trades.length>1?'s':''} · ${fecha}`);
+}
 
 // ══════════════════════════════════════════════════════════════
 // ÍTEM 20 — ORDER IMBALANCE (Lee-Ready) + HISTORIAL

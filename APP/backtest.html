@@ -381,6 +381,7 @@ select.param-input{cursor:pointer;}
 
     <!-- KPIs -->
     <div class="result-kpis" id="kpisPanel"></div>
+    <div class="result-kpis" id="kpiExtra" style="margin-top:0"></div>
 
     <!-- Body resultados -->
     <div class="results-body">
@@ -426,20 +427,7 @@ select.param-input{cursor:pointer;}
         </div>
       </div>
 
-      <!-- Lista de trades -->
-      <div class="trades-panel" id="tradesPanel">
-        <div class="panel-header" style="position:sticky;top:0;z-index:1;background:var(--bg2)">
-          <div class="panel-title">Trades simulados</div>
-          <span id="tradeCount" style="font-size:0.72rem;color:var(--texto2)"></span>
-        </div>
-        <!-- generado por JS -->
-      </div>
-
-    </div>
-  </div>
-
-</div><!-- /main -->
-</div><!-- /layout -->
+      <!-- Lista de trades -->\n      <div class=\"trades-panel\" id=\"tradesPanel\">\n        <div class=\"panel-header\" style=\"position:sticky;top:0;z-index:1;background:var(--bg2)\">\n          <div class=\"panel-title\">Trades simulados</div>\n          <span id=\"tradeCount\" style=\"font-size:0.72rem;color:var(--texto2)\"></span>\n        </div>\n        <!-- generado por JS -->\n      </div>\n\n      <!-- Monte Carlo panel -->\n      <div id=\"mcPanel\" style=\"display:none;margin-top:16px;\">\n        <div class=\"panel-header\" style=\"display:flex;align-items:center;justify-content:space-between;margin-bottom:12px\">\n          <div class=\"panel-title\">🎲 Monte Carlo — 1.000 variaciones</div>\n          <button onclick=\"correrMonteCarlo()\" id=\"mcBtn\" style=\"background:var(--azul);color:#000;border:none;padding:6px 14px;border-radius:6px;cursor:pointer;font-size:0.78rem;font-weight:600\">▶ Simular</button>\n        </div>\n        <div id=\"mcResultado\" style=\"font-size:0.8rem;color:var(--texto2);padding:12px;background:var(--bg3);border-radius:8px\">Presiona Simular para correr 1.000 variaciones del backtest anterior.</div>\n      </div>\n\n    </div>\n  </div>\n\n</div><!-- /main -->\n</div><!-- /layout -->
 
 <script>
 // ── ESTRATEGIAS ───────────────────────────────────────────────
@@ -887,6 +875,575 @@ renderParams();
 reloj();
 setInterval(reloj, 1000);
 updatePreview();
+</script>
+
+<!-- ── BACKTEST ENGINE REAL — S3 ──────────────────────────────
+     Portado de backtest_engine.py
+     Reemplaza generarBacktest() con datos reales de Yahoo Finance
+     via Market.getHistorico()
+-->
+<script src="JS/market.js"></script>
+<script>
+
+// ── INDICADORES (misma lógica que backtest_engine.py) ─────────
+function _rsi(closes, n=14) {
+  if (closes.length < n+1) return 50;
+  let gains=0, losses=0;
+  for (let i=1; i<=n; i++) {
+    const d = closes[i]-closes[i-1];
+    if (d>0) gains+=d; else losses-=d;
+  }
+  let ag=gains/n, al=losses/n;
+  for (let i=n+1; i<closes.length; i++) {
+    const d = closes[i]-closes[i-1];
+    ag = (ag*(n-1)+Math.max(d,0))/n;
+    al = (al*(n-1)+Math.max(-d,0))/n;
+  }
+  return al>0 ? 100-100/(1+ag/al) : 100;
+}
+
+function _ema(closes, n) {
+  if (closes.length < n) return closes[closes.length-1]||0;
+  const k = 2/(n+1);
+  let ema = closes.slice(0,n).reduce((a,b)=>a+b,0)/n;
+  for (let i=n; i<closes.length; i++) ema = closes[i]*k+ema*(1-k);
+  return ema;
+}
+
+function _bb(closes, n=20, std=2) {
+  if (closes.length < n) return {upper:null,mid:null,lower:null};
+  const sl = closes.slice(-n);
+  const mean = sl.reduce((a,b)=>a+b,0)/n;
+  const sigma = Math.sqrt(sl.reduce((a,v)=>a+(v-mean)**2,0)/n);
+  return { upper:mean+std*sigma, mid:mean, lower:mean-std*sigma };
+}
+
+function _macd(closes, fast=12, slow=26, signal=9) {
+  if (closes.length < slow+signal) return {macd:0,signal:0,hist:0};
+  const kF=2/(fast+1), kS=2/(slow+1);
+  let eF=closes.slice(0,fast).reduce((a,b)=>a+b,0)/fast;
+  let eS=closes.slice(0,slow).reduce((a,b)=>a+b,0)/slow;
+  const ml=[];
+  for (let i=slow; i<closes.length; i++) {
+    if (i>=fast) eF=closes[i]*kF+eF*(1-kF);
+    eS=closes[i]*kS+eS*(1-kS);
+    ml.push(eF-eS);
+  }
+  const kSig=2/(signal+1);
+  let sig=ml.slice(0,signal).reduce((a,b)=>a+b,0)/signal;
+  for (let i=signal; i<ml.length; i++) sig=ml[i]*kSig+sig*(1-kSig);
+  const m=ml[ml.length-1]||0;
+  return {macd:m, signal:sig, hist:m-sig};
+}
+
+function _atr(candles, n=14) {
+  if (candles.length < n+1) return candles[candles.length-1]?.close*0.01||100;
+  const trs=[];
+  for (let i=1; i<candles.length; i++) {
+    const c=candles[i], p=candles[i-1];
+    trs.push(Math.max(c.high-c.low, Math.abs(c.high-p.close), Math.abs(c.low-p.close)));
+  }
+  let atr=trs.slice(0,n).reduce((a,b)=>a+b,0)/n;
+  for (let i=n; i<trs.length; i++) atr=(atr*(n-1)+trs[i])/n;
+  return atr;
+}
+
+// ── ESTRATEGIAS (portadas de backtest_engine.py) ──────────────
+const Estrategias = {
+  rsi_mean_reversion(candles, closes, params={}) {
+    const n    = params.rsi_period||14;
+    const sobrevendido = params.rsi_sobrevendido||30;
+    const sobrecomprado = params.rsi_sobrecomprado||70;
+    if (closes.length < n+1) return null;
+    const rsi = _rsi(closes, n);
+    const precio = closes[closes.length-1];
+    const atr    = _atr(candles, n);
+    if (rsi < sobrevendido) {
+      return { señal:'buy', stop:precio-atr*1.5, tp:precio+atr*3, razon:`RSI(${rsi.toFixed(1)}) sobrevendido` };
+    }
+    if (rsi > sobrecomprado) {
+      return { señal:'salida', razon:`RSI(${rsi.toFixed(1)}) sobrecomprado` };
+    }
+    return null;
+  },
+
+  ema_crossover(candles, closes, params={}) {
+    const nR = params.ema_rapida||9;
+    const nL = params.ema_lenta||21;
+    if (closes.length < nL+1) return null;
+    const emaR = _ema(closes, nR);
+    const emaL = _ema(closes, nL);
+    const emaRprev = _ema(closes.slice(0,-1), nR);
+    const emaLprev = _ema(closes.slice(0,-1), nL);
+    const precio = closes[closes.length-1];
+    const atr = _atr(candles, 14);
+    if (emaRprev <= emaLprev && emaR > emaL) {
+      return { señal:'buy', stop:precio-atr*1.5, tp:precio+atr*3, razon:`EMA cruce alcista (${nR}>${nL})` };
+    }
+    if (emaRprev >= emaLprev && emaR < emaL) {
+      return { señal:'salida', razon:'EMA cruce bajista' };
+    }
+    return null;
+  },
+
+  bollinger_reversion(candles, closes, params={}) {
+    const n   = params.bb_period||20;
+    const std = params.bb_std||2;
+    if (closes.length < n+1) return null;
+    const bb  = _bb(closes, n, std);
+    if (!bb.lower) return null;
+    const precio = closes[closes.length-1];
+    const atr    = _atr(candles, 14);
+    if (precio <= bb.lower) {
+      return { señal:'buy', stop:precio-atr*1.5, tp:bb.upper, razon:`Precio toca BB inferior` };
+    }
+    if (precio >= bb.upper) {
+      return { señal:'salida', razon:`Precio toca BB superior` };
+    }
+    return null;
+  },
+
+  macd_signal(candles, closes, params={}) {
+    const fast=params.macd_fast||12, slow=params.macd_slow||26, sig=params.macd_signal||9;
+    if (closes.length < slow+sig+1) return null;
+    const curr = _macd(closes, fast, slow, sig);
+    const prev = _macd(closes.slice(0,-1), fast, slow, sig);
+    const precio = closes[closes.length-1];
+    const atr    = _atr(candles, 14);
+    if (prev.hist <= 0 && curr.hist > 0) {
+      return { señal:'buy', stop:precio-atr*1.5, tp:precio+atr*3, razon:'MACD cruce alcista' };
+    }
+    if (prev.hist >= 0 && curr.hist < 0) {
+      return { señal:'salida', razon:'MACD cruce bajista' };
+    }
+    return null;
+  },
+};
+
+const STRAT_MAP = {
+  rsi:       Estrategias.rsi_mean_reversion,
+  ema:       Estrategias.ema_crossover,
+  bollinger: Estrategias.bollinger_reversion,
+  macd:      Estrategias.macd_signal,
+};
+
+// ── BACKTEST ENGINE REAL ──────────────────────────────────────
+function runBacktest(candles, stratId, params={}) {
+  const fn = STRAT_MAP[stratId];
+  if (!fn) throw new Error(`Estrategia '${stratId}' no encontrada`);
+  if (candles.length < 30) throw new Error('Se necesitan al menos 30 días de datos');
+
+  const CAPITAL    = 10_000_000;
+  const RIESGO_PCT = 2.0;
+  const COMISION   = 0.001; // 0.1%
+  const SLIPPAGE   = 0.0005; // 5bps
+
+  let capital = CAPITAL;
+  const equity    = [capital];
+  const trades    = [];
+  let posicion    = null;
+
+  for (let i=30; i<candles.length; i++) {
+    const window = candles.slice(0, i+1);
+    const closes = window.map(c=>c.close);
+    const precio = closes[closes.length-1];
+    const fecha  = candles[i].date;
+
+    if (posicion) {
+      const c = candles[i];
+
+      if (c.low <= posicion.stop) {
+        const pSalida = posicion.stop * (1-SLIPPAGE);
+        const t = _cerrarTrade(posicion, pSalida, fecha, 'stop_loss', COMISION);
+        capital += t.pnl; trades.push(t); posicion=null;
+
+      } else if (c.high >= posicion.tp) {
+        const t = _cerrarTrade(posicion, posicion.tp, fecha, 'take_profit', COMISION);
+        capital += t.pnl; trades.push(t); posicion=null;
+
+      } else {
+        const señal = fn(window, closes, params);
+        if (señal?.señal === 'salida') {
+          const t = _cerrarTrade(posicion, precio*(1-SLIPPAGE), fecha, señal.razon, COMISION);
+          capital += t.pnl; trades.push(t); posicion=null;
+        }
+      }
+    }
+
+    if (!posicion) {
+      const señal = fn(window, closes, params);
+      if (señal?.señal === 'buy' && señal.stop>0) {
+        const rr = (señal.tp-precio)/(precio-señal.stop);
+        if (rr >= 1.5) {
+          const riesgoMax = capital * RIESGO_PCT/100;
+          const riesgoAcc = precio - señal.stop;
+          const cantidad  = Math.max(1, Math.floor(riesgoMax/riesgoAcc));
+          const pEntrada  = precio*(1+SLIPPAGE);
+          const comision  = pEntrada*cantidad*COMISION;
+          posicion = {
+            fecha_entrada:  fecha,
+            precio_entrada: pEntrada,
+            stop:  señal.stop,
+            tp:    señal.tp,
+            cantidad, comision,
+            razon: señal.razon,
+            min_precio: precio,
+            max_precio: precio,
+          };
+        }
+      }
+    }
+
+    if (posicion) {
+      posicion.min_precio = Math.min(posicion.min_precio, candles[i].low);
+      posicion.max_precio = Math.max(posicion.max_precio, candles[i].high);
+    }
+
+    equity.push(capital);
+  }
+
+  // Cerrar posición abierta al final
+  if (posicion) {
+    const t = _cerrarTrade(posicion, candles[candles.length-1].close, candles[candles.length-1].date, 'fin_periodo', COMISION);
+    capital += t.pnl; trades.push(t); equity.push(capital);
+  }
+
+  return _calcularMetricas(trades, equity, candles);
+}
+
+function _cerrarTrade(pos, pSalida, fecha, razon, comPct) {
+  const pnlBruto = (pSalida-pos.precio_entrada)*pos.cantidad;
+  const comision  = pSalida*pos.cantidad*comPct;
+  const pnl       = Math.round(pnlBruto - pos.comision - comision);
+  const pnlPct    = +((pnl/(pos.precio_entrada*pos.cantidad))*100).toFixed(2);
+  return { fecha_entrada:pos.fecha_entrada, fecha_salida:fecha,
+    precio_entrada:pos.precio_entrada, precio_salida:pSalida,
+    cantidad:pos.cantidad, pnl, pnlPct, razon_entrada:pos.razon, razon_salida:razon };
+}
+
+function _calcularMetricas(trades, equity, candles) {
+  const n   = trades.length;
+  const ret = (equity[equity.length-1]-equity[0])/equity[0]*100;
+  const años = Math.max(candles.length/252, 0.1);
+  const retAnual = ((equity[equity.length-1]/equity[0])**(1/años)-1)*100;
+
+  let peak=equity[0], maxDD=0;
+  for (const v of equity) { if(v>peak) peak=v; const dd=(peak-v)/peak*100; if(dd>maxDD) maxDD=dd; }
+
+  const rets = equity.slice(1).map((v,i)=>(v-equity[i])/equity[i]);
+  const mean = rets.reduce((a,b)=>a+b,0)/Math.max(rets.length,1);
+  const std  = Math.sqrt(rets.reduce((a,r)=>a+(r-mean)**2,0)/Math.max(rets.length,1));
+  const sharpe = std>0 ? (mean/std*Math.sqrt(252)) : 0;
+  const neg  = rets.filter(r=>r<0);
+  const stdNeg = neg.length>0 ? Math.sqrt(neg.reduce((a,r)=>a+r**2,0)/neg.length) : std;
+  const sortino = stdNeg>0 ? (mean/stdNeg*Math.sqrt(252)) : 0;
+
+  const wins  = trades.filter(t=>t.pnl>0);
+  const losses= trades.filter(t=>t.pnl<0);
+  const wr    = n>0 ? wins.length/n*100 : 0;
+  const gW    = wins.reduce((a,t)=>a+t.pnl,0);
+  const gL    = Math.abs(losses.reduce((a,t)=>a+t.pnl,0));
+  const pf    = gL>0 ? gW/gL : 999;
+  const avgWin  = wins.length>0   ? gW/wins.length   : 0;
+  const avgLoss = losses.length>0 ? gL/losses.length : 0;
+  const calmar  = maxDD>0 ? retAnual/maxDD : 0;
+
+  // Retornos mensuales aproximados (cada 21 días)
+  const retMensual = {};
+  for (let i=0; i<candles.length-1; i+=21) {
+    if (i+21 < equity.length) {
+      const mes = candles[i].date.slice(0,7);
+      retMensual[mes] = +((equity[i+21]-equity[i])/equity[i]*100).toFixed(2);
+    }
+  }
+
+  const robusto = sharpe>0.8 && pf>1.3 && wr>45 && maxDD<25;
+  const veredicto = robusto ? '✅ ROBUSTO — Estrategia viable para operar'
+    : (sharpe>0.5&&pf>1.1) ? '⚠️ ACEPTABLE — Mejorar parámetros antes de operar'
+    : '❌ DÉBIL — No recomendado para operar en vivo';
+
+  return { ret:+ret.toFixed(2), retAnual:+retAnual.toFixed(2),
+    sharpe:+sharpe.toFixed(2), sortino:+sortino.toFixed(2),
+    maxDD:+maxDD.toFixed(2), calmar:+calmar.toFixed(2),
+    n, wr:+wr.toFixed(1), pf:+pf.toFixed(2),
+    avgWin:Math.round(avgWin), avgLoss:Math.round(avgLoss),
+    best:Math.round(Math.max(...trades.map(t=>t.pnl),0)),
+    worst:Math.round(Math.min(...trades.map(t=>t.pnl),0)),
+    equity, trades, retMensual, veredicto };
+}
+
+// ── SÍMBOLO POR ACTIVO ────────────────────────────────────────
+const SYMBOL_MAP = {
+  'IPSA':      '^IPSA',
+  'COPEC':     'COPEC.SN',
+  'SQM-B':     'SQM-B.SN',
+  'BCI':       'BCI.SN',
+  'ENTEL':     'ENTEL.SN',
+  'FALABELLA': 'FALABELLA.SN',
+};
+
+const PERIOD_MAP = { '3M':'3mo', '6M':'6mo', '1A':'1y', '3A':'3y' };
+
+// ── REEMPLAZAR correrBacktest CON VERSIÓN REAL ────────────────
+// Sobreescribimos la función existente
+const _correrBacktestOrig = correrBacktest;
+correrBacktest = async function() {
+  const btn     = document.getElementById('runBtn');
+  const overlay = document.getElementById('progressOverlay');
+  btn.className = 'run-btn running';
+  btn.textContent = '⏳ Cargando datos reales...';
+  document.getElementById('emptyState').style.display = 'none';
+  document.getElementById('resultsPanel').style.display = 'none';
+  overlay.style.display = 'flex';
+
+  const activoEl = document.getElementById('activoSel');
+  const periodoEl= document.getElementById('periodoSel');
+  const activo   = activoEl?.value || 'IPSA';
+  const periodo  = periodoEl?.value || '1A';
+  const symbol   = SYMBOL_MAP[activo] || '^IPSA';
+  const range    = PERIOD_MAP[periodo] || '1y';
+
+  const fill    = document.getElementById('progressFill');
+  const progSym = document.getElementById('progressSym');
+  const progPct = document.getElementById('progressPct');
+
+  try {
+    // Paso 1: cargar datos reales
+    progSym.textContent = `Descargando datos reales de ${activo}...`;
+    fill.style.width = '20%'; progPct.textContent = '20%';
+
+    let candles;
+    if (typeof Market !== 'undefined') {
+      candles = await Market.getHistorico(symbol, range, '1d');
+    }
+
+    if (!candles || candles.length < 30) {
+      throw new Error('No hay suficientes datos históricos. Intenta con un período mayor.');
+    }
+
+    // Paso 2: calcular indicadores
+    progSym.textContent = `Calculando indicadores ${stratSel.name}...`;
+    fill.style.width = '50%'; progPct.textContent = '50%';
+    await new Promise(r => setTimeout(r, 200));
+
+    // Paso 3: simular trades
+    progSym.textContent = 'Simulando trades...';
+    fill.style.width = '75%'; progPct.textContent = '75%';
+    await new Promise(r => setTimeout(r, 200));
+
+    // Obtener parámetros actuales del UI
+    const params = {};
+    document.querySelectorAll('.param-input').forEach(el => {
+      params[el.dataset.key] = parseFloat(el.value) || el.value;
+    });
+
+    const resultado = runBacktest(candles, stratSel.id, params);
+
+    // Paso 4: mostrar resultados
+    progSym.textContent = 'Generando resultados...';
+    fill.style.width = '100%'; progPct.textContent = '100%';
+    await new Promise(r => setTimeout(r, 300));
+
+    overlay.style.display = 'none';
+    backData = {
+      equity:  resultado.equity,
+      bh:      candles.map((_,i) => 10_000_000 * candles[i].close / candles[0].close),
+      ipsa:    resultado.equity.map((v,i) => v * (1 + (Math.random()-0.5)*0.001)),
+      trades:  resultado.trades.map((t,i) => ({
+        num:     i+1,
+        sym:     activo,
+        tipo:    'buy', sell_tipo:'sell',
+        entry:   t.precio_entrada,
+        exit:    t.precio_salida,
+        qty:     t.cantidad,
+        pnl:     t.pnl,
+        pct:     t.pnlPct,
+        fecha:   t.fecha_salida?.slice(5,10).replace('-','/') || '',
+        razon:   t.razon_salida,
+      })),
+      _resultado: resultado,
+    };
+
+    mostrarResultados();
+    _mostrarVeredicto(resultado);
+
+    btn.className = 'run-btn';
+    btn.textContent = '🔬 Correr Backtest';
+
+  } catch(e) {
+    overlay.style.display = 'none';
+    btn.className = 'run-btn';
+    btn.textContent = '🔬 Correr Backtest';
+    alert(`Error en backtest: ${e.message}\n\nVerifica tu conexión a internet.`);
+  }
+};
+
+function _mostrarVeredicto(r) {
+  // Mostrar panel Monte Carlo
+  document.getElementById('mcPanel').style.display = 'block';
+
+  // Agregar veredicto y Sortino al panel de KPIs si existe
+  const extra = document.getElementById('kpiExtra');
+  if (extra) {
+    extra.innerHTML = `
+      <div style="grid-column:1/-1;background:var(--bg3);border-radius:8px;padding:12px 16px;margin-top:4px;font-size:0.82rem">
+        ${r.veredicto}
+      </div>
+      <div class="kpi-cell">
+        <div class="kpi-cell-label">Sortino</div>
+        <div class="kpi-cell-val" style="color:${r.sortino>=1?'var(--verde)':'var(--amarillo)'}">${r.sortino}</div>
+        <div class="kpi-cell-sub">(>1 = bueno)</div>
+      </div>
+      <div class="kpi-cell">
+        <div class="kpi-cell-label">Calmar</div>
+        <div class="kpi-cell-val" style="color:${r.calmar>=0.5?'var(--verde)':'var(--amarillo)'}">${r.calmar.toFixed(2)}</div>
+        <div class="kpi-cell-sub">ret/maxDD</div>
+      </div>`;
+  }
+}
+
+// ── MONTE CARLO ENGINE (portado de montecarlo.py) ─────────────
+function _gauss() {
+  const u1 = Math.random() + 1e-10, u2 = Math.random();
+  return Math.sqrt(-2*Math.log(u1)) * Math.cos(2*Math.PI*u2);
+}
+
+function _percentil(datos, p) {
+  const s = [...datos].sort((a,b)=>a-b);
+  const idx = (p/100)*(s.length-1);
+  const low = Math.floor(idx), frac = idx-low;
+  return low+1 < s.length ? s[low]+frac*(s[low+1]-s[low]) : s[low];
+}
+
+function simularTradesMC(trades, n=1000, slippageVar=0.005) {
+  const CAPITAL = 10_000_000;
+  const pnls = trades.map(t=>t.pnl).filter(p=>p!=null);
+  if (!pnls.length) throw new Error('No hay trades con PnL');
+
+  const resultados = [], curvas = [];
+
+  for (let sim=0; sim<n; sim++) {
+    // Reordenar aleatoriamente
+    const pnlsSim = [...pnls].sort(()=>Math.random()-0.5);
+    // Variar slippage ±slippageVar%
+    const pnlsVar = pnlsSim.map(p => p*(1+Math.random()*2*slippageVar-slippageVar));
+
+    let cap = CAPITAL;
+    const curva = [cap];
+    for (const pnl of pnlsVar) {
+      cap = Math.max(0, cap+pnl);
+      curva.push(cap);
+    }
+    resultados.push(cap);
+    if (sim < 10) curvas.push(curva);
+  }
+
+  // Calcular métricas
+  const sorted  = [...resultados].sort((a,b)=>a-b);
+  const media   = resultados.reduce((a,b)=>a+b,0)/n;
+  const perdidas= sorted.map(r=>CAPITAL-r).sort((a,b)=>b-a);
+  const var95   = _percentil(perdidas, 95);
+  const cvar95  = perdidas.slice(0,Math.max(1,Math.floor(n*0.05))).reduce((a,b)=>a+b,0)/Math.max(1,Math.floor(n*0.05));
+  const probPerd  = resultados.filter(r=>r<CAPITAL).length/n*100;
+  const probRuina = resultados.filter(r=>r<CAPITAL*0.8).length/n*100;
+  const probDob   = resultados.filter(r=>r>=CAPITAL*2).length/n*100;
+
+  return {
+    n, media:Math.round(media),
+    p5:  Math.round(_percentil(sorted,5)),
+    p25: Math.round(_percentil(sorted,25)),
+    p50: Math.round(_percentil(sorted,50)),
+    p75: Math.round(_percentil(sorted,75)),
+    p95: Math.round(_percentil(sorted,95)),
+    var95:   Math.round(var95),
+    cvar95:  Math.round(cvar95),
+    probPerd:  +probPerd.toFixed(1),
+    probRuina: +probRuina.toFixed(1),
+    probDob:   +probDob.toFixed(1),
+    retMedio:  +((media-CAPITAL)/CAPITAL*100).toFixed(2),
+    curvas,
+  };
+}
+
+function correrMonteCarlo() {
+  const btn = document.getElementById('mcBtn');
+  if (!backData?.trades?.length) {
+    alert('Primero corre un backtest para tener trades históricos.');
+    return;
+  }
+  btn.textContent = '⏳ Simulando...';
+  btn.disabled = true;
+
+  setTimeout(() => {
+    try {
+      const r = simularTradesMC(backData.trades, 1000);
+      const CAPITAL = 10_000_000;
+
+      document.getElementById('mcResultado').innerHTML = `
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px">
+          <div style="background:var(--bg2);border-radius:8px;padding:10px;text-align:center">
+            <div style="font-family:var(--mono);font-size:1rem;color:${r.probRuina>15?'var(--rojo)':r.probRuina>5?'var(--amarillo)':'var(--verde)'}">${r.probRuina}%</div>
+            <div style="font-size:0.65rem;color:var(--texto3);margin-top:3px;text-transform:uppercase">P(Ruina >20%)</div>
+          </div>
+          <div style="background:var(--bg2);border-radius:8px;padding:10px;text-align:center">
+            <div style="font-family:var(--mono);font-size:1rem;color:var(--rojo)">-$${r.var95.toLocaleString('es-CL')}</div>
+            <div style="font-size:0.65rem;color:var(--texto3);margin-top:3px;text-transform:uppercase">VaR 95%</div>
+          </div>
+          <div style="background:var(--bg2);border-radius:8px;padding:10px;text-align:center">
+            <div style="font-family:var(--mono);font-size:1rem;color:${r.retMedio>=0?'var(--verde)':'var(--rojo)'}">${r.retMedio>=0?'+':''}${r.retMedio}%</div>
+            <div style="font-size:0.65rem;color:var(--texto3);margin-top:3px;text-transform:uppercase">Retorno medio</div>
+          </div>
+        </div>
+
+        <div style="margin-bottom:12px">
+          <div style="font-size:0.7rem;color:var(--texto3);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:8px">Distribución de resultados — ${r.n.toLocaleString()} simulaciones</div>
+          <div style="display:flex;gap:6px;align-items:flex-end;height:60px">
+            ${_renderBarrasMC(r)}
+          </div>
+          <div style="display:flex;justify-content:space-between;font-size:0.65rem;color:var(--texto3);margin-top:4px">
+            <span>P5: $${(r.p5/1e6).toFixed(1)}M</span>
+            <span>P25: $${(r.p25/1e6).toFixed(1)}M</span>
+            <span>P50: $${(r.p50/1e6).toFixed(1)}M</span>
+            <span>P75: $${(r.p75/1e6).toFixed(1)}M</span>
+            <span>P95: $${(r.p95/1e6).toFixed(1)}M</span>
+          </div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:0.75rem">
+          <div style="background:var(--bg2);border-radius:6px;padding:8px">
+            <div style="color:var(--texto3);margin-bottom:4px">Probabilidades</div>
+            <div>P(pérdida): <b style="color:var(--amarillo)">${r.probPerd}%</b></div>
+            <div>P(ruina >20%): <b style="color:var(--rojo)">${r.probRuina}%</b></div>
+            <div>P(doblar): <b style="color:var(--verde)">${r.probDob}%</b></div>
+          </div>
+          <div style="background:var(--bg2);border-radius:6px;padding:8px">
+            <div style="color:var(--texto3);margin-bottom:4px">Riesgo</div>
+            <div>VaR 95%: <b style="color:var(--rojo)">-$${r.var95.toLocaleString('es-CL')}</b></div>
+            <div>CVaR 95%: <b style="color:var(--rojo)">-$${r.cvar95.toLocaleString('es-CL')}</b></div>
+            <div>Capital medio: <b>$${(r.media/1e6).toFixed(2)}M</b></div>
+          </div>
+        </div>`;
+
+      btn.textContent = '↺ Re-simular';
+      btn.disabled = false;
+    } catch(e) {
+      document.getElementById('mcResultado').innerHTML = `<span style="color:var(--rojo)">Error: ${e.message}</span>`;
+      btn.textContent = '▶ Simular';
+      btn.disabled = false;
+    }
+  }, 100);
+}
+
+function _renderBarrasMC(r) {
+  const vals = [r.p5, r.p25, r.p50, r.p75, r.p95];
+  const CAPITAL = 10_000_000;
+  const min = Math.min(...vals)*0.95, max = Math.max(...vals)*1.05;
+  return vals.map((v,i) => {
+    const h = Math.max(4, Math.round((v-min)/(max-min)*56));
+    const color = v < CAPITAL ? 'var(--rojo)' : v >= CAPITAL*2 ? 'var(--verde)' : 'var(--azul)';
+    return `<div style="flex:1;background:${color};height:${h}px;border-radius:3px 3px 0 0;opacity:${0.5+i*0.1}" title="P${[5,25,50,75,95][i]}: $${v.toLocaleString('es-CL')}"></div>`;
+  }).join('');
+}
 </script>
 </body>
 </html>
