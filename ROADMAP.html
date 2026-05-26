@@ -1041,7 +1041,10 @@ h1 .verde{color:var(--verde);}
 // Los checks se sincronizan entre Seba y Joaquín en tiempo real.
 const BIN_ID  = '69d3b63636566621a883d10d';
 const BIN_URL = `https://api.jsonbin.io/v3/b/${BIN_ID}`;
-const HEADERS = { 'Content-Type': 'application/json' };
+const HEADERS = {
+  'Content-Type': 'application/json',
+  'X-Master-Key': '$2a$10$IHZYQ6LdxkuPSzCcQCW.1eDqfG8lbBaqslm0Kuo4PHclQUbictk82',
+};
 
 let _syncTimeout = null;
 let _cargando    = false;
