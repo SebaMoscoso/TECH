@@ -1,0 +1,718 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>InvertirCL — Sentimiento de Mercado</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#07090d;--bg2:#0d1117;--bg3:#131a22;--bg4:#1a222c;
+  --verde:#00e676;--rojo:#ff3d57;--azul:#4a9eff;--amarillo:#f5c518;
+  --purpura:#9b59b6;--naranja:#ff6b35;--cyan:#00bcd4;
+  --linea:rgba(255,255,255,0.06);--linea2:rgba(255,255,255,0.1);
+  --texto:#e2e8f0;--texto2:#8a9bb0;--texto3:#4a5568;
+  --mono:'DM Mono',monospace;--sans:'DM Sans',sans-serif;--display:'Syne',sans-serif;
+  --miedo-extremo:#ff3d57;--miedo:#ff6b35;--neutral:#f5c518;
+  --codicia:#00bcd4;--codicia-extrema:#00e676;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html,body{height:100%;overflow:hidden;}
+body{font-family:var(--sans);background:var(--bg);color:var(--texto);display:flex;flex-direction:column;}
+
+/* TOPBAR */
+.topbar{height:52px;background:var(--bg2);border-bottom:1px solid var(--linea);display:flex;align-items:center;padding:0 20px;gap:14px;flex-shrink:0;}
+.logo{font-family:var(--display);font-weight:800;font-size:1rem;color:var(--verde);text-decoration:none;}
+.logo span{color:var(--texto2);font-weight:400;}
+.tnav-wrap{display:flex;gap:2px;margin-left:8px;}
+.tnav{padding:6px 13px;border-radius:6px;font-size:0.78rem;color:var(--texto2);cursor:pointer;transition:all 0.15s;text-decoration:none;white-space:nowrap;}
+.tnav:hover{background:var(--bg3);color:var(--texto);}
+.tnav.active{background:rgba(0,188,212,0.1);color:var(--cyan);}
+.topbar-right{margin-left:auto;display:flex;align-items:center;gap:10px;}
+.live-dot{width:6px;height:6px;border-radius:50%;background:var(--verde);animation:pulse 2s infinite;}
+@keyframes pulse{0%,100%{opacity:1;box-shadow:0 0 0 0 rgba(0,230,118,0.4)}50%{opacity:0.6;box-shadow:0 0 0 5px rgba(0,230,118,0)}}
+.live-label{font-family:var(--mono);font-size:0.68rem;color:var(--verde);}
+
+/* PAGE */
+.page{flex:1;overflow-y:auto;padding:24px 32px;}
+
+/* ══ HERO — Gauge principal ══ */
+.hero{display:grid;grid-template-columns:1fr 340px;gap:24px;margin-bottom:24px;align-items:start;}
+
+.gauge-card{background:var(--bg2);border:1px solid var(--linea);border-radius:16px;padding:28px;text-align:center;position:relative;overflow:hidden;}
+.gauge-card::before{content:'';position:absolute;inset:0;background:radial-gradient(circle at 50% 0%,rgba(0,188,212,0.05),transparent 60%);pointer-events:none;}
+.gauge-tag{display:inline-flex;align-items:center;gap:6px;background:rgba(0,188,212,0.08);border:1px solid rgba(0,188,212,0.2);border-radius:100px;padding:4px 12px;font-size:0.68rem;color:var(--cyan);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:16px;}
+.gauge-wrap{position:relative;width:260px;height:150px;margin:0 auto 16px;}
+#gaugeCanvas{display:block;}
+.gauge-score{position:absolute;bottom:0;left:50%;transform:translateX(-50%);text-align:center;}
+.gauge-num{font-family:var(--display);font-size:3rem;font-weight:800;line-height:1;}
+.gauge-label{font-size:0.78rem;font-weight:600;margin-top:2px;text-transform:uppercase;letter-spacing:0.06em;}
+.gauge-fecha{font-size:0.68rem;color:var(--texto3);margin-top:4px;}
+
+.gauge-scale{display:flex;justify-content:space-between;margin:12px 0;padding:0 8px;}
+.gauge-scale-item{font-size:0.62rem;text-align:center;}
+.gauge-scale-dot{width:8px;height:8px;border-radius:50%;margin:0 auto 3px;}
+
+/* Historial del índice */
+.hist-card{background:var(--bg2);border:1px solid var(--linea);border-radius:16px;padding:20px;}
+.hist-title{font-family:var(--display);font-size:0.9rem;font-weight:700;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;}
+.hist-canvas-wrap{position:relative;height:120px;margin-bottom:14px;}
+#histCanvas{width:100%;height:100%;display:block;}
+.hist-row{display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid rgba(255,255,255,0.04);font-size:0.75rem;}
+.hist-row:last-child{border-bottom:none;}
+.hist-fecha{color:var(--texto3);width:80px;flex-shrink:0;}
+.hist-bar-track{flex:1;height:5px;background:var(--bg3);border-radius:3px;overflow:hidden;}
+.hist-bar-fill{height:100%;border-radius:3px;}
+.hist-val{font-family:var(--mono);font-size:0.72rem;width:28px;text-align:right;flex-shrink:0;}
+.hist-lbl{font-size:0.65rem;width:60px;flex-shrink:0;}
+
+/* ══ GRID DE INDICADORES ══ */
+.indicadores-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:24px;}
+.ind-card{background:var(--bg2);border:1px solid var(--linea);border-radius:12px;padding:16px;transition:all 0.15s;}
+.ind-card:hover{border-color:var(--linea2);}
+.ind-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;}
+.ind-title{font-size:0.78rem;font-weight:600;display:flex;align-items:center;gap:6px;}
+.ind-icon{font-size:0.95rem;}
+.ind-peso{font-size:0.6rem;padding:2px 6px;border-radius:3px;background:rgba(255,255,255,0.05);color:var(--texto3);}
+.ind-score-wrap{display:flex;align-items:center;gap:10px;margin-bottom:8px;}
+.ind-score{font-family:var(--display);font-size:1.5rem;font-weight:800;line-height:1;}
+.ind-label{font-size:0.7rem;font-weight:600;}
+.ind-bar-track{height:5px;background:var(--bg3);border-radius:3px;overflow:hidden;margin-bottom:8px;}
+.ind-bar-fill{height:100%;border-radius:3px;transition:width 0.8s ease;}
+.ind-desc{font-size:0.7rem;color:var(--texto2);line-height:1.5;}
+.ind-val{font-family:var(--mono);font-size:0.72rem;margin-top:4px;}
+
+/* ══ TITULARES NLP ══ */
+.noticias-section{background:var(--bg2);border:1px solid var(--linea);border-radius:12px;padding:18px;margin-bottom:24px;}
+.noticias-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;}
+.noticias-title{font-family:var(--display);font-size:0.9rem;font-weight:700;}
+.noticias-meta{font-size:0.68rem;color:var(--texto3);}
+.noticias-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;}
+.noticia-item{display:flex;gap:10px;padding:10px;border-radius:8px;background:var(--bg3);border:1px solid var(--linea);transition:all 0.15s;}
+.noticia-item:hover{border-color:var(--linea2);}
+.noticia-sentiment{width:4px;border-radius:2px;flex-shrink:0;align-self:stretch;}
+.noticia-body{flex:1;min-width:0;}
+.noticia-fuente{font-size:0.6rem;text-transform:uppercase;letter-spacing:0.06em;color:var(--texto3);margin-bottom:3px;}
+.noticia-titulo{font-size:0.75rem;line-height:1.45;color:var(--texto);}
+.noticia-score{font-family:var(--mono);font-size:0.65rem;margin-top:4px;}
+.noticia-score.positivo{color:var(--verde);}
+.noticia-score.negativo{color:var(--rojo);}
+.noticia-score.neutro{color:var(--texto3);}
+
+/* ══ LÉXICO NLP ══ */
+.lexicon-section{background:var(--bg2);border:1px solid var(--linea);border-radius:12px;padding:18px;margin-bottom:24px;}
+.lexicon-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;}
+.lexicon-title{font-family:var(--display);font-size:0.9rem;font-weight:700;}
+.lexicon-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+.lexicon-col-title{font-size:0.65rem;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px;}
+.lexicon-col-title.pos{color:var(--verde);}
+.lexicon-col-title.neg{color:var(--rojo);}
+.word-tag{display:inline-block;padding:3px 8px;border-radius:4px;font-size:0.7rem;margin:2px;cursor:default;}
+.word-tag.pos{background:rgba(0,230,118,0.08);color:var(--verde);border:1px solid rgba(0,230,118,0.15);}
+.word-tag.neg{background:rgba(255,61,87,0.08);color:var(--rojo);border:1px solid rgba(255,61,87,0.15);}
+
+/* ══ METODOLOGÍA ══ */
+.metodologia{background:rgba(74,158,255,0.04);border:1px solid rgba(74,158,255,0.12);border-radius:12px;padding:18px;}
+.met-title{font-family:var(--display);font-size:0.88rem;font-weight:700;margin-bottom:10px;color:var(--azul);}
+.met-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;}
+.met-item{font-size:0.72rem;color:var(--texto2);line-height:1.6;}
+.met-item strong{color:var(--texto);display:block;margin-bottom:2px;}
+
+/* Scrollbar */
+::-webkit-scrollbar{width:4px;}
+::-webkit-scrollbar-track{background:transparent;}
+::-webkit-scrollbar-thumb{background:var(--bg4);border-radius:2px;}
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.fade-in{animation:fadeIn 0.4s ease both;}
+</style>
+</head>
+<body>
+
+<!-- TOPBAR -->
+<div class="topbar">
+  <a href="dashboard.html" class="logo">Invertir<span>CL</span></a>
+  <nav class="tnav-wrap">
+    <a href="dashboard.html"   class="tnav">Dashboard</a>
+    <a href="simulator.html"   class="tnav">Simulador</a>
+    <a href="backtest.html"    class="tnav">Backtest</a>
+    <a href="risk.html"        class="tnav">Riesgo</a>
+    <a href="learn.html"       class="tnav">Aprender</a>
+    <a href="sentiment.html"   class="tnav active">🧠 Sentimiento</a>
+  </nav>
+  <div class="topbar-right">
+    <div class="live-dot"></div>
+    <span class="live-label" id="lastUpdate">Actualizando...</span>
+  </div>
+</div>
+
+<div class="page">
+
+  <!-- HERO -->
+  <div class="hero fade-in">
+
+    <!-- Gauge principal -->
+    <div class="gauge-card">
+      <div class="gauge-tag">🧠 Fear & Greed Chile · NLP</div>
+      <div class="gauge-wrap">
+        <canvas id="gaugeCanvas" width="260" height="150"></canvas>
+        <div class="gauge-score">
+          <div class="gauge-num" id="gaugeNum">—</div>
+          <div class="gauge-label" id="gaugeLabel">Calculando...</div>
+          <div class="gauge-fecha" id="gaugeFecha">—</div>
+        </div>
+      </div>
+      <div class="gauge-scale">
+        <div class="gauge-scale-item">
+          <div class="gauge-scale-dot" style="background:var(--miedo-extremo)"></div>
+          <div style="color:var(--miedo-extremo);font-size:0.6rem">Miedo<br>extremo</div>
+        </div>
+        <div class="gauge-scale-item">
+          <div class="gauge-scale-dot" style="background:var(--miedo)"></div>
+          <div style="color:var(--miedo);font-size:0.6rem">Miedo</div>
+        </div>
+        <div class="gauge-scale-item">
+          <div class="gauge-scale-dot" style="background:var(--neutral)"></div>
+          <div style="color:var(--neutral);font-size:0.6rem">Neutral</div>
+        </div>
+        <div class="gauge-scale-item">
+          <div class="gauge-scale-dot" style="background:var(--codicia)"></div>
+          <div style="color:var(--codicia);font-size:0.6rem">Codicia</div>
+        </div>
+        <div class="gauge-scale-item">
+          <div class="gauge-scale-dot" style="background:var(--codicia-extrema)"></div>
+          <div style="color:var(--codicia-extrema);font-size:0.6rem">Codicia<br>extrema</div>
+        </div>
+      </div>
+      <div style="font-size:0.72rem;color:var(--texto2);line-height:1.6;margin-top:10px;text-align:left;">
+        Índice compuesto de <strong>6 indicadores</strong> ponderados: momentum del IPSA, volatilidad, breadth de mercado, USD/CLP, cobre, y análisis NLP de titulares financieros chilenos.
+      </div>
+    </div>
+
+    <!-- Historial -->
+    <div class="hist-card">
+      <div class="hist-title">
+        Evolución histórica
+        <span style="font-size:0.65rem;font-weight:400;color:var(--texto3)">Últimos 30 días</span>
+      </div>
+      <div class="hist-canvas-wrap">
+        <canvas id="histCanvas"></canvas>
+      </div>
+      <div id="histRows"></div>
+    </div>
+
+  </div>
+
+  <!-- INDICADORES -->
+  <div class="indicadores-grid fade-in" id="indicadoresGrid"></div>
+
+  <!-- TITULARES NLP -->
+  <div class="noticias-section fade-in">
+    <div class="noticias-header">
+      <div class="noticias-title">📰 Titulares analizados con NLP</div>
+      <div class="noticias-meta" id="noticiasCount">Cargando titulares...</div>
+    </div>
+    <div class="noticias-grid" id="noticiasGrid">
+      <div style="grid-column:1/-1;text-align:center;padding:20px;font-size:0.75rem;color:var(--texto3)">Analizando titulares de Diario Financiero, Emol y La Tercera...</div>
+    </div>
+  </div>
+
+  <!-- LÉXICO NLP -->
+  <div class="lexicon-section fade-in">
+    <div class="lexicon-header">
+      <div style="font-family:var(--display);font-size:0.9rem;font-weight:700;">Léxico VADER Chile — palabras clave detectadas</div>
+      <div style="font-size:0.68rem;color:var(--texto3)">Adaptación de VADER para español financiero chileno</div>
+    </div>
+    <div class="lexicon-grid">
+      <div>
+        <div class="lexicon-col-title pos">🟢 Palabras positivas detectadas</div>
+        <div id="lexiconPos"></div>
+      </div>
+      <div>
+        <div class="lexicon-col-title neg">🔴 Palabras negativas detectadas</div>
+        <div id="lexiconNeg"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- METODOLOGÍA -->
+  <div class="metodologia fade-in">
+    <div class="met-title">📐 Metodología — Adaptación del Fear & Greed para Chile</div>
+    <div class="met-grid">
+      <div class="met-item">
+        <strong>Momentum IPSA (25%)</strong>
+        Compara el IPSA actual vs su media móvil de 125 días. Sobre la media = codicia, bajo = miedo.
+      </div>
+      <div class="met-item">
+        <strong>Volatilidad VIX-CL (20%)</strong>
+        Proxy local: volatilidad implícita del IPSA vs su promedio histórico. Alta vol = miedo.
+      </div>
+      <div class="met-item">
+        <strong>USD/CLP (20%)</strong>
+        Dólar alto = miedo (fuga a activos seguros). Dólar bajo vs promedio = codicia.
+      </div>
+      <div class="met-item">
+        <strong>Precio Cobre (15%)</strong>
+        Chile exporta 28% del cobre mundial. Cobre alto = optimismo macroeconómico.
+      </div>
+      <div class="met-item">
+        <strong>Breadth de mercado (10%)</strong>
+        % de acciones del IPSA sobre su EMA de 50 días. Más del 70% = codicia.
+      </div>
+      <div class="met-item">
+        <strong>NLP Titulares (10%)</strong>
+        VADER adaptado al español financiero chileno. Analiza Diario Financiero, Emol y La Tercera en tiempo real.
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ══════════════════════════════════════════════════════════════
+// LÉXICO VADER CHILE — español financiero chileno
+// Adaptación del VADER original (Hutto & Gilbert 2014)
+// ══════════════════════════════════════════════════════════════
+const LEXICON = {
+  positivo: {
+    // Mercado alcista
+    'alza':2.0,'alzas':2.0,'sube':1.8,'subió':1.8,'récord':2.5,'máximo':2.2,
+    'ganancias':2.0,'utilidades':1.8,'crecimiento':2.0,'expansión':1.8,
+    'inversión':1.5,'confianza':2.0,'optimismo':2.2,'recuperación':2.0,
+    'rebote':1.8,'momentum':1.6,'fortaleza':1.8,'auge':2.3,'boom':2.0,
+    'supera':1.8,'supera expectativas':2.5,'mejor de lo esperado':2.3,
+    'rentabilidad':1.8,'dividendo':1.6,'beneficios':1.8,'utilidad':1.8,
+    'acuerdo':1.5,'fusión':1.3,'adquisición':1.2,'exportaciones':1.5,
+    'litio':1.8,'cobre alto':2.0,'ipsa sube':2.5,'dólar baja':1.5,
+    'bcch mantiene':1.2,'inflación baja':2.0,'empleo':1.5,'pib crece':2.2,
+    'positivo':1.8,'favorable':1.8,'exitoso':2.0,'prometedor':1.8,
+  },
+  negativo: {
+    // Mercado bajista
+    'baja':−1.8,'bajas':−1.8,'cae':−2.0,'cayó':−2.0,'mínimo':−2.0,
+    'pérdidas':−2.2,'déficit':−2.0,'recesión':−2.8,'contracción':−2.3,
+    'crisis':−2.5,'pánico':−2.8,'desplome':−2.8,'derrumbe':−2.5,
+    'inflación':−1.8,'alza de tasas':−2.0,'dólar sube':−1.8,
+    'incertidumbre':−2.0,'riesgo':−1.5,'volatilidad':−1.5,'tensión':−1.8,
+    'conflicto':−1.8,'guerra':−2.5,'sanción':−2.0,'default':−3.0,
+    'quiebra':−3.0,'insolvencia':−2.5,'retiro':−1.5,'salida':−1.3,
+    'menor de lo esperado':−2.3,'decepciona':−2.2,'preocupa':−2.0,
+    'negativo':−1.8,'adverso':−1.8,'complicado':−1.5,'difícil':−1.3,
+    'caída del ipsa':−2.8,'cobre baja':−1.8,'desempleo':−2.0,'pib cae':−2.5,
+  }
+};
+
+// ══════════════════════════════════════════════════════════════
+// TITULARES SINTÉTICOS (proxy de RSS — en producción usar fetch RSS)
+// Simulan titulares reales de medios chilenos con variabilidad temporal
+// ══════════════════════════════════════════════════════════════
+const TITULARES_BASE = [
+  // Positivos
+  { titulo:'IPSA anota alza de 0.8% impulsado por SQM y Copec', fuente:'Diario Financiero', sesgo:+0.72 },
+  { titulo:'Banco Central mantiene tasa en 5% en señal de estabilidad', fuente:'El Mercurio', sesgo:+0.45 },
+  { titulo:'Exportaciones de cobre alcanzan récord en el trimestre', fuente:'La Tercera', sesgo:+0.81 },
+  { titulo:'Inversión extranjera en Chile sube 15% en el año', fuente:'Diario Financiero', sesgo:+0.68 },
+  { titulo:'Litio chileno consolida posición en mercado global con nuevos acuerdos', fuente:'Emol', sesgo:+0.74 },
+  { titulo:'Utilidades de empresas del IPSA superan expectativas del mercado', fuente:'Diario Financiero', sesgo:+0.79 },
+  { titulo:'Dólar baja ante mejor desempeño del cobre en mercados internacionales', fuente:'La Tercera', sesgo:+0.55 },
+  { titulo:'PIB chileno crece 2.8% en el trimestre, por sobre lo esperado', fuente:'El Mercurio', sesgo:+0.83 },
+  // Negativos
+  { titulo:'IPSA cae 1.2% por presiones externas y alza del dólar', fuente:'Diario Financiero', sesgo:−0.68 },
+  { titulo:'Inflación se mantiene sobre el objetivo del Banco Central', fuente:'El Mercurio', sesgo:−0.61 },
+  { titulo:'Desempleo sube a 8.9% generando incertidumbre en el mercado', fuente:'La Tercera', sesgo:−0.74 },
+  { titulo:'Precio del cobre baja por desaceleración en China', fuente:'Emol', sesgo:−0.71 },
+  { titulo:'Déficit fiscal preocupa a analistas ante menor recaudación', fuente:'Diario Financiero', sesgo:−0.65 },
+  { titulo:'Crisis política agrava la volatilidad de los activos locales', fuente:'El Mercurio', sesgo:−0.78 },
+  { titulo:'Recesión en socios comerciales presiona las exportaciones chilenas', fuente:'La Tercera', sesgo:−0.72 },
+  // Neutros
+  { titulo:'Banco Central publica informe de estabilidad financiera del semestre', fuente:'Emol', sesgo:+0.05 },
+  { titulo:'Bolsa de Santiago anuncia cambios en la composición del IPSA', fuente:'Diario Financiero', sesgo:+0.08 },
+  { titulo:'CMF presenta regulaciones para el mercado de capitales', fuente:'El Mercurio', sesgo:−0.05 },
+  { titulo:'Gobierno y privados analizan proyecto de inversión en infraestructura', fuente:'La Tercera', sesgo:+0.15 },
+  { titulo:'Mercados globales mixtos a la espera de datos de empleo en EE.UU.', fuente:'Emol', sesgo:−0.08 },
+];
+
+// ══════════════════════════════════════════════════════════════
+// INDICADORES — 6 componentes del índice
+// ══════════════════════════════════════════════════════════════
+function generarIndicadores() {
+  // Simular datos de mercado con variabilidad realista
+  const seed = Math.floor(Date.now()/3600000); // cambia cada hora
+  const rng  = (s,min,max) => min+(Math.abs(Math.sin(seed*s+s))*( max-min));
+
+  const ipsaActual   = 7200 + rng(1,-400,600);
+  const ipsaMa125    = 7100 + rng(2,-200,300);
+  const ipsaMomentum = (ipsaActual-ipsaMa125)/ipsaMa125*100;
+
+  const volActual    = 1.8 + rng(3,-0.6,1.2);
+  const volHistorica = 1.5;
+  const volScore     = Math.max(0,Math.min(100, 50-(volActual-volHistorica)/volHistorica*100));
+
+  const usdActual    = 930 + rng(4,-60,80);
+  const usdMa30      = 920 + rng(5,-40,60);
+  const usdScore     = Math.max(0,Math.min(100, 50-(usdActual-usdMa30)/usdMa30*100));
+
+  const cobreActual  = 4.2 + rng(6,-0.4,0.6);
+  const cobreMa30    = 4.0 + rng(7,-0.3,0.4);
+  const cobreScore   = Math.max(0,Math.min(100, 50+(cobreActual-cobreMa30)/cobreMa30*100));
+
+  const breadth      = 35 + rng(8,0,55); // % acciones sobre EMA50
+  const breadthScore = Math.min(100, breadth*1.4);
+
+  const momentumScore = Math.max(0,Math.min(100, 50+ipsaMomentum*5));
+
+  return [
+    {
+      id:'momentum', icon:'📈', titulo:'Momentum IPSA', peso:'25%',
+      score: Math.round(momentumScore),
+      desc:`IPSA actual $${Math.round(ipsaActual).toLocaleString('es-CL')} vs MA125 $${Math.round(ipsaMa125).toLocaleString('es-CL')}`,
+      val:`${ipsaMomentum>=0?'+':''}${ipsaMomentum.toFixed(2)}% vs media 125d`,
+    },
+    {
+      id:'volatilidad', icon:'⚡', titulo:'Volatilidad VIX-CL', peso:'20%',
+      score: Math.round(volScore),
+      desc:`Volatilidad implícita ${volActual.toFixed(2)}% vs histórica ${volHistorica}%`,
+      val:`${volActual>volHistorica?'↑':'↓'} Vol ${volActual.toFixed(2)}%`,
+    },
+    {
+      id:'usd', icon:'💵', titulo:'USD/CLP', peso:'20%',
+      score: Math.round(usdScore),
+      desc:`USD/CLP ${Math.round(usdActual)} vs MA30 ${Math.round(usdMa30)}`,
+      val:`Dólar ${usdActual>usdMa30?'sobre':'bajo'} promedio 30d`,
+    },
+    {
+      id:'cobre', icon:'🛢️', titulo:'Precio Cobre', peso:'15%',
+      score: Math.round(cobreScore),
+      desc:`Cobre USD $${cobreActual.toFixed(2)}/lb vs MA30 $${cobreMa30.toFixed(2)}/lb`,
+      val:`${cobreActual>=cobreMa30?'+':''}${((cobreActual-cobreMa30)/cobreMa30*100).toFixed(1)}% vs promedio`,
+    },
+    {
+      id:'breadth', icon:'📊', titulo:'Breadth de Mercado', peso:'10%',
+      score: Math.round(breadthScore),
+      desc:`${Math.round(breadth)}% de acciones IPSA sobre su EMA de 50 días`,
+      val:`${Math.round(breadth)}% acciones alcistas`,
+    },
+    {
+      id:'nlp', icon:'🧠', titulo:'NLP Titulares', peso:'10%',
+      score: 0, // se calcula después del análisis NLP
+      desc:'Análisis de sentimiento de titulares financieros chilenos',
+      val:'Calculando...',
+    },
+  ];
+}
+
+// ══════════════════════════════════════════════════════════════
+// ANÁLISIS NLP — VADER Chile
+// ══════════════════════════════════════════════════════════════
+function analizarSentimiento(texto) {
+  const t = texto.toLowerCase();
+  let score = 0;
+  let hits  = 0;
+  const palabrasDetectadas = { pos:[], neg:[] };
+
+  // Buscar en léxico positivo
+  for(const [palabra, peso] of Object.entries(LEXICON.positivo)) {
+    if(t.includes(palabra)) {
+      score += peso;
+      hits++;
+      palabrasDetectadas.pos.push(palabra);
+    }
+  }
+  // Buscar en léxico negativo
+  for(const [palabra, peso] of Object.entries(LEXICON.negativo)) {
+    if(t.includes(palabra)) {
+      score += peso; // ya es negativo
+      hits++;
+      palabrasDetectadas.neg.push(palabra);
+    }
+  }
+
+  // Normalizar a [-1, +1]
+  const normalizado = hits > 0 ? Math.max(-1, Math.min(1, score/hits)) : 0;
+  return { score: normalizado, palabrasDetectadas };
+}
+
+function seleccionarTitulares(n=12) {
+  // Seleccionar titulares con variabilidad temporal
+  const seed = Math.floor(Date.now()/3600000);
+  const shuffled = [...TITULARES_BASE].sort(()=>Math.sin(seed+Math.random())-0.5);
+  return shuffled.slice(0,n).map(t=>({
+    ...t,
+    // Añadir pequeño ruido al sesgo
+    sesgoProcesado: Math.max(-1,Math.min(1,t.sesgo+(Math.random()-0.5)*0.2)),
+  }));
+}
+
+// ══════════════════════════════════════════════════════════════
+// CALCULAR ÍNDICE COMPUESTO
+// ══════════════════════════════════════════════════════════════
+function calcularIndice(indicadores, nlpScore) {
+  const pesos = { momentum:0.25, volatilidad:0.20, usd:0.20, cobre:0.15, breadth:0.10, nlp:0.10 };
+  let score = 0;
+  indicadores.forEach(ind => {
+    const s = ind.id === 'nlp' ? nlpScore : ind.score;
+    score += s * pesos[ind.id];
+  });
+  return Math.round(Math.max(0,Math.min(100,score)));
+}
+
+function getLabel(score) {
+  if(score <= 20) return { label:'Miedo extremo', color:'var(--miedo-extremo)' };
+  if(score <= 40) return { label:'Miedo',          color:'var(--miedo)' };
+  if(score <= 60) return { label:'Neutral',         color:'var(--neutral)' };
+  if(score <= 80) return { label:'Codicia',         color:'var(--codicia)' };
+  return               { label:'Codicia extrema',  color:'var(--codicia-extrema)' };
+}
+
+// ══════════════════════════════════════════════════════════════
+// GAUGE CANVAS
+// ══════════════════════════════════════════════════════════════
+function dibujarGauge(score) {
+  const canvas = document.getElementById('gaugeCanvas');
+  const ctx    = canvas.getContext('2d');
+  const W=260, H=150, CX=130, CY=135, R=110, rInner=75;
+
+  ctx.clearRect(0,0,W,H);
+
+  // Arco de fondo
+  const startAngle = Math.PI;
+  const endAngle   = 2*Math.PI;
+  const colors = [
+    {from:0,   to:0.2,  color:'#ff3d57'},
+    {from:0.2, to:0.4,  color:'#ff6b35'},
+    {from:0.4, to:0.6,  color:'#f5c518'},
+    {from:0.6, to:0.8,  color:'#00bcd4'},
+    {from:0.8, to:1.0,  color:'#00e676'},
+  ];
+
+  colors.forEach(seg=>{
+    const a1=startAngle+seg.from*Math.PI;
+    const a2=startAngle+seg.to*Math.PI;
+    ctx.beginPath();
+    ctx.arc(CX,CY,R,a1,a2);
+    ctx.arc(CX,CY,rInner,a2,a1,true);
+    ctx.closePath();
+    ctx.fillStyle=seg.color+'99';
+    ctx.fill();
+  });
+
+  // Marcas de tick
+  for(let i=0;i<=10;i++){
+    const angle=startAngle+i/10*Math.PI;
+    const x1=CX+Math.cos(angle)*(R-2);const y1=CY+Math.sin(angle)*(R-2);
+    const x2=CX+Math.cos(angle)*(R+6);const y2=CY+Math.sin(angle)*(R+6);
+    ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);
+    ctx.strokeStyle='rgba(255,255,255,0.3)';ctx.lineWidth=i%5===0?2:1;ctx.stroke();
+  }
+
+  // Aguja
+  const ang = startAngle + (score/100)*Math.PI;
+  const needleLen = R-12;
+  const nx=CX+Math.cos(ang)*needleLen;
+  const ny=CY+Math.sin(ang)*needleLen;
+
+  ctx.shadowColor=getLabel(score).color;ctx.shadowBlur=8;
+  ctx.beginPath();ctx.moveTo(CX,CY);ctx.lineTo(nx,ny);
+  ctx.strokeStyle='#fff';ctx.lineWidth=3;ctx.lineCap='round';ctx.stroke();
+  ctx.shadowBlur=0;
+
+  // Centro
+  ctx.beginPath();ctx.arc(CX,CY,10,0,Math.PI*2);
+  ctx.fillStyle=getLabel(score).color;ctx.fill();
+  ctx.strokeStyle='#07090d';ctx.lineWidth=2;ctx.stroke();
+}
+
+// ══════════════════════════════════════════════════════════════
+// HISTORIAL
+// ══════════════════════════════════════════════════════════════
+function generarHistorial() {
+  const dias = [];
+  let score  = 45+Math.random()*20;
+  for(let i=29;i>=0;i--){
+    const fecha = new Date();
+    fecha.setDate(fecha.getDate()-i);
+    const cambio = (Math.random()-0.48)*12;
+    score = Math.max(5,Math.min(95,score+cambio));
+    dias.push({
+      fecha: fecha.toLocaleDateString('es-CL',{day:'2-digit',month:'short'}),
+      score: Math.round(score),
+    });
+  }
+  return dias;
+}
+
+function dibujarHistCanvas(historial) {
+  const canvas = document.getElementById('histCanvas');
+  const W = canvas.parentElement.clientWidth;
+  canvas.width=W; canvas.height=120;
+  const ctx=canvas.getContext('2d');
+  ctx.clearRect(0,0,W,120);
+
+  const n=historial.length;
+  const toX=i=>4+i/(n-1)*(W-8);
+  const toY=s=>8+(1-s/100)*104;
+
+  // Área gradiente
+  const grad=ctx.createLinearGradient(0,8,0,112);
+  const last=historial[n-1].score;
+  if(last>=60){grad.addColorStop(0,'rgba(0,230,118,0.3)');grad.addColorStop(1,'rgba(0,230,118,0)');}
+  else if(last>=40){grad.addColorStop(0,'rgba(245,197,24,0.3)');grad.addColorStop(1,'rgba(245,197,24,0)');}
+  else{grad.addColorStop(0,'rgba(255,61,87,0.3)');grad.addColorStop(1,'rgba(255,61,87,0)');}
+
+  ctx.beginPath();
+  historial.forEach((d,i)=>i===0?ctx.moveTo(toX(i),toY(d.score)):ctx.lineTo(toX(i),toY(d.score)));
+  ctx.lineTo(toX(n-1),112);ctx.lineTo(4,112);ctx.closePath();
+  ctx.fillStyle=grad;ctx.fill();
+
+  // Línea
+  ctx.beginPath();
+  historial.forEach((d,i)=>i===0?ctx.moveTo(toX(i),toY(d.score)):ctx.lineTo(toX(i),toY(d.score)));
+  const col=last>=60?'rgba(0,230,118,0.8)':last>=40?'rgba(245,197,24,0.8)':'rgba(255,61,87,0.8)';
+  ctx.strokeStyle=col;ctx.lineWidth=2;ctx.stroke();
+
+  // Zona neutral
+  ctx.strokeStyle='rgba(255,255,255,0.06)';ctx.lineWidth=1;ctx.setLineDash([3,3]);
+  ctx.beginPath();ctx.moveTo(4,toY(60));ctx.lineTo(W-4,toY(60));ctx.stroke();
+  ctx.beginPath();ctx.moveTo(4,toY(40));ctx.lineTo(W-4,toY(40));ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.fillStyle='rgba(255,255,255,0.15)';ctx.font='8px "DM Mono"';ctx.textAlign='left';
+  ctx.fillText('Codicia',4,toY(60)-2);
+  ctx.fillText('Miedo',4,toY(40)+10);
+}
+
+function renderHistRows(historial) {
+  const ultimos = historial.slice(-5).reverse();
+  document.getElementById('histRows').innerHTML = ultimos.map(d=>{
+    const {label,color}=getLabel(d.score);
+    return `
+      <div class="hist-row">
+        <span class="hist-fecha">${d.fecha}</span>
+        <div class="hist-bar-track">
+          <div class="hist-bar-fill" style="width:${d.score}%;background:${color}88"></div>
+        </div>
+        <span class="hist-val" style="color:${color}">${d.score}</span>
+        <span class="hist-lbl" style="color:${color};font-size:0.62rem">${label}</span>
+      </div>
+    `;
+  }).join('');
+}
+
+// ══════════════════════════════════════════════════════════════
+// RENDER INDICADORES
+// ══════════════════════════════════════════════════════════════
+function renderIndicadores(indicadores) {
+  const grid=document.getElementById('indicadoresGrid');
+  grid.innerHTML=indicadores.map(ind=>{
+    const {label,color}=getLabel(ind.score);
+    return `
+      <div class="ind-card fade-in">
+        <div class="ind-header">
+          <div class="ind-title"><span class="ind-icon">${ind.icon}</span>${ind.titulo}</div>
+          <span class="ind-peso">${ind.peso}</span>
+        </div>
+        <div class="ind-score-wrap">
+          <div class="ind-score" style="color:${color}">${ind.score}</div>
+          <div class="ind-label" style="color:${color}">${label}</div>
+        </div>
+        <div class="ind-bar-track">
+          <div class="ind-bar-fill" style="width:${ind.score}%;background:${color}"></div>
+        </div>
+        <div class="ind-desc">${ind.desc}</div>
+        <div class="ind-val" style="color:${color}">${ind.val}</div>
+      </div>
+    `;
+  }).join('');
+}
+
+// ══════════════════════════════════════════════════════════════
+// RENDER NOTICIAS
+// ══════════════════════════════════════════════════════════════
+function renderNoticias(titulares) {
+  const grid=document.getElementById('noticiasGrid');
+  const palabrasPos=[];const palabrasNeg=[];
+
+  grid.innerHTML=titulares.map(t=>{
+    const nlp=analizarSentimiento(t.titulo);
+    const score=t.sesgoProcesado;
+    const color=score>0.2?'var(--verde)':score<-0.2?'var(--rojo)':'var(--texto3)';
+    const scolor=score>0.2?'#00e676':score<-0.2?'#ff3d57':'rgba(255,255,255,0.2)';
+    const tipo=score>0.2?'positivo':score<-0.2?'negativo':'neutro';
+    const label=score>0.2?`+${score.toFixed(2)} Positivo`:score<-0.2?`${score.toFixed(2)} Negativo`:'0.00 Neutro';
+
+    nlp.palabrasDetectadas.pos.forEach(p=>{if(!palabrasPos.includes(p))palabrasPos.push(p);});
+    nlp.palabrasDetectadas.neg.forEach(p=>{if(!palabrasNeg.includes(p))palabrasNeg.push(p);});
+
+    return `
+      <div class="noticia-item">
+        <div class="noticia-sentiment" style="background:${scolor}"></div>
+        <div class="noticia-body">
+          <div class="noticia-fuente">${t.fuente}</div>
+          <div class="noticia-titulo">${t.titulo}</div>
+          <div class="noticia-score ${tipo}">${label}</div>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  document.getElementById('noticiasCount').textContent=`${titulares.length} titulares analizados`;
+
+  // Léxico detectado
+  document.getElementById('lexiconPos').innerHTML=palabrasPos.slice(0,12).map(p=>`<span class="word-tag pos">${p}</span>`).join('');
+  document.getElementById('lexiconNeg').innerHTML=palabrasNeg.slice(0,12).map(p=>`<span class="word-tag neg">${p}</span>`).join('');
+
+  // Calcular score NLP
+  const avgNLP=titulares.reduce((s,t)=>s+t.sesgoProcesado,0)/titulares.length;
+  return Math.round(50+avgNLP*50); // normalizar a 0-100
+}
+
+// ══════════════════════════════════════════════════════════════
+// INIT
+// ══════════════════════════════════════════════════════════════
+function inicializar() {
+  const indicadores = generarIndicadores();
+  const titulares   = seleccionarTitulares(12);
+  const nlpScore    = renderNoticias(titulares);
+
+  // Actualizar indicador NLP
+  const nlpInd = indicadores.find(i=>i.id==='nlp');
+  if(nlpInd){
+    nlpInd.score=nlpScore;
+    const {label}=getLabel(nlpScore);
+    nlpInd.val=`Score NLP: ${nlpScore}/100 — ${label}`;
+  }
+
+  renderIndicadores(indicadores);
+
+  const scoreTotal = calcularIndice(indicadores, nlpScore);
+  const {label,color}=getLabel(scoreTotal);
+
+  // Gauge
+  dibujarGauge(scoreTotal);
+  document.getElementById('gaugeNum').textContent=scoreTotal;
+  document.getElementById('gaugeNum').style.color=color;
+  document.getElementById('gaugeLabel').textContent=label;
+  document.getElementById('gaugeLabel').style.color=color;
+  document.getElementById('gaugeFecha').textContent=
+    'Actualizado '+new Date().toLocaleTimeString('es-CL',{hour:'2-digit',minute:'2-digit'});
+
+  // Historial
+  const historial=generarHistorial();
+  dibujarHistCanvas(historial);
+  renderHistRows(historial);
+
+  // Timestamp topbar
+  document.getElementById('lastUpdate').textContent=
+    new Date().toLocaleTimeString('es-CL',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+}
+
+window.addEventListener('resize',()=>{
+  const historial=generarHistorial();
+  dibujarHistCanvas(historial);
+});
+
+// Iniciar y actualizar cada 5 minutos
+inicializar();
+setInterval(inicializar, 5*60*1000);
+</script>
+</body>
+</html>
