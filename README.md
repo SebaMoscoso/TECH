@@ -1,4 +1,4 @@
-# InvertirCL 🇨🇱
+# BROTA 🇨🇱
 
 > Plataforma educativa de inversiones para el mercado chileno. Simula trading real con datos en vivo del IPSA, USD/CLP y acciones locales — sin arriesgar plata real.
 
