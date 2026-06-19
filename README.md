@@ -6,9 +6,9 @@
 
 ---
 
-## ¿Qué es InvertirCL?
+## ¿Qué es BROTA?
 
-InvertirCL es una herramienta educativa donde personas con conocimientos básicos de inversión pueden aprender a operar en el mercado chileno **practicando con dinero ficticio y datos reales**. No es solo un gráfico — es una experiencia guiada que enseña disciplina institucional.
+BROTA es una herramienta educativa donde personas con conocimientos básicos de inversión pueden aprender a operar en el mercado chileno **practicando con dinero ficticio y datos reales**. No es solo un gráfico — es una experiencia guiada que enseña disciplina institucional.
 
 **Público objetivo:** chilenos que quieren dar el paso de Fintual/eToro a entender realmente cómo funciona el mercado.
 
@@ -18,7 +18,7 @@ InvertirCL es una herramienta educativa donde personas con conocimientos básico
 
 ## Diferenciadores
 
-| Feature | InvertirCL | Competencia |
+| Feature | BROTA | Competencia |
 |---|---|---|
 | Score de Disciplina Institucional (0-100) | ✅ | ❌ |
 | Anti-Tilt — bloqueo de mesa por tilt emocional | ✅ | ❌ |
